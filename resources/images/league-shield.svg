@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 130" role="img" aria-hidden="true">
+  <defs>
+    <linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffd700" />
+      <stop offset="100%" stop-color="#c79b00" />
+    </linearGradient>
+  </defs>
+  <path
+    d="M60 5 15 20 20 85 60 125 100 85 105 20z"
+    fill="url(#lg)"
+    stroke="#1b1b1b"
+    stroke-width="6"
+  />
+  <path
+    d="M60 25c-16 0-25 9-25 27s9 30 25 40 25-18 25-40-9-27-25-27Z"
+    fill="#0b0b0b"
+  />
+  <text x="60" y="74" text-anchor="middle" fill="#ffd700" font-family="Russo One, Impact, sans-serif" font-size="24">
+    LS
+  </text>
+</svg>

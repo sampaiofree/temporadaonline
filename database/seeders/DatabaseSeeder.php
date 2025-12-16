@@ -2,9 +2,10 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Jogador;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
 {
@@ -15,11 +16,17 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        Jogador::factory()->create([
+            'nome' => 'Operador Demo',
+            'nickname' => 'operador_demo',
+            'email' => 'demo@example.com',
+            'whatsapp' => '559999999999',
+            'plataforma' => 'PlayStation',
+            'geracao' => 'Gen 5',
+            'jogo' => 'MCO FIFA',
+            'reputacao_score' => 99,
+            'nivel' => 0,
+            'remember_token' => Str::random(10),
         ]);
     }
 }

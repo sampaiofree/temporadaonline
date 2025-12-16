@@ -309,7 +309,7 @@ a:focus-visible {
 }
 
 .btn-text {
-    font-family: 'Impact', sans-serif;
+    font-family: 'Russo One', sans-serif;
     color: var(--white);
     font-size: 20px;
     font-style: italic;
@@ -328,13 +328,295 @@ a:focus-visible {
     border-color: transparent transparent var(--gold) transparent;
 }
 
+/* Perfil */
+.profile-panel {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    background: linear-gradient(135deg, #0b0b0b, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gap-md);
+}
+
+.profile-avatar {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    background-color: var(--bg-card);
+}
+
+.profile-name {
+    font-family: var(--font-heading);
+    font-size: 22px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.profile-nickname {
+    font-family: var(--font-body);
+    font-size: 14px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.profile-details {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.profile-field {
+    padding: var(--gap-sm) var(--gap-md);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.profile-label {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.profile-value {
+    font-family: var(--font-heading);
+    font-size: 16px;
+    text-transform: uppercase;
+}
+
+.profile-footer {
+    width: 100%;
+}
+
+/* Minha Liga */
+.league-header {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    background: linear-gradient(135deg, #0c0c0c, #1e1e1e);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.league-logo {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    margin: 0 auto;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0b0b0b, #1b1b1b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.league-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.league-title {
+    font-family: var(--font-heading);
+    font-size: 24px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+}
+
+.league-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--gap-md);
+}
+
+.league-meta span {
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.league-meta strong {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.league-menu {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--gap-md);
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto;
+}
+
+.wallet-card {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    margin-top: var(--gap-lg);
+    background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+    border: 2px solid rgba(255, 215, 0, 0.4);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.wallet-card h2 {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.wallet-balance {
+    font-size: 32px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.auth-card {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    margin-top: 40px;
+    background: linear-gradient(135deg, #0c0c0c, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: calc(var(--gap-lg) * 1.5);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);
+}
+
+.auth-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.auth-kicker {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.auth-title {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+}
+
+.auth-description {
+    font-size: 14px;
+    color: #dddddd;
+    line-height: 1.5;
+}
+
+.auth-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.auth-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.auth-label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #bfbfbf;
+}
+
+.auth-input {
+    background-color: var(--bg-main);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: var(--white);
+    padding: 14px 16px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.auth-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.auth-input:focus {
+    border-color: var(--gold);
+    outline: none;
+}
+
+.auth-submit {
+    align-self: flex-start;
+    margin-top: var(--gap-md);
+}
+
+.auth-note {
+    font-size: 13px;
+    text-align: center;
+    color: #dddddd;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.auth-link {
+    color: var(--gold);
+}
+
+.auth-error {
+    font-size: 12px;
+    color: var(--danger);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.auth-input.has-error {
+    border-color: var(--danger);
+}
+
 @media (max-width: 768px) {
     .mco-screen::after {
         background-image: var(--mco-cover-mobile, var(--mco-cover));
         transform: none;
     }
 
+    .league-menu {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .dashboard-actions {
         padding-top: 24px;
+    }
+
+    .auth-card {
+        margin-top: 24px;
+        padding: var(--gap-lg);
     }
 }
