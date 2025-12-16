@@ -255,7 +255,7 @@ a:focus-visible {
     position: absolute;
     bottom: 0;
     width: 60%;
-    height: 5px;
+    height: 2px;
     background-color: var(--gold);
 }
 
@@ -264,20 +264,6 @@ a:focus-visible {
     height: 28px;
     margin-bottom: 4px;
     fill: currentColor;
-}
-
-body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: var(--mco-cover-current, var(--mco-cover-desktop, none));
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    transform-origin: center;
-    transform: var(--mco-cover-transform);
-    pointer-events: none;
-    z-index: 0;
 }
 
 /* Ações do dashboard */
@@ -323,7 +309,7 @@ body::after {
 }
 
 .btn-text {
-    font-family: 'Russo One', sans-serif;
+    font-family: 'Impact', sans-serif;
     color: var(--white);
     font-size: 20px;
     font-style: italic;
@@ -343,6 +329,11 @@ body::after {
 }
 
 @media (max-width: 768px) {
+    .mco-screen::after {
+        background-image: var(--mco-cover-mobile, var(--mco-cover));
+        transform: none;
+    }
+
     .dashboard-actions {
         padding-top: 24px;
     }
