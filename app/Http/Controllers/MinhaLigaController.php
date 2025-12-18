@@ -25,7 +25,7 @@ class MinhaLigaController extends Controller
         $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
 
         return view('minha_liga', [
-            'appContext' => $this->makeAppContext($liga, $userClub),
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
@@ -68,7 +68,7 @@ class MinhaLigaController extends Controller
         $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
         $clubeElencoIds = LigaClubeElenco::where('liga_id', $liga->id)->pluck('elencopadrao_id')->all();
         $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
-        $appContext = $this->makeAppContext($liga, $userClub);
+        $appContext = $this->makeAppContext($liga, $userClub, 'clube');
 
         return view('minha_liga_elenco', [
             'liga' => [
@@ -153,7 +153,7 @@ class MinhaLigaController extends Controller
                 'rodadasRestantes' => $rodadasRestantes,
                 'movimentos' => $movimentos,
             ],
-            'appContext' => $this->makeAppContext($liga, $userClub),
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
         ]);
     }
 
@@ -211,7 +211,7 @@ class MinhaLigaController extends Controller
                 'max_players' => (int) ($liga->max_jogadores_por_clube ?? 18),
                 'salary_per_round' => $salaryPerRound,
             ],
-            'appContext' => $this->makeAppContext($liga, $userClub),
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
         ]);
     }
 

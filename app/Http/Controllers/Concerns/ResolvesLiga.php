@@ -45,7 +45,7 @@ trait ResolvesLiga
         return $user->clubesLiga()->where('liga_id', $liga->id)->first();
     }
 
-    protected function makeAppContext(?Liga $liga = null, ?LigaClube $clube = null): array
+    protected function makeAppContext(?Liga $liga = null, ?LigaClube $clube = null, ?string $nav = null): array
     {
         $mode = $liga ? 'liga' : 'global';
 
@@ -53,6 +53,7 @@ trait ResolvesLiga
             'mode' => $mode,
             'liga' => $liga ? ['id' => $liga->id, 'nome' => $liga->nome] : null,
             'clube' => $clube ? ['id' => $clube->id, 'nome' => $clube->nome] : null,
+            'nav' => $nav,
         ];
     }
 }

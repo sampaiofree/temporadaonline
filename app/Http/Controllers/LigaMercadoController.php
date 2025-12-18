@@ -72,7 +72,7 @@ class LigaMercadoController extends Controller
                 'nome' => $userClub->nome,
             ] : null,
             'players' => $players,
-            'appContext' => $this->makeAppContext($liga, $userClub),
+            'appContext' => $this->makeAppContext($liga, $userClub, 'mercado'),
         ]);
     }
 }

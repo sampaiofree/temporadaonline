@@ -28,7 +28,7 @@ class LigaPartidasController extends Controller
             ] : null,
             'minhas_partidas' => [],
             'todas_partidas' => [],
-            'appContext' => $this->makeAppContext($liga, $clube),
+            'appContext' => $this->makeAppContext($liga, $clube, 'partidas'),
         ]);
     }
 }

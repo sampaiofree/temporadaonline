@@ -86,7 +86,7 @@ class LigaDashboardController extends Controller
                     'href' => null,
                 ],
             ],
-            'appContext' => $this->makeAppContext($liga, $clube),
+            'appContext' => $this->makeAppContext($liga, $clube, null),
         ]);
     }
 }

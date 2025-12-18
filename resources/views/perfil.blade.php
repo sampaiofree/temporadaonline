@@ -11,7 +11,7 @@
             window.__JOGOS__ = @json($jogos);
             window.__GERACOES__ = @json($geracoes);
         </script>
-        @include('components.app_context', ['appContext' => ['mode' => 'global', 'liga' => null, 'clube' => null]])
+        @include('components.app_context', ['appContext' => ['mode' => 'global', 'liga' => null, 'clube' => null, 'nav' => 'perfil']])
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/perfil.jsx'])
     </head>

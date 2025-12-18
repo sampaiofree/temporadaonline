@@ -16,6 +16,15 @@ const STATUS_LABELS = {
 
 const fallbackImage = 'https://via.placeholder.com/180?text=MCO';
 
+const getLeagueInitials = (name) => {
+    if (!name) return 'MCO';
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length === 1) {
+        return parts[0].slice(0, 2).toUpperCase();
+    }
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+};
+
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 
 export default function MinhaLiga() {
@@ -93,7 +102,11 @@ export default function MinhaLiga() {
         <main className="mco-screen" style={backgroundStyles} aria-label="Minha liga">
             <section className="league-header">
                 <div className="league-logo">
-                    <img src={liga.imagem || fallbackImage} alt={`Escudo da ${liga.nome}`} />
+                    {liga.imagem ? (
+                        <img src={liga.imagem} alt={`Escudo da ${liga.nome}`} />
+                    ) : (
+                        <span className="league-logo-initials">{getLeagueInitials(liga.nome)}</span>
+                    )}
                 </div>
                 <p className="league-title">{liga.nome}</p>
                 <div className="league-meta">
@@ -114,18 +127,18 @@ export default function MinhaLiga() {
                 </div>
             </section>
             <section className="league-actions">
-                <a className="btn-primary" href={elencoHref}>
-                    Elenco
+                <a className="btn-primary text-center" href={elencoHref}>
+                    Mercado
                 </a>
-                <a className="btn-outline" href={financeiroHref}>
+                <a className="btn-primary text-center" href={financeiroHref}>
                     Financeiro
                 </a>
-                <a className="btn-outline" href={meuElencoHref}>
+                <a className="btn-primary text-center" href={meuElencoHref}>
                     Meu elenco
                 </a>
                 <button
                     type="button"
-                    className="btn-outline"
+                    className="btn-primary"
                     onClick={() => {
                         setClubModalOpen(true);
                         setClubFeedback('');

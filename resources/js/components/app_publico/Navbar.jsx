@@ -31,35 +31,33 @@ const withLigaId = (href, ligaId) => {
 
 const buildLigaNavItems = (ligaId, clubeId) => [
     {
-        id: 'back',
-        label: 'LIGAS',
-        href: '/ligas',
-        iconPath: 'M10 19l-7-7 7-7v4h8v6h-8z',
+        id: 'home',
+        label: 'INÍCIO',
+        href: '/dashboard',
+        iconPath: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
     },
     {
-        id: 'mercado',
-        label: 'MERCADO',
-        href: withLigaId('/liga/mercado', ligaId),
-        iconPath: 'M12 2l4 4h-3v6h-2V6H8z',
+        id: 'liga',
+        label: 'LIGA',
+        href: withLigaId('/minha_liga', ligaId),
+        iconPath: 'M12 2L4 5v6c0 5 3.8 9.7 8 11 4.2-1.3 8-6 8-11V5l-8-3z'
+
     },
     {
         id: 'partidas',
         label: 'PARTIDAS',
         href: withLigaId('/liga/partidas', ligaId),
-        iconPath: 'M5 3v18h14V3H5zm12 16H7V5h10v14z',
+        iconPath: 'M12 3a6 6 0 100 12 6 6 0 000-12zm7 13l2 2-2 2-2-2 2-2z'
+
     },
     {
         id: 'tabela',
         label: 'TABELA',
         href: withLigaId('/liga/classificacao', ligaId),
-        iconPath: 'M4 6h16v2H4zm0 4h16v2H4zm0 4h16v2H4z',
+        iconPath: 'M7 10h4v10H7V10zm6-4h4v14h-4V6zM1 14h4v6H1v-6z'
+
     },
-    {
-        id: 'clube',
-        label: 'MEU CLUBE',
-        href: clubeId ? withLigaId(`/liga/clubes/${clubeId}`, ligaId) : withLigaId('/minha_liga', ligaId),
-        iconPath: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
-    },
+    
 ];
 
 const getAppContext = () => window.__APP_CONTEXT__ ?? { mode: 'global', liga: null, clube: null };
@@ -84,7 +82,7 @@ const resolveActiveId = (mode) => {
             return 'clube';
         }
         if (path.startsWith('/minha_liga')) {
-            return 'clube';
+            return 'liga';
         }
 
         return '';

@@ -40,7 +40,7 @@ class LigaClassificacaoController extends Controller
                 'nome' => $liga->nome,
             ],
             'classification' => $classification,
-            'appContext' => $this->makeAppContext($liga, $clube),
+            'appContext' => $this->makeAppContext($liga, $clube, 'tabela'),
         ]);
     }
 }

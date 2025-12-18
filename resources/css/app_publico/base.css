@@ -105,7 +105,13 @@ a:focus-visible {
     outline-offset: 2px;
 }
 
-.mco-screen {
+.mco-screen,
+.liga-dashboard-screen,
+.liga-mercado-screen,
+.liga-partidas-screen,
+.liga-classificacao-screen,
+.liga-clube-perfil-screen,
+.meu-elenco-screen {
     position: relative;
     min-height: 100vh;
     flex: 1;
@@ -119,7 +125,13 @@ a:focus-visible {
     overflow: hidden;
 }
 
-.mco-screen::after {
+.mco-screen::after,
+.liga-dashboard-screen::after,
+.liga-mercado-screen::after,
+.liga-partidas-screen::after,
+.liga-classificacao-screen::after,
+.liga-clube-perfil-screen::after,
+.meu-elenco-screen::after {
     content: '';
     position: absolute;
     inset: 0;
@@ -131,7 +143,13 @@ a:focus-visible {
     z-index: 0;
 }
 
-.mco-screen > * {
+.mco-screen > *,
+.liga-dashboard-screen > *,
+.liga-mercado-screen > *,
+.liga-partidas-screen > *,
+.liga-classificacao-screen > *,
+.liga-clube-perfil-screen > *,
+.meu-elenco-screen > * {
     position: relative;
     z-index: 1;
 }
@@ -453,11 +471,20 @@ a:focus-visible {
     display: block;
 }
 
+.league-logo-initials {
+    font-family: var(--font-heading);
+    font-size: 36px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: var(--gold);
+}
+
 .league-title {
     font-family: var(--font-heading);
     font-size: 24px;
     letter-spacing: 0.3em;
     text-transform: uppercase;
+    overflow-wrap: anywhere;
 }
 
 .league-meta {
@@ -619,8 +646,772 @@ a:focus-visible {
     border-color: var(--danger);
 }
 
+/* Liga / Ligas – header compartilhado */
+.ligas-hero,
+.liga-dashboard-hero,
+.meu-elenco-hero {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    background: linear-gradient(135deg, #0c0c0c, #1e1e1e);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.ligas-eyebrow,
+.meu-elenco-eyebrow {
+    font-size: 12px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.ligas-title,
+.meu-elenco-title {
+    font-family: var(--font-heading);
+    font-size: 26px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    overflow-wrap: anywhere;
+}
+
+.ligas-subtitle,
+.liga-dashboard-subtitle {
+    font-size: 14px;
+    color: #dddddd;
+    line-height: 1.5;
+}
+
+.ligas-empty {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto;
+    text-align: center;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #dddddd;
+}
+
+/* Filtros */
+.ligas-filter-row,
+.mercado-filters,
+.liga-partidas-tabs {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+    display: flex;
+    gap: var(--gap-md);
+    flex-wrap: wrap;
+}
+
+.filter-button {
+    flex: 1;
+    min-width: 140px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: var(--white);
+    padding: 10px 12px;
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    cursor: pointer;
+}
+
+.filter-button.active {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+}
+
+.filter-pill-row {
+    display: flex;
+    gap: var(--gap-sm);
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.filter-pill {
+    flex: 0 0 auto;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: var(--white);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    clip-path: polygon(8% 0, 100% 0, 92% 100%, 0 100%);
+}
+
+.filter-pill.active {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+}
+
+.filter-group > span {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #bfbfbf;
+}
+
+.btn-outline.small,
+.btn-primary.small {
+    padding: 8px 12px;
+    font-size: 12px;
+}
+
+.btn-primary.disabled,
+.btn-outline.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* Ligas – lista */
+.ligas-list {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto;
+}
+
+.ligas-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap-lg);
+}
+
+.liga-card {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.liga-card:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 3px;
+}
+
+.liga-card-image {
+    height: 140px;
+    background-size: cover;
+    background-position: center;
+    background-color: #0b0b0b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.liga-card-body {
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.liga-card-title {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    overflow-wrap: anywhere;
+}
+
+.liga-card-badge {
+    align-self: flex-start;
+    background: var(--gold);
+    color: var(--black);
+    padding: 4px 10px;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.liga-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    font-size: 12px;
+    color: #bfbfbf;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.liga-card-status {
+    font-size: 12px;
+    color: #dddddd;
+    line-height: 1.4;
+}
+
+/* Ligas – modal */
+.ligas-modal-overlay,
+.club-modal-overlay,
+.meu-elenco-modal-overlay,
+.elenco-warning-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--gap-lg);
+}
+
+.ligas-modal,
+.club-modal,
+.meu-elenco-modal,
+.elenco-warning-modal {
+    width: min(520px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    background: linear-gradient(135deg, #0c0c0c, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.ligas-modal-image {
+    height: 160px;
+    background-size: cover;
+    background-position: center;
+    background-color: #0b0b0b;
+}
+
+.ligas-modal-header h2,
+.club-modal h3,
+.meu-elenco-modal h3,
+.elenco-warning-title {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+}
+
+.ligas-modal-status {
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.liga-modal-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.liga-modal-label {
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.liga-modal-value {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #dddddd;
+}
+
+.ligas-modal-actions,
+.club-actions,
+.meu-elenco-modal-actions,
+.elenco-warning-actions {
+    display: flex;
+    gap: var(--gap-md);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.ligas-modal-button {
+    padding: 10px 16px;
+    font-family: Impact, sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    cursor: pointer;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+.ligas-modal-button--primary {
+    background: var(--gold);
+    color: var(--black);
+}
+
+.ligas-modal-button--ghost {
+    background: transparent;
+    color: var(--gold);
+    border: 2px solid var(--gold);
+}
+
+.ligas-modal-error {
+    font-size: 12px;
+    color: var(--danger);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.ligas-modal-registered {
+    font-size: 12px;
+    color: #bfbfbf;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* Minha Liga – ações e modal */
+.league-actions {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-md);
+}
+
+.league-actions-copy {
+    grid-column: 1 / -1;
+    font-size: 13px;
+    color: #dddddd;
+    line-height: 1.5;
+}
+
+.league-actions-copy.success {
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.club-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.club-form label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: #bfbfbf;
+}
+
+.club-form input {
+    background-color: var(--bg-main);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: var(--white);
+    padding: 14px 16px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.club-errors {
+    list-style: none;
+    padding-left: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--danger);
+}
+
+/* Liga Dashboard */
+.liga-dashboard-stats,
+.meu-elenco-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-md);
+}
+
+.liga-dashboard-stats span,
+.meu-elenco-stats span {
+    display: block;
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.liga-dashboard-stats strong,
+.meu-elenco-stats strong {
+    display: block;
+    font-family: var(--font-heading);
+    font-size: 18px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.liga-dashboard-grid {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--gap-md);
+}
+
+.dashboard-card {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dashboard-card h2 {
+    font-family: var(--font-heading);
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+}
+
+.card-value {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.dashboard-warning {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.dashboard-warning p {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #dddddd;
+}
+
+.dashboard-action-card {
+    background: linear-gradient(135deg, #0c0c0c, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-lg);
+}
+
+.dashboard-action-card strong {
+    display: block;
+    font-family: var(--font-heading);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.dashboard-action-card p {
+    font-size: 13px;
+    color: #dddddd;
+    line-height: 1.4;
+    margin-top: 6px;
+}
+
+/* Mercado */
+.mercado-list,
+.elenco-list,
+.meu-elenco-list,
+.liga-partidas-list,
+.liga-classificacao-table,
+.clube-elenco-list {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto;
+}
+
+.mercado-card,
+.elenco-card,
+.meu-elenco-card {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-md);
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    gap: var(--gap-md);
+    align-items: center;
+}
+
+.mercado-card-image,
+.elenco-card-image,
+.meu-elenco-card-image {
+    width: 68px;
+    height: 68px;
+    border: 2px solid rgba(255, 215, 0, 0.5);
+    background: #0b0b0b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    overflow: hidden;
+}
+
+.mercado-card-image img,
+.elenco-card-image img,
+.meu-elenco-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.mercado-card-body,
+.elenco-card-body,
+.meu-elenco-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.mercado-card-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: var(--gap-md);
+    flex-wrap: wrap;
+}
+
+.mercado-card-title strong,
+.meu-elenco-card-name,
+.elenco-card-title {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.mercado-card-title span,
+.mercado-card-meta,
+.mercado-card-club,
+.elenco-card-meta,
+.elenco-card-value,
+.meu-elenco-card-meta,
+.meu-elenco-status {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.mercado-card-overall {
+    font-family: var(--font-heading);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.mercado-card-actions,
+.elenco-card-actions,
+.meu-elenco-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    margin-top: 8px;
+}
+
+.elenco-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.elenco-card-line {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.elenco-card-status {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+}
+
+.elenco-feedback {
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gold);
+    margin-top: var(--gap-sm);
+}
+
+.elenco-pagination {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    justify-content: center;
+    margin-top: var(--gap-lg);
+}
+
+.elenco-pagination-link {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--white);
+}
+
+.elenco-pagination-link.active {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+}
+
+.elenco-pagination-link.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+}
+
+/* Meu Elenco */
+.meu-elenco-filters {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.meu-elenco-card-stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-sm);
+}
+
+.meu-elenco-card-stats strong {
+    font-family: var(--font-heading);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--white);
+}
+
+.meu-elenco-card-stats span {
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.meu-elenco-footer {
+    width: min(520px, 100%);
+    margin: 0 auto var(--gap-lg);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+    text-align: center;
+}
+
+.meu-elenco-modal-description {
+    font-size: 14px;
+    line-height: 1.5;
+    color: #dddddd;
+}
+
+.modal-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.modal-field span {
+    font-size: 12px;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.modal-field input {
+    background-color: var(--bg-main);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    color: var(--white);
+    padding: 14px 16px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.modal-error {
+    font-size: 12px;
+    color: var(--danger);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.modal-success {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+/* Classificação */
+.classificacao-row {
+    display: grid;
+    grid-template-columns: 72px 1fr 70px 70px;
+    gap: var(--gap-sm);
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    align-items: center;
+}
+
+.classificacao-row.header {
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.classificacao-row:not(.header) {
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--white);
+}
+
+.classificacao-row:not(.header):hover,
+.classificacao-row:not(.header):focus-visible {
+    outline: 2px solid rgba(255, 215, 0, 0.35);
+    outline-offset: -2px;
+}
+
+/* Partidas placeholder */
+.liga-partidas-list article {
+    padding: var(--gap-lg);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.35);
+}
+
 @media (max-width: 768px) {
-    .mco-screen::after {
+    .mco-screen::after,
+    .liga-dashboard-screen::after,
+    .liga-mercado-screen::after,
+    .liga-partidas-screen::after,
+    .liga-classificacao-screen::after,
+    .liga-clube-perfil-screen::after,
+    .meu-elenco-screen::after {
         background-image: var(--mco-cover-mobile, var(--mco-cover));
         transform: none;
     }

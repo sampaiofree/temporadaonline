@@ -42,6 +42,7 @@ class LigaController extends Controller
                 'mode' => 'global',
                 'liga' => null,
                 'clube' => null,
+                'nav' => 'ligas',
             ],
         ]);
     }

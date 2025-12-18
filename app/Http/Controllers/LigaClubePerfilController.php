@@ -15,6 +15,8 @@ class LigaClubePerfilController extends Controller
     public function show(Request $request, LigaClube $clube): View
     {
         $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()?->clubesLiga()->where('liga_id', $liga->id)->first();
+        $nav = $userClub && (int) $userClub->id === (int) $clube->id ? 'clube' : 'tabela';
 
         if ((int) $clube->liga_id !== (int) $liga->id) {
             abort(404);
@@ -47,7 +49,7 @@ class LigaClubePerfilController extends Controller
                 'dono' => $clube->user?->name,
                 'players' => $players,
             ],
-            'appContext' => $this->makeAppContext($liga, $clube),
+            'appContext' => $this->makeAppContext($liga, $userClub, $nav),
         ]);
     }
 }
