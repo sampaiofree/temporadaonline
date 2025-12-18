@@ -47,7 +47,7 @@ trait ResolvesLiga
 
     protected function makeAppContext(?Liga $liga = null, ?LigaClube $clube = null): array
     {
-        $mode = $liga && $clube ? 'liga' : 'global';
+        $mode = $liga ? 'liga' : 'global';
 
         return [
             'mode' => $mode,

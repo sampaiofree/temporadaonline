@@ -4,6 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>MCO | Dashboard</title>
+        @include('components.app_context', ['appContext' => ['mode' => 'global', 'liga' => null, 'clube' => null]])
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.jsx'])
     </head>

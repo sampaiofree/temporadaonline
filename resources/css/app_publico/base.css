@@ -230,6 +230,24 @@ a:focus-visible {
     justify-content: space-around;
     align-items: center;
     z-index: 1000;
+    overflow: visible;
+}
+
+.nav-context {
+    position: absolute;
+    left: 0;
+    top: -28px;
+    width: 100%;
+    padding: 6px var(--gap-lg);
+    text-align: center;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--white);
+    background-color: rgba(18, 18, 18, 0.85);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    pointer-events: none;
 }
 
 .nav-item {

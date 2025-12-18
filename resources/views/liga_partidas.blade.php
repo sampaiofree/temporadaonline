@@ -8,10 +8,7 @@
         <script>
             window.__LIGA__ = @json($liga);
             window.__CLUBE__ = @json($clube);
-            window.__PARTIDAS__ = @json([
-                'minhas_partidas' => $minhas_partidas,
-                'todas_partidas' => $todas_partidas,
-            ]);
+            window.__PARTIDAS__ = @json(['minhas_partidas' => $minhas_partidas, 'todas_partidas' => $todas_partidas]);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh

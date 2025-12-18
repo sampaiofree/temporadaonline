@@ -8,12 +8,7 @@
         <script>
             window.__LIGA__ = @json($liga);
             window.__CLUBE__ = @json($clube);
-            window.__DASHBOARD__ = @json([
-                'hasClub' => $hasClub,
-                'nextMatch' => $nextMatch,
-                'classification' => $classification,
-                'actions' => $actions,
-            ]);
+            window.__DASHBOARD__ = @json(['hasClub' => $hasClub, 'nextMatch' => $nextMatch, 'classification' => $classification, 'actions' => $actions]);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh
