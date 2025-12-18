@@ -43,7 +43,7 @@ export default function MinhaLiga() {
         );
     }
 
-    const elencoHref = `/minha_liga/elenco?liga_id=${liga.id}`;
+    const mercadoHref = `/liga/mercado?liga_id=${liga.id}`;
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
     const [isClubModalOpen, setClubModalOpen] = useState(false);
@@ -127,7 +127,7 @@ export default function MinhaLiga() {
                 </div>
             </section>
             <section className="league-actions">
-                <a className="btn-primary text-center" href={elencoHref}>
+                <a className="btn-primary text-center" href={mercadoHref}>
                     Mercado
                 </a>
                 <a className="btn-primary text-center" href={financeiroHref}>
@@ -147,7 +147,7 @@ export default function MinhaLiga() {
                     Meu clube
                 </button>
                 <p className="league-actions-copy">
-                    Confira o elenco completo do jogo que alimenta esta liga, ordenado por nome e pronto para analisar.
+                    Acesse o mercado para buscar, filtrar e contratar jogadores disponíveis nesta liga.
                 </p>
             </section>
             {clubFeedback && <p className="league-actions-copy success">{clubFeedback}</p>}

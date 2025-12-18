@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Elencopadrao;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
@@ -12,7 +11,6 @@ use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 use App\Http\Controllers\Concerns\ResolvesLiga;
 
@@ -36,56 +34,6 @@ class MinhaLigaController extends Controller
             'geracao' => $liga->geracao?->nome,
             'plataforma' => $liga->plataforma?->nome,
         ]]);
-    }
-
-    public function elenco(Request $request): View
-    {
-        $liga = $this->resolveUserLiga($request);
-        $jogoId = $liga->jogo_id;
-
-        $perPage = 12;
-        if ($jogoId) {
-            $players = Elencopadrao::where('jogo_id', $jogoId)
-                ->orderByRaw('COALESCE(short_name, long_name)')
-                ->paginate(
-                    $perPage,
-                    [
-                        'id',
-                        'player_face_url',
-                        'short_name',
-                        'value_eur',
-                        'club_name',
-                        'nationality_name',
-                    ],
-                    'page',
-                    $request->query('page', 1),
-                );
-            $players->appends($request->query());
-        } else {
-            $players = new LengthAwarePaginator([], 0, $perPage, $request->query('page', 1));
-        }
-
-        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
-        $clubeElencoIds = LigaClubeElenco::where('liga_id', $liga->id)->pluck('elencopadrao_id')->all();
-        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
-        $appContext = $this->makeAppContext($liga, $userClub, 'clube');
-
-        return view('minha_liga_elenco', [
-            'liga' => [
-                'id' => $liga->id,
-                'nome' => $liga->nome,
-                'imagem' => $liga->imagem,
-                'jogo' => $liga->jogo?->nome,
-            ],
-            'elenco' => $players->toArray(),
-            'userClub' => $userClub ? [
-                'id' => $userClub->id,
-                'nome' => $userClub->nome,
-                'escudo_url' => $userClub->escudo_url,
-            ] : null,
-            'clubeElencoIds' => $clubeElencoIds,
-            'appContext' => $appContext,
-        ]);
     }
 
     public function financeiro(Request $request): View

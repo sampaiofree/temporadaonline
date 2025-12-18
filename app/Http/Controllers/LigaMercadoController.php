@@ -23,9 +23,18 @@ class LigaMercadoController extends Controller
             ->keyBy('elencopadrao_id');
 
         $players = Elencopadrao::query()
+            ->select([
+                'id',
+                'short_name',
+                'long_name',
+                'player_positions',
+                'overall',
+                'value_eur',
+                'wage_eur',
+                'player_face_url',
+            ])
             ->where('jogo_id', $liga->jogo_id)
             ->orderByDesc('overall')
-            ->limit(48)
             ->get()
             ->map(function (Elencopadrao $player) use ($elencos, $userClub) {
                 $entry = $elencos->get($player->id);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.webp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundo_vertical.webp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpgp';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpgp';
 
 const REGISTER_FIELDS = [
     {

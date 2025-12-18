@@ -29,7 +29,6 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::delete('/profile', [ProfileController::class, 'destroy']);
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
-    Route::get('/minha_liga/elenco', [MinhaLigaController::class, 'elenco'])->name('minha_liga.elenco');
     Route::get('/minha_liga/meu-elenco', [MinhaLigaController::class, 'meuElenco'])->name('minha_liga.meu_elenco');
     Route::get('/minha_liga/financeiro', [MinhaLigaController::class, 'financeiro'])->name('minha_liga.financeiro');
     Route::get('/liga/dashboard', [LigaDashboardController::class, 'show'])->name('liga.dashboard');
@@ -38,6 +37,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/liga/classificacao', [LigaClassificacaoController::class, 'index'])->name('liga.classificacao');
     Route::get('/liga/clubes/{clube}', [LigaClubePerfilController::class, 'show'])->name('liga.clube.perfil');
     Route::post('/minha_liga/clube/elenco', [MinhaLigaController::class, 'addPlayerToClub'])->name('minha_liga.clube.elenco');
+    // Rota legada: redireciona antiga lista de elenco para o mercado da liga
+    Route::get('/minha_liga/elenco', function (Illuminate\Http\Request $request) {
+        $ligaId = $request->query('liga_id');
+        $target = $ligaId ? route('liga.mercado', ['liga_id' => $ligaId]) : route('liga.mercado');
+        return redirect()->to($target);
+    })->name('minha_liga.elenco.legacy');
     Route::post('/elenco/{elenco}/vender-mercado', [ElencoController::class, 'venderMercado'])->name('elenco.venderMercado');
     Route::post('/elenco/{elenco}/listar-mercado', [ElencoController::class, 'listarMercado'])->name('elenco.listarMercado');
     Route::post('/minha_liga/clubes', [MinhaLigaController::class, 'storeClube'])->name('minha_liga.clubes');

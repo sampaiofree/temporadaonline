@@ -28,7 +28,7 @@ class LigaSeeder extends Seeder
         ], [
             'descricao' => 'Uma liga de demonstração para mostrar o funcionamento do sistema.',
             'regras' => 'Respeito, fair play e resultados reportados em até 24 horas.',
-            'imagem' => 'https://example.com/assets/ligas/ligamco.jpg',
+            'imagem' => '',
             'saldo_inicial' => 100000000,
             'tipo' => 'publica',
             'status' => 'ativa',
