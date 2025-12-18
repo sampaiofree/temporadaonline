@@ -53,6 +53,7 @@ class DatabaseSeeder extends Seeder
             LigaSeeder::class,
             AdminUserSeeder::class,
             DemoLigaUsersSeeder::class,
+            OtherLigaClubsSeeder::class,
         ]);
 
         $user = User::where('email', 'sampaio.free@gmail.com')->with('profile')->first();

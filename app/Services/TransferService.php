@@ -84,6 +84,49 @@ class TransferService
         }, 3);
     }
 
+    public function releaseToMarket(LigaClubeElenco $entry): array
+    {
+        return DB::transaction(function () use ($entry): array {
+            $model = LigaClubeElenco::query()
+                ->lockForUpdate()
+                ->find($entry->id);
+
+            if (! $model) {
+                throw new \DomainException('Jogador não está disponível para transferência nesta liga.');
+            }
+
+            if (! $model->ativo) {
+                throw new \DomainException('Jogador inativo não pode ser devolvido ao mercado.');
+            }
+
+            $model->loadMissing('elencopadrao');
+            $baseValue = (int) ($model->elencopadrao?->value_eur ?? 0);
+
+            // Default taxa de venda: 20%
+            $taxPercent = 20;
+            $taxValue = (int) round($baseValue * ($taxPercent / 100));
+            $credit = max(0, $baseValue - $taxValue);
+
+            $ligaId = (int) $model->liga_id;
+            $clubeOrigemId = (int) $model->liga_clube_id;
+            $elencopadraoId = (int) $model->elencopadrao_id;
+
+            if ($credit > 0) {
+                $this->finance->credit($ligaId, $clubeOrigemId, $credit, 'Venda ao mercado');
+            }
+
+            $model->delete();
+
+            return [
+                'base_value' => $baseValue,
+                'tax_percent' => $taxPercent,
+                'tax_value' => $taxValue,
+                'credit' => $credit,
+                'elencopadrao_id' => $elencopadraoId,
+            ];
+        }, 3);
+    }
+
     public function sellPlayer(int $ligaId, int $vendedorClubeId, int $compradorClubeId, int $elencopadraoId, int $price): LigaClubeElenco
     {
         return DB::transaction(function () use ($ligaId, $vendedorClubeId, $compradorClubeId, $elencopadraoId, $price): LigaClubeElenco {

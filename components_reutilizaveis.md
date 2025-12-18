@@ -19,6 +19,10 @@
 - `DangerButton.jsx`: bg vermelho, texto branco.
 - São estilizados via tailwind utilitário, não usam o tema dourado de `base.css`.
 
+## Botões de tabela (tema MCO)
+- Para botões dentro das tabelas do marketplace e do elenco, use a classe `.table-action-badge` definida em `resources/css/app_publico/base.css`. Ela replica o visual dos badges (`.mercado-pos-badge`) e garante espaçamento/hover consistentes.
+- Variantes: `.primary` (para ações positivas como comprar), `.outline` (para ações secundárias como multa) e `.neutral` (para estados desabilitados/indicadores `Já no clube`). Evite usar `.btn-primary`/`.btn-outline` nesses contextos.
+
 ## Inputs básicos
 - `TextInput.jsx`: input com focus indigo; suporta `isFocused`.
 - `Checkbox.jsx`, `InputLabel.jsx`, `InputError.jsx` estão presentes (não listados acima mas seguem o padrão breeze).

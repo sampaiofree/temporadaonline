@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\Elencopadrao;
 use App\Models\LigaClubeElenco;
+use App\Models\LigaClubeFinanceiro;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -21,6 +22,22 @@ class LigaMercadoController extends Controller
             ->where('liga_id', $liga->id)
             ->get()
             ->keyBy('elencopadrao_id');
+
+        $walletSaldo = 0;
+        $salaryPerRound = 0;
+
+        if ($userClub) {
+            $walletSaldo = (int) LigaClubeFinanceiro::query()
+                ->where('liga_id', $liga->id)
+                ->where('clube_id', $userClub->id)
+                ->value('saldo');
+
+            $salaryPerRound = (int) LigaClubeElenco::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->where('ativo', true)
+                ->sum('wage_eur');
+        }
 
         $players = Elencopadrao::query()
             ->select([
@@ -74,11 +91,14 @@ class LigaMercadoController extends Controller
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
+                'saldo_inicial' => (int) ($liga->saldo_inicial ?? 0),
                 'jogo' => $liga->jogo?->nome,
             ],
             'clube' => $userClub ? [
                 'id' => $userClub->id,
                 'nome' => $userClub->nome,
+                'saldo' => $walletSaldo,
+                'salary_per_round' => $salaryPerRound,
             ] : null,
             'players' => $players,
             'appContext' => $this->makeAppContext($liga, $userClub, 'mercado'),

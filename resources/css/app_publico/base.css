@@ -975,7 +975,7 @@ a:focus-visible {
 }
 
 .mercado-table .numeric {
-    text-align: right;
+    text-align: left;
     font-family: var(--font-heading);
     letter-spacing: 0.05em;
 }
@@ -1075,6 +1075,51 @@ a:focus-visible {
     font-size: 12px;
     text-transform: uppercase;
     letter-spacing: 0.08em;
+}
+
+.table-action-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 18px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.3);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #fff;
+    transition: background 0.2s ease, border-color 0.2s ease, opacity 0.2s ease;
+    cursor: pointer;
+}
+
+.table-action-badge.primary {
+    background: rgba(46, 204, 113, 0.12);
+    border-color: rgba(46, 204, 113, 0.5);
+    color: #2ecc71;
+}
+
+.table-action-badge.outline {
+    background: rgba(0, 0, 0, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+    color: #fff;
+}
+
+.table-action-badge.neutral {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: transparent;
+    color: #bfbfbf;
+    cursor: default;
+}
+
+.table-action-badge:hover:not(.neutral):not(.disabled) {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.table-action-badge.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .mercado-pagination {

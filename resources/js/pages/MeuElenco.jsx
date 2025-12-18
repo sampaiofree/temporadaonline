@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpgp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpgp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -69,11 +69,32 @@ const resolveOvrTone = (overall) => {
     return 'low';
 };
 
+const TAX_PERCENT = 20;
+const PERCENT_OPTIONS = [10, 30, 70, 100];
+
+function PlayerAvatar({ src, alt, fallback }) {
+    const [failed, setFailed] = useState(false);
+
+    if (!src || failed) {
+        return <span className="mercado-avatar-fallback">{fallback}</span>;
+    }
+
+    return (
+        <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            decoding="async"
+            onError={() => setFailed(true)}
+        />
+    );
+}
+
 export default function MeuElenco() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const meuElenco = getMeuElencoFromWindow();
-    const players = Array.isArray(meuElenco.players) ? meuElenco.players : [];
+    const [players, setPlayers] = useState(Array.isArray(meuElenco.players) ? meuElenco.players : []);
 
     // Busca + filtros
     const [q, setQ] = useState('');
@@ -85,12 +106,16 @@ export default function MeuElenco() {
 
     // Modal de ações
     const [modalPlayer, setModalPlayer] = useState(null);
-    const [modalMode, setModalMode] = useState('vender');
-    const [modalPrice, setModalPrice] = useState('');
     const [modalMessage, setModalMessage] = useState('');
     const [modalError, setModalError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [valueModalPlayer, setValueModalPlayer] = useState(null);
+    const [valueModalValue, setValueModalValue] = useState('');
+    const [valueModalWage, setValueModalWage] = useState('');
+    const [valueModalPercent, setValueModalPercent] = useState(PERCENT_OPTIONS[0]);
+    const [valueModalError, setValueModalError] = useState('');
+    const [isValueSaving, setIsValueSaving] = useState(false);
 
     const backgroundStyles = {
         '--mco-cover': `url(${backgroundDefault})`,
@@ -149,10 +174,30 @@ export default function MeuElenco() {
         });
     }, [players, q, positionFilter, overallFilter, salaryFilter, statusFilter]);
 
-    const openModal = (player, mode) => {
+    const salaryPerRound = useMemo(
+        () => players.reduce((total, entry) => total + (entry?.wage_eur ?? 0), 0),
+        [players],
+    );
+
+    const baseSaleValue = (player) =>
+        Number(
+            player?.snapshot_value_eur ??
+                player?.elencopadrao?.value_eur ??
+                0,
+        );
+
+    const taxSaleValue = (player) => {
+        const base = baseSaleValue(player);
+        return Math.round(base * (TAX_PERCENT / 100));
+    };
+
+    const netSaleValue = (player) => {
+        const base = baseSaleValue(player);
+        return Math.max(0, base - taxSaleValue(player));
+    };
+
+    const openModal = (player) => {
         setModalPlayer(player);
-        setModalMode(mode);
-        setModalPrice(mode === 'listar' ? (player?.value_eur ?? '') : '');
         setModalMessage('');
         setModalError('');
         setIsModalOpen(true);
@@ -161,7 +206,6 @@ export default function MeuElenco() {
     const closeModal = () => {
         setIsModalOpen(false);
         setModalPlayer(null);
-        setModalPrice('');
         setModalError('');
         setModalMessage('');
         setIsSubmitting(false);
@@ -169,24 +213,19 @@ export default function MeuElenco() {
 
     const handleModalSubmit = async () => {
         if (!modalPlayer) return;
-        if (modalMode === 'listar' && !modalPrice) {
-            setModalError('Informe um valor válido.');
-            return;
-        }
 
         setIsSubmitting(true);
         setModalError('');
 
         try {
-            const route =
-                modalMode === 'listar'
-                    ? `/elenco/${modalPlayer.id}/listar-mercado`
-                    : `/elenco/${modalPlayer.id}/vender-mercado`;
+            const route = `/elenco/${modalPlayer.id}/vender-mercado`;
 
-            const payload = modalMode === 'listar' ? { preco: Number(modalPrice) } : {};
-
-            const { data } = await window.axios.post(route, payload);
-            setModalMessage(data?.message ?? 'Operação realizada com sucesso.');
+            const { data } = await window.axios.post(route, {});
+            setPlayers((prev) => prev.filter((entry) => entry.id !== modalPlayer.id));
+            const credit = data?.credit ?? netSaleValue(modalPlayer);
+            setModalMessage(
+                data?.message ?? `Jogador devolvido ao mercado. Crédito de ${formatCurrency(credit)} aplicado.`,
+            );
         } catch (error) {
             setModalError(
                 error.response?.data?.message ?? 'Não foi possível completar a operação. Tente novamente.',
@@ -202,6 +241,71 @@ export default function MeuElenco() {
         setSalaryFilter('all');
         setStatusFilter('all');
         setQ('');
+    };
+
+    const openValueModal = (entry) => {
+        setValueModalPlayer(entry);
+        setValueModalValue(entry?.value_eur ?? 0);
+        setValueModalWage(entry?.wage_eur ?? 0);
+        setValueModalPercent(PERCENT_OPTIONS[0]);
+        setValueModalError('');
+    };
+
+    const closeValueModal = () => {
+        setValueModalPlayer(null);
+        setValueModalValue('');
+        setValueModalWage('');
+        setValueModalPercent(PERCENT_OPTIONS[0]);
+        setValueModalError('');
+        setIsValueSaving(false);
+    };
+
+    const computedValue = useMemo(() => {
+        const base = Number(valueModalValue) || 0;
+        return Math.round(base * (1 + (valueModalPercent ?? 0) / 100));
+    }, [valueModalValue, valueModalPercent]);
+
+    const computedWage = useMemo(() => {
+        const base = Number(valueModalWage) || 0;
+        return Math.round(base * (1 + (valueModalPercent ?? 0) / 100));
+    }, [valueModalWage, valueModalPercent]);
+
+    const handleValueSubmit = async () => {
+        if (!valueModalPlayer) return;
+        if (!Number.isFinite(computedValue) || computedValue < 0 || !Number.isFinite(computedWage) || computedWage < 0) {
+            setValueModalError('Valor inválido. Tente outra porcentagem.');
+            return;
+        }
+
+        setIsValueSaving(true);
+        setValueModalError('');
+
+        try {
+            const { data } = await window.axios.patch(`/elenco/${valueModalPlayer.id}/valor`, {
+                value_eur: computedValue,
+                wage_eur: computedWage,
+            });
+
+            setPlayers((prev) =>
+                prev.map((entry) =>
+                    entry.id === valueModalPlayer.id
+                        ? {
+                              ...entry,
+                              value_eur: data?.value_eur ?? computedValue,
+                              wage_eur: data?.wage_eur ?? computedWage,
+                          }
+                        : entry,
+                ),
+            );
+
+            closeValueModal();
+        } catch (error) {
+            setValueModalError(
+                error.response?.data?.message ?? 'Não foi possível atualizar o valor. Tente novamente.',
+            );
+        } finally {
+            setIsValueSaving(false);
+        }
     };
 
     if (!liga) {
@@ -236,12 +340,12 @@ export default function MeuElenco() {
                     <div>
                         <span>Jogadores</span>
                         <strong>
-                            {meuElenco.player_count} / {meuElenco.max_players}
+                            {players.length} / {meuElenco.max_players}
                         </strong>
                     </div>
                     <div>
                         <span>Custo por rodada</span>
-                        <strong>{formatCurrency(meuElenco.salary_per_round)}</strong>
+                        <strong>{formatCurrency(salaryPerRound)}</strong>
                     </div>
                 </div>
             </section>
@@ -347,15 +451,19 @@ export default function MeuElenco() {
             )}
 
             {/* Tabela única */}
-            <section className="mercado-table-wrap" aria-label="Tabela do elenco">
+            <section
+                className="mercado-table-wrap"
+                aria-label="Tabela do elenco"
+                style={{ marginTop: 20 }}
+            >
                 <div className="mercado-table-scroll">
-                    <table className="mercado-table">
+                    <table className="mercado-table" style={{ textAlign: 'left' }}>
                         <thead>
                             <tr>
                                 <th>Jogador</th>
                                 <th className="col-compact">OVR</th>
                                 <th className="col-compact">POS</th>
-                                <th className="numeric">Valor</th>
+                                <th style={{ textAlign: 'left' }}>Valor</th>
                                 <th className="numeric">Salário</th>
                                 <th>Status</th>
                                 <th className="col-action">Ação</th>
@@ -385,13 +493,11 @@ export default function MeuElenco() {
                                             <td>
                                                 <div className="mercado-player-cell">
                                                     <div className="mercado-avatar-sm">
-                                                        {imageUrl ? (
-                                                            <img src={imageUrl} alt={name} loading="lazy" decoding="async" />
-                                                        ) : (
-                                                            <span className="mercado-avatar-fallback">
-                                                                {getInitials(name)}
-                                                            </span>
-                                                        )}
+                                                        <PlayerAvatar
+                                                            src={imageUrl}
+                                                            alt={name}
+                                                            fallback={getInitials(name)}
+                                                        />
                                                     </div>
                                                     <div className="mercado-player-meta">
                                                         <strong>{name}</strong>
@@ -405,24 +511,26 @@ export default function MeuElenco() {
                                             <td>
                                                 <span className="mercado-pos-badge">{pos}</span>
                                             </td>
-                                            <td className="numeric">{formatCurrency(entry.value_eur)}</td>
-                                            <td className="numeric">{formatCurrency(entry.wage_eur)}</td>
+                                            <td className="numeric text-left">
+                                                <button
+                                                    type="button"
+                                                    className="table-action-badge outline"
+                                                    onClick={() => openValueModal(entry)}
+                                                    aria-label={`Editar valor de ${name}`}
+                                                >
+                                                    {formatCurrency(entry.value_eur)}
+                                                </button>
+                                            </td>
+                                            <td className="numeric text-left">{formatCurrency(entry.wage_eur)}</td>
                                             <td>{statusBadge}</td>
                                             <td>
                                                 <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                                     <button
                                                         type="button"
-                                                        className="btn-outline small"
-                                                        onClick={() => openModal(entry, 'vender')}
+                                                        className="table-action-badge outline"
+                                                        onClick={() => openModal(entry)}
                                                     >
                                                         Vender
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="btn-primary small"
-                                                        onClick={() => openModal(entry, 'listar')}
-                                                    >
-                                                        Colocar no mercado
                                                     </button>
                                                 </div>
                                             </td>
@@ -442,24 +550,24 @@ export default function MeuElenco() {
             {isModalOpen && modalPlayer && (
                 <div className="meu-elenco-modal-overlay" role="alertdialog" aria-modal="true">
                     <div className="meu-elenco-modal">
-                        <h3>{modalMode === 'listar' ? 'Listar no mercado' : 'Devolver ao mercado'}</h3>
+                        <h3>Devolver ao mercado</h3>
                         <p className="meu-elenco-modal-description">
-                            {modalMode === 'listar'
-                                ? 'Defina o preço pedido; a liga cobra 10%.'
-                                : 'Recebe 80% do valor pago e o jogador volta ao mercado.'}
+                            O crédito é calculado a partir do valor original do jogador menos a taxa de {TAX_PERCENT}%.
                         </p>
-                        {modalMode === 'listar' && (
-                            <label className="modal-field">
-                                <span>Preço pedido</span>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    value={modalPrice}
-                                    onChange={(event) => setModalPrice(event.target.value)}
-                                    placeholder="Ex.: 120000"
-                                />
-                            </label>
-                        )}
+                        <div className="modal-field">
+                            <span>Valor base</span>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(baseSaleValue(modalPlayer))}</p>
+                        </div>
+                        <div className="modal-field">
+                            <span>Imposto ({TAX_PERCENT}%)</span>
+                            <p style={{ fontWeight: 600 }}>
+                                {formatCurrency(taxSaleValue(modalPlayer))}
+                            </p>
+                        </div>
+                        <div className="modal-field">
+                            <span>Valor líquido a receber</span>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(netSaleValue(modalPlayer))}</p>
+                        </div>
                         {modalError && <p className="modal-error">{modalError}</p>}
                         {modalMessage && <p className="modal-success">{modalMessage}</p>}
                         <div className="meu-elenco-modal-actions">
@@ -473,6 +581,56 @@ export default function MeuElenco() {
                                 disabled={isSubmitting}
                             >
                                 {isSubmitting ? 'Enviando...' : 'Confirmar'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {valueModalPlayer && (
+                <div className="meu-elenco-modal-overlay" role="dialog" aria-modal="true">
+                    <div className="meu-elenco-modal">
+                        <h3>Editar valor de mercado</h3>
+                        <p className="meu-elenco-modal-description">
+                            Selecione um reajuste. Aplicaremos o mesmo percentual ao valor e ao salário deste jogador.
+                        </p>
+                        <div className="modal-field">
+                            <span>Escolha um reajuste</span>
+                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                {PERCENT_OPTIONS.map((pct) => (
+                                    <button
+                                        key={pct}
+                                        type="button"
+                                        className={`btn-outline small${valueModalPercent === pct ? ' active' : ''}`}
+                                        onClick={() => setValueModalPercent(pct)}
+                                    >
+                                        +{pct}%
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="modal-field">
+                            <span>Novo valor de mercado</span>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(computedValue)}</p>
+                        </div>
+
+                        <div className="modal-field">
+                            <span>Novo salário</span>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(computedWage)}</p>
+                        </div>
+                        {valueModalError && <p className="modal-error">{valueModalError}</p>}
+                        <div className="meu-elenco-modal-actions">
+                            <button type="button" className="btn-outline" onClick={closeValueModal} disabled={isValueSaving}>
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={handleValueSubmit}
+                                disabled={isValueSaving}
+                            >
+                                {isValueSaving ? 'Salvando...' : 'Salvar'}
                             </button>
                         </div>
                     </div>

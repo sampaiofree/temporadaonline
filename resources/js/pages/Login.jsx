@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpgp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpgp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const LOGIN_FIELDS = [
     {

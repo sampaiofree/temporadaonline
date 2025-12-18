@@ -129,6 +129,8 @@ class MinhaLigaController extends Controller
                     'ativo' => (bool) $entry->ativo,
                     'value_eur' => (int) ($entry->value_eur ?? 0),
                     'wage_eur' => (int) ($entry->wage_eur ?? 0),
+                    'snapshot_value_eur' => (int) ($player?->value_eur ?? 0),
+                    'snapshot_wage_eur' => (int) ($player?->wage_eur ?? 0),
                     'elencopadrao' => [
                         'id' => $player?->id,
                         'short_name' => $player?->short_name,
@@ -136,6 +138,8 @@ class MinhaLigaController extends Controller
                         'player_positions' => $player?->player_positions,
                         'overall' => $player?->overall,
                         'player_face_url' => $player?->player_face_url,
+                        'value_eur' => $player?->value_eur,
+                        'wage_eur' => $player?->wage_eur,
                     ],
                 ];
             })->values()->all();

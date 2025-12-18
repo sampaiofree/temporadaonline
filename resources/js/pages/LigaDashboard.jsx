@@ -1,6 +1,6 @@
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpgp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpgp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const formatDate = (value) => {
     if (!value) {

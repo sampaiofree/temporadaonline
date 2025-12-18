@@ -1,7 +1,7 @@
 import Navbar from '../components/app_publico/Navbar';
 import DashboardButton from '../components/app_publico/DashboardButton';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.webp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundo_vertical.webp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const BUTTONS = [
     {

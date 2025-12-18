@@ -43,6 +43,7 @@ Route::middleware('auth')->group(function () {
         $target = $ligaId ? route('liga.mercado', ['liga_id' => $ligaId]) : route('liga.mercado');
         return redirect()->to($target);
     })->name('minha_liga.elenco.legacy');
+    Route::patch('/elenco/{elenco}/valor', [ElencoController::class, 'updateValor'])->name('elenco.updateValor');
     Route::post('/elenco/{elenco}/vender-mercado', [ElencoController::class, 'venderMercado'])->name('elenco.venderMercado');
     Route::post('/elenco/{elenco}/listar-mercado', [ElencoController::class, 'listarMercado'])->name('elenco.listarMercado');
     Route::post('/minha_liga/clubes', [MinhaLigaController::class, 'storeClube'])->name('minha_liga.clubes');

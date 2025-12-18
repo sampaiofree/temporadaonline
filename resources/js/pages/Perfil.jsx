@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 import DashboardButton from '../components/app_publico/DashboardButton';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpgp';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpgp';
+import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
+import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const EDIT_ICON_PATHS = [
     'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z',
