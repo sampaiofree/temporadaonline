@@ -61,6 +61,11 @@ const STATUS_FILTERS = [
     { value: 'outro', label: 'Outros clubes' },
 ];
 
+const MODAL_MODES = {
+    BUY: 'buy',
+    MULTA: 'multa',
+};
+
 const OVR_FILTERS = [
     { value: 'all', label: 'OVR: Todos' },
     { value: '50-69', label: '50–69' },
@@ -118,12 +123,12 @@ export default function LigaMercado() {
     const [clubBalance, setClubBalance] = useState(clube?.saldo ?? 0);
     const [clubSalaryPerRound, setClubSalaryPerRound] = useState(clube?.salary_per_round ?? 0);
 
-    const [purchasePlayer, setPurchasePlayer] = useState(null);
-    const [isPurchaseSubmitting, setIsPurchaseSubmitting] = useState(false);
-    const [purchaseError, setPurchaseError] = useState('');
+    const [modalPlayer, setModalPlayer] = useState(null);
+    const [modalMode, setModalMode] = useState(null);
+    const [isModalSubmitting, setIsModalSubmitting] = useState(false);
+    const [modalError, setModalError] = useState('');
 
     const [feedback, setFeedback] = useState('');
-    const [loadingId, setLoadingId] = useState(null);
 
     // Top bar
     const [q, setQ] = useState('');
@@ -274,89 +279,100 @@ export default function LigaMercado() {
        Ações
 ========================= */
 
-    const handleMulta = async (player) => {
-        if (!liga || !clube) {
-            setFeedback('Você precisa criar um clube antes de operar no mercado.');
-            return;
-        }
-
-        if (loadingId) return;
-
-        setLoadingId(player.elencopadrao_id);
-        setFeedback('');
-
-        try {
-            const { data } = await window.axios.post(
-                `/api/ligas/${liga.id}/clubes/${clube.id}/multa`,
-                {
-                    elencopadrao_id: player.elencopadrao_id,
-                },
-            );
-            setFeedback(data?.message ?? 'Operação concluída.');
-        } catch (e) {
-            setFeedback(e.response?.data?.message ?? 'Erro na operação.');
-        } finally {
-            setLoadingId(null);
-        }
-    };
-
-    const openPurchaseModal = (player) => {
+    const openMarketModal = (player, mode) => {
         if (!clube || !liga) {
             setFeedback('Você precisa criar um clube antes de operar no mercado.');
             return;
         }
 
-        setPurchasePlayer(player);
-        setPurchaseError('');
+        setModalPlayer(player);
+        setModalMode(mode);
+        setModalError('');
+        setIsModalSubmitting(false);
     };
 
-    const closePurchaseModal = () => {
-        setPurchasePlayer(null);
-        setPurchaseError('');
-        setIsPurchaseSubmitting(false);
+    const openPurchaseModal = (player) => openMarketModal(player, MODAL_MODES.BUY);
+    const openMultaModal = (player) => openMarketModal(player, MODAL_MODES.MULTA);
+
+    const closeModal = () => {
+        setModalPlayer(null);
+        setModalMode(null);
+        setModalError('');
+        setIsModalSubmitting(false);
     };
 
-    const handlePurchaseConfirm = async () => {
-        if (!purchasePlayer || !liga || !clube) return;
+    const applyPlayerToMyClub = (playerId) => {
+        setPlayersData((prev) =>
+            prev.map((entry) =>
+                entry.elencopadrao_id === playerId
+                    ? {
+                          ...entry,
+                          club_status: 'meu',
+                          club_name: clube?.nome ?? 'Meu clube',
+                          club_id: clube?.id ?? null,
+                          is_free_agent: false,
+                      }
+                    : entry,
+            ),
+        );
+    };
 
-        setIsPurchaseSubmitting(true);
-        setPurchaseError('');
+    const getModalPaymentAmount = () => {
+        if (!modalPlayer || !modalMode) return 0;
+        const baseValue = Number(modalPlayer.value_eur ?? 0);
+        if (modalMode === MODAL_MODES.BUY) {
+            return baseValue;
+        }
+
+        const multiplier = Number(liga?.multa_multiplicador ?? 2) || 2;
+        return Math.round(baseValue * multiplier);
+    };
+
+    const handleModalConfirm = async () => {
+        if (!modalPlayer || !liga || !clube || !modalMode) return;
+
+        setIsModalSubmitting(true);
+        setModalError('');
+
+        const isBuy = modalMode === MODAL_MODES.BUY;
+        const endpoint = isBuy ? 'comprar' : 'multa';
+        const paymentAmount = getModalPaymentAmount();
 
         try {
             const { data } = await window.axios.post(
-                `/api/ligas/${liga.id}/clubes/${clube.id}/comprar`,
+                `/api/ligas/${liga.id}/clubes/${clube.id}/${endpoint}`,
                 {
-                    elencopadrao_id: purchasePlayer.elencopadrao_id,
+                    elencopadrao_id: modalPlayer.elencopadrao_id,
                 },
             );
 
-            setPlayersData((prev) =>
-                prev.map((entry) =>
-                    entry.elencopadrao_id === purchasePlayer.elencopadrao_id
-                        ? {
-                              ...entry,
-                              club_status: 'meu',
-                              club_name: clube?.nome ?? 'Meu clube',
-                              club_id: clube?.id ?? null,
-                              is_free_agent: false,
-                          }
-                        : entry,
-                ),
+            applyPlayerToMyClub(modalPlayer.elencopadrao_id);
+            setClubBalance((prev) => prev - paymentAmount);
+            setClubSalaryPerRound((prev) => prev + (modalPlayer.wage_eur ?? 0));
+            setFeedback(
+                data?.message ??
+                    (isBuy
+                        ? 'Jogador comprado com sucesso.'
+                        : 'Multa paga e jogador transferido com sucesso.'),
             );
-
-            setClubBalance((prev) => prev - (purchasePlayer.value_eur ?? 0));
-            setClubSalaryPerRound((prev) => prev + (purchasePlayer.wage_eur ?? 0));
-            setFeedback(data?.message ?? 'Jogador comprado com sucesso.');
             setPage(1);
-            closePurchaseModal();
-        } catch (e) {
-            setPurchaseError(e.response?.data?.message ?? 'Não foi possível completar a compra.');
+            closeModal();
+        } catch (error) {
+            setModalError(
+                error.response?.data?.message ??
+                    (isBuy ? 'Não foi possível completar a compra.' : 'Não foi possível pagar a multa.'),
+            );
         } finally {
-            setIsPurchaseSubmitting(false);
+            setIsModalSubmitting(false);
         }
     };
 
     const renderAction = (player) => {
+        const isPlayerModalActive =
+            modalPlayer && modalPlayer.elencopadrao_id === player.elencopadrao_id;
+        const isBuyActive = modalMode === MODAL_MODES.BUY && isPlayerModalActive;
+        const isMultaActive = modalMode === MODAL_MODES.MULTA && isPlayerModalActive;
+
         if (player.club_status === 'livre') {
             const isDisabled = !clube;
             return (
@@ -364,9 +380,13 @@ export default function LigaMercado() {
                     type="button"
                     className={`table-action-badge primary${isDisabled ? ' disabled' : ''}`}
                     onClick={() => openPurchaseModal(player)}
-                    disabled={isDisabled}
+                    disabled={isDisabled || (isBuyActive && isModalSubmitting)}
                 >
-                    {isDisabled ? 'Crie seu clube' : 'Comprar'}
+                    {isBuyActive && isModalSubmitting
+                        ? 'Operando...'
+                        : isDisabled
+                        ? 'Crie seu clube'
+                        : 'Comprar'}
                 </button>
             );
         }
@@ -375,11 +395,11 @@ export default function LigaMercado() {
             return (
                 <button
                     type="button"
-                    className={`table-action-badge outline${loadingId === player.elencopadrao_id ? ' disabled' : ''}`}
-                    onClick={() => handleMulta(player)}
-                    disabled={loadingId === player.elencopadrao_id}
+                    className={`table-action-badge outline${isMultaActive && isModalSubmitting ? ' disabled' : ''}`}
+                    onClick={() => openMultaModal(player)}
+                    disabled={isMultaActive && isModalSubmitting}
                 >
-                    {loadingId === player.elencopadrao_id ? 'Operando...' : 'Roubar (multa)'}
+                    {isMultaActive && isModalSubmitting ? 'Operando...' : 'Roubar (multa)'}
                 </button>
             );
         }
@@ -403,6 +423,16 @@ export default function LigaMercado() {
             </main>
         );
     }
+
+    const modalPaymentAmount = getModalPaymentAmount();
+    const modalTitle =
+        modalMode === MODAL_MODES.MULTA
+            ? `Pagar multa por ${modalPlayer?.short_name || 'jogador'}`
+            : `Comprar ${modalPlayer?.short_name || 'jogador'}`;
+    const modalDescription =
+        modalMode === MODAL_MODES.MULTA
+            ? 'Veja o impacto financeiro antes de pagar a cláusula de rescisão.'
+            : 'Veja o impacto financeiro antes de confirmar a compra.';
 
     return (
         <main className="liga-mercado-screen" style={backgroundStyles}>
@@ -633,30 +663,26 @@ export default function LigaMercado() {
                 </div>
             </section>
 
-            {purchasePlayer && (
+            {modalPlayer && (
                 <div className="meu-elenco-modal-overlay" role="dialog" aria-modal="true">
                     <div className="meu-elenco-modal">
-                        <h3>Comprar {purchasePlayer.short_name || 'jogador'}</h3>
-                        <p className="meu-elenco-modal-description">
-                            Veja o impacto financeiro antes de confirmar a compra.
-                        </p>
+                        <h3>{modalTitle}</h3>
+                        <p className="meu-elenco-modal-description">{modalDescription}</p>
                         <div className="modal-field">
                             <span>Valor que será pago</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(purchasePlayer.value_eur)}</p>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(modalPaymentAmount)}</p>
                         </div>
                         <div className="modal-field">
                             <span>Salário do jogador</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(purchasePlayer.wage_eur)}</p>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(modalPlayer.wage_eur)}</p>
                         </div>
                         <div className="modal-field">
                             <span>Saldo atual da carteira</span>
                             <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance)}</p>
                         </div>
                         <div className="modal-field">
-                            <span>Saldo após a compra</span>
-                            <p style={{ fontWeight: 600 }}>
-                                {formatCurrency(clubBalance - (purchasePlayer.value_eur || 0))}
-                            </p>
+                            <span>Saldo após a operação</span>
+                            <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance - modalPaymentAmount)}</p>
                         </div>
                         <div className="modal-field">
                             <span>Custo por rodada atual</span>
@@ -665,21 +691,30 @@ export default function LigaMercado() {
                         <div className="modal-field">
                             <span>Novo custo por rodada</span>
                             <p style={{ fontWeight: 600 }}>
-                                {formatCurrency(clubSalaryPerRound + (purchasePlayer.wage_eur || 0))}
+                                {formatCurrency(clubSalaryPerRound + (modalPlayer.wage_eur || 0))}
                             </p>
                         </div>
-                        {purchaseError && <p className="modal-error">{purchaseError}</p>}
+                        {modalError && <p className="modal-error">{modalError}</p>}
                         <div className="meu-elenco-modal-actions">
-                            <button type="button" className="btn-outline" onClick={closePurchaseModal} disabled={isPurchaseSubmitting}>
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={closeModal}
+                                disabled={isModalSubmitting}
+                            >
                                 Cancelar
                             </button>
                             <button
                                 type="button"
                                 className="btn-primary"
-                                onClick={handlePurchaseConfirm}
-                                disabled={isPurchaseSubmitting}
+                                onClick={handleModalConfirm}
+                                disabled={isModalSubmitting}
                             >
-                                {isPurchaseSubmitting ? 'Operando...' : 'Confirmar compra'}
+                                {isModalSubmitting
+                                    ? 'Operando...'
+                                    : modalMode === MODAL_MODES.MULTA
+                                    ? 'Confirmar multa'
+                                    : 'Confirmar compra'}
                             </button>
                         </div>
                     </div>
