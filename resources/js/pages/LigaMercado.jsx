@@ -570,7 +570,7 @@ export default function LigaMercado() {
             
 
             {/* TABELA (DESKTOP + MOBILE) */}
-            <section className="mercado-table-wrap" aria-label="Tabela do mercado">
+            <section className="mercado-table-wrap" aria-label="Tabela do mercado" style={{ marginTop: 20 }}>
                 <div className="mercado-table-scroll">
                     <table className="mercado-table">
                         <thead>
