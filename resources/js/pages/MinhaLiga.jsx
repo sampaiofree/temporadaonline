@@ -25,10 +25,14 @@ const getLeagueInitials = (name) => {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
 };
 
+const getAppContext = () => window.__APP_CONTEXT__ ?? null;
+
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 
 export default function MinhaLiga() {
     const liga = getLigaFromWindow();
+    const appContext = getAppContext();
+    const resolveExistingClubName = () => appContext?.clube?.nome ?? '';
     const backgroundStyles = {
         '--mco-cover': `url(${backgroundDefault})`,
         '--mco-cover-mobile': `url(${backgroundVertical})`,
@@ -47,13 +51,13 @@ export default function MinhaLiga() {
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
     const [isClubModalOpen, setClubModalOpen] = useState(false);
-    const [clubName, setClubName] = useState('');
+    const [clubName, setClubName] = useState(resolveExistingClubName());
     const [clubFeedback, setClubFeedback] = useState('');
     const [clubErrors, setClubErrors] = useState([]);
     const [isSavingClub, setIsSavingClub] = useState(false);
 
     const clearClubForm = () => {
-        setClubName('');
+        setClubName(resolveExistingClubName());
         setClubErrors([]);
     };
 
@@ -138,12 +142,13 @@ export default function MinhaLiga() {
                 </a>
                 <button
                     type="button"
-                    className="btn-primary"
-                    onClick={() => {
-                        setClubModalOpen(true);
-                        setClubFeedback('');
-                    }}
-                >
+                className="btn-primary"
+                onClick={() => {
+                    setClubModalOpen(true);
+                    setClubFeedback('');
+                    setClubName(resolveExistingClubName());
+                }}
+            >
                     Meu clube
                 </button>
                 <p className="league-actions-copy">
