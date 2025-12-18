@@ -5,10 +5,13 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>MCO | Dashboard da Liga</title>
+        @php
+            $dashboardData = compact('hasClub', 'nextMatch', 'classification', 'actions');
+        @endphp
         <script>
             window.__LIGA__ = @json($liga);
             window.__CLUBE__ = @json($clube);
-            window.__DASHBOARD__ = @json(['hasClub' => $hasClub, 'nextMatch' => $nextMatch, 'classification' => $classification, 'actions' => $actions]);
+            window.__DASHBOARD__ = @json($dashboardData);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh

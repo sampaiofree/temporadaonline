@@ -9,17 +9,27 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 const formatCurrency = (value) => {
-    if (value === null || typeof value === 'undefined') {
-        return '—';
-    }
-
+    if (value === null || typeof value === 'undefined') return '—';
     return currencyFormatter.format(value);
 };
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
 const getFinanceiroFromWindow = () =>
-    window.__FINANCEIRO__ ?? { saldo: null, salarioPorRodada: 0, rodadasRestantes: null, movimentos: [] };
+    window.__FINANCEIRO__ ?? {
+        saldo: null,
+        salarioPorRodada: 0,
+        rodadasRestantes: null,
+        movimentos: [],
+    };
+
+const TYPE_ICONS = {
+    venda: '⬆',
+    compra: '⬇',
+    multa: '⚠',
+    troca: '🔁',
+    jogador_livre: '➕',
+};
 
 const TYPE_LABELS = {
     jogador_livre: 'Jogador livre',
@@ -35,40 +45,37 @@ export default function FinanceiroClube() {
     const financeiro = getFinanceiroFromWindow();
     const movimentos = Array.isArray(financeiro.movimentos) ? financeiro.movimentos : [];
 
+    const saldo = financeiro.saldo;
+    const salario = financeiro.salarioPorRodada ?? 0;
+    const rodadas = financeiro.rodadasRestantes;
+
     const backgroundStyles = {
         '--mco-cover': `url(${backgroundDefault})`,
         '--mco-cover-mobile': `url(${backgroundVertical})`,
     };
 
+    // Lógica de texto de fôlego do desenvolvedor
+    const folegoText =
+        rodadas === null
+            ? 'Sem gasto fixo'
+            : rodadas < 0
+            ? 'Saldo Negativo'
+            : `${rodadas} rodadas`;
+
     if (!liga) {
         return (
-            <main className="mco-screen" style={backgroundStyles} aria-label="Financeiro do clube">
-                <p className="ligas-empty">Liga indisponível. Volte para a lista e tente novamente.</p>
+            <main className="mco-screen" style={backgroundStyles}>
+                <p className="ligas-empty">Liga indisponível. Volte e tente novamente.</p>
                 <Navbar active="ligas" />
             </main>
         );
     }
 
     const minhaLigaHref = `/minha_liga?liga_id=${liga.id}`;
-    const saldo = financeiro.saldo;
-    const salario = financeiro.salarioPorRodada ?? 0;
-    const rodadasRestantes = financeiro.rodadasRestantes;
-
-    const situationText = (() => {
-        if (rodadasRestantes === null) {
-            return 'Sem custos fixos por rodada.';
-        }
-
-        if (rodadasRestantes < 0) {
-            return 'Você já está no negativo. Compras e multas ficam bloqueadas até regularizar.';
-        }
-
-        return `Você aguenta ${rodadasRestantes} rodadas no ritmo atual.`;
-    })();
 
     return (
         <main className="mco-screen" style={backgroundStyles} aria-label="Financeiro do clube">
-            <section className="league-header" aria-label="Resumo da liga e clube">
+            <section className="league-header">
                 <p className="league-title">Financeiro</p>
                 <div className="league-meta">
                     <div>
@@ -79,17 +86,13 @@ export default function FinanceiroClube() {
                         <span>Clube</span>
                         <strong>{clube?.nome ?? 'Ainda não criado'}</strong>
                     </div>
-                    <div>
-                        <span>Jogo</span>
-                        <strong>{liga.jogo || 'Não informado'}</strong>
-                    </div>
                 </div>
             </section>
 
             {!clube ? (
-                <section className="league-actions" aria-label="Aviso de clube não criado">
+                <section className="league-actions">
                     <p className="ligas-empty">
-                        Você ainda não criou um clube nesta liga. Registre um clube antes de acompanhar o financeiro.
+                        Você ainda não criou um clube nesta liga.
                     </p>
                     <a className="btn-primary" href={minhaLigaHref}>
                         Criar meu clube
@@ -97,50 +100,55 @@ export default function FinanceiroClube() {
                 </section>
             ) : (
                 <>
-                    <section className="league-menu" aria-label="Indicadores financeiros">
+                    {/* Seção de Cards - Usando suas classes originais */}
+                    <section className="league-menu">
                         <article className="card card-gold">
                             <p className="card-title">Saldo atual</p>
                             <p className="wallet-balance">{formatCurrency(saldo)}</p>
-                            <p className="card-meta">Dinheiro disponível para mercado e salários.</p>
+                            <p className="card-meta">Dinheiro disponível para mercado.</p>
                         </article>
+
                         <article className="card card-gold">
                             <p className="card-title">Salário / rodada</p>
                             <p className="wallet-balance">{formatCurrency(salario)}</p>
-                            <p className="card-meta">Soma dos salários (ativos) do seu elenco.</p>
+                            <p className="card-meta">Custo fixo do elenco.</p>
                         </article>
+
                         <article className="card card-gold">
                             <p className="card-title">Fôlego</p>
-                            <p className="wallet-balance">{rodadasRestantes === null ? '—' : rodadasRestantes}</p>
-                            <p className="card-meta">{situationText}</p>
+                            <p className="wallet-balance">{folegoText}</p>
+                            {rodadas !== null && rodadas <= 3 && (
+                                <p className="card-meta" style={{ color: '#ffcc00' }}>
+                                    ⚠ Atenção ao caixa!
+                                </p>
+                            )}
                         </article>
                     </section>
 
-                    <section className="wallet-card" aria-label="Últimos movimentos">
+                    {/* Seção de Histórico - Usando suas classes originais */}
+                    <section className="wallet-card">
                         <h2>Últimos movimentos</h2>
                         {movimentos.length === 0 ? (
                             <p className="card-meta">Nenhum movimento registrado ainda.</p>
                         ) : (
-                            <div className="profile-details" aria-label="Lista de movimentos">
+                            <div className="profile-details">
                                 {movimentos.map((movimento) => (
                                     <article key={movimento.id} className="profile-field">
                                         <span className="profile-label">
-                                            {TYPE_LABELS[movimento.tipo] ?? movimento.tipo}
+                                            {TYPE_ICONS[movimento.tipo] ?? '•'}{' '}
+                                            {movimento.observacao || TYPE_LABELS[movimento.tipo] || movimento.tipo}
                                         </span>
-                                        <span className="profile-value">
+                                        <span 
+                                            className="profile-value" 
+                                            style={{ color: movimento.valor < 0 ? '#ff4d4d' : '#2ecc71' }}
+                                        >
                                             {formatCurrency(movimento.valor)}
                                         </span>
-                                        {movimento.observacao && (
-                                            <span className="card-meta">{movimento.observacao}</span>
-                                        )}
                                     </article>
                                 ))}
                             </div>
                         )}
-                        <div className="profile-footer">
-                            <a className="btn-outline" href={minhaLigaHref}>
-                                Voltar para Minha Liga
-                            </a>
-                        </div>
+                        
                     </section>
                 </>
             )}
@@ -149,4 +157,3 @@ export default function FinanceiroClube() {
         </main>
     );
 }
-
