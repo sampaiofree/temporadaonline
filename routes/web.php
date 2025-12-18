@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ElencoController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
 use App\Http\Controllers\LigaDashboardController;
@@ -12,6 +13,10 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'dashboard');
+
+Route::prefix('admin')->name('admin.')->group(function () {
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+});
 
 Route::middleware('auth')->group(function () {
     Route::view('/dashboard', 'dashboard')->name('dashboard');
