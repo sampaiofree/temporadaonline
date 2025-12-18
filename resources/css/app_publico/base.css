@@ -1429,3 +1429,23 @@ a:focus-visible {
         padding: var(--gap-lg);
     }
 }
+
+/* DESKTOP */
+.mercado-table-desktop {
+  display: block;
+}
+
+/* MOBILE */
+.mercado-list-mobile {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mercado-table-desktop {
+    display: none;
+  }
+  .mercado-list-mobile {
+    display: block;
+  }
+}
+

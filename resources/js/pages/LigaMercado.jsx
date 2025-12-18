@@ -20,27 +20,42 @@ const STATUS_FILTERS = [
     { value: 'outro', label: 'Outros clubes' },
 ];
 
+const OVR_FILTERS = [
+    { value: 'all', label: 'OVR: Todos' },
+    { value: '50-69', label: '50–69' },
+    { value: '70-79', label: '70–79' },
+    { value: '80-84', label: '80–84' },
+    { value: '85-89', label: '85–89' },
+    { value: '90+', label: '90+' },
+];
+
 const proxyFaceUrl = (url) => {
-    if (!url) {
-        return null;
-    }
+    if (!url) return null;
     const trimmed = url.replace(/^https?:\/\//, '');
     return `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&w=180&h=180`;
 };
 
 const formatCurrency = (value) => {
-    if (value === null || typeof value === 'undefined') {
-        return '—';
-    }
-
+    if (value === null || typeof value === 'undefined') return '—';
     return currencyFormatter.format(value);
+};
+
+const normalizePositions = (positions) => {
+    if (!positions) return [];
+    return String(positions).split(',').map((p) => p.trim()).filter(Boolean);
 };
 
 export default function LigaMercado() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const mercado = getMercadoFromWindow();
+
     const [statusFilter, setStatusFilter] = useState('all');
+    const [positionFilter, setPositionFilter] = useState('all');
+    const [ovrFilter, setOvrFilter] = useState('all');
+    const [page, setPage] = useState(1);
+    const perPage = 25;
+
     const [feedback, setFeedback] = useState('');
     const [loadingId, setLoadingId] = useState(null);
 
@@ -49,130 +64,144 @@ export default function LigaMercado() {
         '--mco-cover-mobile': `url(${backgroundVertical})`,
     };
 
-    const filteredPlayers = useMemo(() => {
-        return (mercado.players || []).filter((player) => {
-            if (statusFilter === 'all') {
-                return true;
-            }
+    const allPlayers = mercado.players || [];
 
-            return player.club_status === statusFilter;
+    // Gera opções de posição dinamicamente baseado nos jogadores da liga
+    const positionOptions = useMemo(() => {
+        const set = new Set();
+        allPlayers.forEach((p) => {
+            normalizePositions(p.player_positions).forEach((pos) => set.add(pos));
         });
-    }, [mercado.players, statusFilter]);
+        return ['all', ...Array.from(set).sort()];
+    }, [allPlayers]);
+
+    // Lógica de Filtro e Ordenação
+    const filteredPlayers = useMemo(() => {
+        return allPlayers.filter((player) => {
+            const matchesStatus = statusFilter === 'all' || player.club_status === statusFilter;
+            const matchesPos = positionFilter === 'all' || normalizePositions(player.player_positions).includes(positionFilter);
+            
+            let matchesOvr = true;
+            if (ovrFilter !== 'all') {
+                const ovr = Number(player.overall ?? 0);
+                if (ovrFilter === '90+') matchesOvr = ovr >= 90;
+                else {
+                    const [min, max] = ovrFilter.split('-').map(Number);
+                    matchesOvr = ovr >= min && ovr <= max;
+                }
+            }
+            return matchesStatus && matchesPos && matchesOvr;
+        }).sort((a, b) => (b.overall || 0) - (a.overall || 0)); // Ordena por maior OVR por padrão
+    }, [allPlayers, statusFilter, positionFilter, ovrFilter]);
+
+    // Paginação
+    const paginatedItems = useMemo(() => {
+        const start = (page - 1) * perPage;
+        return filteredPlayers.slice(start, start + perPage);
+    }, [filteredPlayers, page]);
 
     const handleAction = async (player, type) => {
         if (!liga || !clube) {
-            setFeedback('Você precisa criar um clube antes de operar no mercado.');
+            setFeedback('Crie um clube antes de negociar.');
             return;
         }
-
-        if (loadingId) {
-            return;
-        }
-
+        if (loadingId) return;
         setLoadingId(player.elencopadrao_id);
         setFeedback('');
 
-        const baseUrl = `/api/ligas/${liga.id}/clubes/${clube.id}`;
-        let endpoint = 'comprar';
-        const payload = { elencopadrao_id: player.elencopadrao_id };
-
-        if (type === 'multa') {
-            endpoint = 'multa';
-        }
-
+        const endpoint = type === 'multa' ? 'multa' : 'comprar';
         try {
-            const { data } = await window.axios.post(`${baseUrl}/${endpoint}`, payload);
-            setFeedback(data?.message ?? 'Operação concluída.');
+            const { data } = await window.axios.post(`/api/ligas/${liga.id}/clubes/${clube.id}/${endpoint}`, {
+                elencopadrao_id: player.elencopadrao_id 
+            });
+            setFeedback(data?.message ?? 'Sucesso!');
         } catch (error) {
-            setFeedback(error.response?.data?.message ?? 'Não foi possível completar a operação.');
+            setFeedback(error.response?.data?.message ?? 'Erro na operação.');
         } finally {
             setLoadingId(null);
         }
     };
 
-    if (!liga) {
-        return (
-            <main className="liga-mercado-screen" style={backgroundStyles}>
-                <p className="ligas-empty">Liga indisponível. Volte para o painel.</p>
-                <Navbar active="ligas" />
-            </main>
-        );
-    }
-
-    const heroMessage = clube
-        ? `Operando como ${clube.nome}`
-        : 'Crie seu clube para negociar no mercado.';
+    if (!liga) return null;
 
     return (
         <main className="liga-mercado-screen" style={backgroundStyles}>
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">MERCADO</p>
                 <h1 className="ligas-title">Jogadores da liga</h1>
-                <p className="ligas-subtitle">{heroMessage}</p>
+                <p className="ligas-subtitle">{clube ? `Operando como ${clube.nome}` : 'Crie seu clube para negociar.'}</p>
             </section>
 
+            {/* Filtros Principais (Pills) */}
             <section className="mercado-filters">
-                {STATUS_FILTERS.map((filter) => (
+                {STATUS_FILTERS.map((f) => (
                     <button
-                        key={filter.value}
-                        type="button"
-                        className={`filter-pill${statusFilter === filter.value ? ' active' : ''}`}
-                        onClick={() => setStatusFilter(filter.value)}
+                        key={f.value}
+                        className={`filter-pill ${statusFilter === f.value ? 'active' : ''}`}
+                        onClick={() => { setStatusFilter(f.value); setPage(1); }}
                     >
-                        {filter.label}
+                        {f.label}
                     </button>
                 ))}
             </section>
 
-            <section className="mercado-list" aria-label="Jogadores do mercado">
-                {filteredPlayers.length === 0 ? (
-                    <p className="ligas-empty">Nenhum jogador encontrado para esse filtro.</p>
+            {/* Filtros Avançados (Selects) - Estilizados para não quebrar */}
+            <section className="mercado-filters" style={{ marginTop: '10px', gap: '10px', flexWrap: 'wrap' }}>
+                <select 
+                    className="filter-pill" 
+                    style={{ background: '#222', color: '#fff', border: '1px solid #444' }}
+                    value={positionFilter}
+                    onChange={(e) => { setPositionFilter(e.target.value); setPage(1); }}
+                >
+                    <option value="all">Todas as Posições</option>
+                    {positionOptions.filter(p => p !== 'all').map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+
+                <select 
+                    className="filter-pill" 
+                    style={{ background: '#222', color: '#fff', border: '1px solid #444' }}
+                    value={ovrFilter}
+                    onChange={(e) => { setOvrFilter(e.target.value); setPage(1); }}
+                >
+                    {OVR_FILTERS.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+                </select>
+            </section>
+
+            <section className="mercado-list">
+                {paginatedItems.length === 0 ? (
+                    <p className="ligas-empty">Nenhum jogador encontrado.</p>
                 ) : (
-                    filteredPlayers.map((player) => (
+                    paginatedItems.map((player) => (
                         <article key={player.elencopadrao_id} className="mercado-card">
                             <div className="mercado-card-image">
                                 {player.player_face_url ? (
-                                    <img src={proxyFaceUrl(player.player_face_url)} alt={player.short_name || player.long_name} />
+                                    <img src={proxyFaceUrl(player.player_face_url)} alt={player.short_name} />
                                 ) : (
-                                    <span>{(player.short_name || player.long_name || '—').slice(0, 2).toUpperCase()}</span>
+                                    <span>{(player.short_name || '—').slice(0, 2).toUpperCase()}</span>
                                 )}
                             </div>
                             <div className="mercado-card-body">
                                 <div className="mercado-card-title">
-                                    <strong>{player.short_name || player.long_name || 'Sem nome'}</strong>
-                                    <span>{player.player_positions ?? 'Posição não informada'}</span>
+                                    <strong>{player.short_name || player.long_name}</strong>
+                                    <span>{player.player_positions}</span>
                                 </div>
-                                <p className="mercado-card-overall">OVR {player.overall ?? '—'}</p>
+                                <p className="mercado-card-overall">OVR {player.overall}</p>
                                 <p className="mercado-card-meta">
-                                    Valor: {formatCurrency(player.value_eur)} · Salário: {formatCurrency(player.wage_eur)}
+                                    V: {formatCurrency(player.value_eur)} · S: {formatCurrency(player.wage_eur)}
                                 </p>
                                 <p className="mercado-card-club">
-                                    {player.club_status === 'livre'
-                                        ? 'Livre'
-                                        : player.club_status === 'meu'
-                                            ? 'Meu clube'
-                                            : `Clube atual: ${player.club_name}`}
+                                    {player.club_status === 'livre' ? 'Livre' : player.club_name}
                                 </p>
                             </div>
                             <div className="mercado-card-actions">
                                 {player.can_buy && (
-                                    <button
-                                        type="button"
-                                        className="btn-primary"
-                                        onClick={() => handleAction(player, 'comprar')}
-                                        disabled={loadingId === player.elencopadrao_id}
-                                    >
-                                        {loadingId === player.elencopadrao_id ? 'Operando...' : 'Comprar livre'}
+                                    <button className="btn-primary" onClick={() => handleAction(player, 'comprar')} disabled={!!loadingId}>
+                                        {loadingId === player.elencopadrao_id ? '...' : 'Comprar'}
                                     </button>
                                 )}
                                 {player.can_multa && (
-                                    <button
-                                        type="button"
-                                        className="btn-outline"
-                                        onClick={() => handleAction(player, 'multa')}
-                                        disabled={loadingId === player.elencopadrao_id}
-                                    >
-                                        {loadingId === player.elencopadrao_id ? 'Operando...' : 'Pagar multa'}
+                                    <button className="btn-outline" onClick={() => handleAction(player, 'multa')} disabled={!!loadingId}>
+                                        {loadingId === player.elencopadrao_id ? '...' : 'Multa'}
                                     </button>
                                 )}
                             </div>
@@ -180,8 +209,25 @@ export default function LigaMercado() {
                     ))
                 )}
             </section>
-            {feedback && <p className="elenco-feedback">{feedback}</p>}
 
+            {/* Paginação Simples */}
+            {filteredPlayers.length > perPage && (
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', padding: '20px' }}>
+                    <button 
+                        className="btn-outline" 
+                        disabled={page === 1} 
+                        onClick={() => setPage(p => p - 1)}
+                    > Anterior </button>
+                    <span style={{ color: '#fff', alignSelf: 'center' }}>Pág {page}</span>
+                    <button 
+                        className="btn-outline" 
+                        disabled={page * perPage >= filteredPlayers.length} 
+                        onClick={() => setPage(p => p + 1)}
+                    > Próxima </button>
+                </div>
+            )}
+
+            {feedback && <p className="elenco-feedback">{feedback}</p>}
             <Navbar active="ligas" />
         </main>
     );
