@@ -14,8 +14,8 @@ return [
     */
 
     'defaults' => [
-        'guard' => env('AUTH_GUARD', 'player'),
-        'passwords' => env('AUTH_PASSWORD_BROKER', 'players'),
+        'guard' => 'web',
+        'passwords' => 'users',
     ],
 
     /*
@@ -36,13 +36,9 @@ return [
     */
 
     'guards' => [
-        'player' => [
+        'web' => [
             'driver' => 'session',
-            'provider' => 'jogadores',
-        ],
-        'admin' => [
-            'driver' => 'session',
-            'provider' => 'admins',
+            'provider' => 'users',
         ],
     ],
 
@@ -64,11 +60,7 @@ return [
     */
 
     'providers' => [
-        'jogadores' => [
-            'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', App\Models\Jogador::class),
-        ],
-        'admins' => [
+        'users' => [
             'driver' => 'eloquent',
             'model' => App\Models\User::class,
         ],
@@ -94,15 +86,9 @@ return [
     */
 
     'passwords' => [
-        'players' => [
-            'provider' => 'jogadores',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
-            'expire' => 60,
-            'throttle' => 60,
-        ],
-        'admins' => [
-            'provider' => 'admins',
-            'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
+        'users' => [
+            'provider' => 'users',
+            'table' => 'password_reset_tokens',
             'expire' => 60,
             'throttle' => 60,
         ],

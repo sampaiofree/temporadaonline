@@ -1,6 +1,16 @@
-export default function DashboardButton({ label, paths = [], onClick }) {
+export default function DashboardButton({ label, paths = [], onClick, href }) {
+    const handleClick = (event) => {
+        if (onClick) {
+            onClick(event);
+        }
+
+        if (href && !event.defaultPrevented) {
+            window.location.href = href;
+        }
+    };
+
     return (
-        <button type="button" className="dashboard-btn" onClick={onClick}>
+        <button type="button" className="dashboard-btn" onClick={handleClick}>
             <svg className="btn-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 {paths.map((d, index) => (
                     <path key={index} d={d} />

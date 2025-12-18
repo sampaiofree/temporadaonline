@@ -1,84 +1,182 @@
+import { useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import DashboardButton from '../components/app_publico/DashboardButton';
 import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.webp';
 import backgroundVertical from '../../../storage/app/public/app/background/fundo_vertical.webp';
-import leagueShield from '../../images/league-shield.svg';
 
-const LEAGUE_INFO = {
-    name: 'Liga Suprema MCO',
-    participants: '12 Participantes',
-    level: 'Nível S',
-    platform: 'PlayStation 5 · Geração 4',
-    game: 'MCO FIFA 17',
+const TYPE_LABELS = {
+    publica: 'Liga pública · aberta para todos os jogadores',
+    privada: 'Liga privada · acesso somente por convite',
 };
 
-const MENU_ACTIONS = [
-    {
-        label: 'Meu Time',
-        paths: ['M3 13h6l3-5 4 9h4'],
-    },
-    {
-        label: 'Meu Elenco',
-        paths: ['M5 8h14l-7 11-7-11z'],
-    },
-    {
-        label: 'Partidas',
-        paths: ['M3 6h18'],
-    },
-    {
-        label: 'Chat',
-        paths: ['M4 4h16v14H4z'],
-    },
-    {
-        label: 'Resultados',
-        paths: ['M6 16h12', 'M6 12h12', 'M6 8h12'],
-    },
-];
+const STATUS_LABELS = {
+    ativa: 'Liga ativa · partidas acontecendo agora',
+    encerrada: 'Liga encerrada · inscrições e jogos finalizados',
+    aguardando: 'Liga aguardando · inscrições em breve',
+};
+
+const fallbackImage = 'https://via.placeholder.com/180?text=MCO';
+
+const getLigaFromWindow = () => window.__LIGA__ ?? null;
 
 export default function MinhaLiga() {
+    const liga = getLigaFromWindow();
     const backgroundStyles = {
         '--mco-cover': `url(${backgroundDefault})`,
         '--mco-cover-mobile': `url(${backgroundVertical})`,
+    };
+
+    if (!liga) {
+        return (
+            <main className="mco-screen" style={backgroundStyles} aria-label="Minha liga">
+                <p className="ligas-empty">Sua liga não foi encontrada. Volte para a lista e tente novamente.</p>
+                <Navbar active="ligas" />
+            </main>
+        );
+    }
+
+    const elencoHref = `/minha_liga/elenco?liga_id=${liga.id}`;
+    const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
+    const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
+    const [isClubModalOpen, setClubModalOpen] = useState(false);
+    const [clubName, setClubName] = useState('');
+    const [clubFeedback, setClubFeedback] = useState('');
+    const [clubErrors, setClubErrors] = useState([]);
+    const [isSavingClub, setIsSavingClub] = useState(false);
+
+    const clearClubForm = () => {
+        setClubName('');
+        setClubErrors([]);
+    };
+
+    const handleClubSubmit = async (event) => {
+        event.preventDefault();
+
+        const errors = [];
+        if (!clubName.trim()) {
+            errors.push('Informe um nome para o clube.');
+        }
+
+        if (errors.length > 0) {
+            setClubErrors(errors);
+            return;
+        }
+
+        setIsSavingClub(true);
+        setClubErrors([]);
+
+        try {
+            const payload = new FormData();
+            payload.append('nome', clubName.trim());
+            payload.append('liga_id', liga.id);
+
+            const { data } = await window.axios.post('/minha_liga/clubes', payload);
+
+            if (data?.redirect) {
+                window.location.href = data.redirect;
+                return;
+            }
+
+            setClubFeedback(data?.message ?? 'Clube salvo com sucesso.');
+            setClubModalOpen(false);
+            clearClubForm();
+        } catch (error) {
+            const message =
+                error.response?.data?.message ??
+                'Não foi possível salvar o clube. Tente novamente.';
+            setClubErrors([message]);
+        } finally {
+            setIsSavingClub(false);
+        }
     };
 
     return (
         <main className="mco-screen" style={backgroundStyles} aria-label="Minha liga">
             <section className="league-header">
                 <div className="league-logo">
-                    <img src={leagueShield} alt={`Escudo da ${LEAGUE_INFO.name}`} />
+                    <img src={liga.imagem || fallbackImage} alt={`Escudo da ${liga.nome}`} />
                 </div>
-                <p className="league-title">{LEAGUE_INFO.name}</p>
+                <p className="league-title">{liga.nome}</p>
                 <div className="league-meta">
                     <div>
-                        <span>Número de participantes</span>
-                        <strong>{LEAGUE_INFO.participants}</strong>
-                    </div>
-                    <div>
                         <span>Nível da liga</span>
-                        <strong>{LEAGUE_INFO.level}</strong>
+                        <strong>{TYPE_LABELS[liga.tipo] ? liga.tipo.toUpperCase() : 'INDIVIDUAL'}</strong>
                     </div>
                     <div>
                         <span>Plataforma & Geração</span>
-                        <strong>{LEAGUE_INFO.platform}</strong>
+                        <strong>
+                            {[liga.plataforma, liga.geracao].filter(Boolean).join(' · ') || 'Não informados'}
+                        </strong>
                     </div>
                     <div>
                         <span>Jogo</span>
-                        <strong>{LEAGUE_INFO.game}</strong>
+                        <strong>{liga.jogo || 'Não informado'}</strong>
                     </div>
                 </div>
             </section>
-
-            <section className="league-menu" aria-label="Ações da liga">
-                {MENU_ACTIONS.map((action) => (
-                    <DashboardButton key={action.label} label={action.label} paths={action.paths} />
-                ))}
+            <section className="league-actions">
+                <a className="btn-primary" href={elencoHref}>
+                    Elenco
+                </a>
+                <a className="btn-outline" href={financeiroHref}>
+                    Financeiro
+                </a>
+                <a className="btn-outline" href={meuElencoHref}>
+                    Meu elenco
+                </a>
+                <button
+                    type="button"
+                    className="btn-outline"
+                    onClick={() => {
+                        setClubModalOpen(true);
+                        setClubFeedback('');
+                    }}
+                >
+                    Meu clube
+                </button>
+                <p className="league-actions-copy">
+                    Confira o elenco completo do jogo que alimenta esta liga, ordenado por nome e pronto para analisar.
+                </p>
             </section>
-
-            <section className="wallet-card" aria-label="Carteira">
-                <h2>Carteira</h2>
-                <p className="wallet-balance">$15.750,00</p>
-            </section>
-
+            {clubFeedback && <p className="league-actions-copy success">{clubFeedback}</p>}
+            {isClubModalOpen && (
+                <div className="club-modal-overlay" role="presentation" onClick={() => setClubModalOpen(false)}>
+                    <div
+                        className="club-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Cadastrar clube"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h3>Criar clube</h3>
+                        <p>Informe apenas um nome para o seu clube.</p>
+                        <form onSubmit={handleClubSubmit} className="club-form">
+                            <label htmlFor="club-name">Nome do clube</label>
+                            <input
+                                id="club-name"
+                                type="text"
+                                value={clubName}
+                                onChange={(event) => setClubName(event.target.value)}
+                                placeholder="Ex.: Furia FC"
+                            />
+                            {clubErrors.length > 0 && (
+                                <ul className="club-errors">
+                                    {clubErrors.map((error) => (
+                                        <li key={error}>{error}</li>
+                                    ))}
+                                </ul>
+                            )}
+                            <div className="club-actions">
+                                <button className="btn-outline" type="button" onClick={() => setClubModalOpen(false)}>
+                                    Cancelar
+                                </button>
+                                <button className="btn-primary" type="submit" disabled={isSavingClub}>
+                                    {isSavingClub ? 'Salvando...' : 'Salvar clube'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
             <Navbar active="ligas" />
         </main>
     );

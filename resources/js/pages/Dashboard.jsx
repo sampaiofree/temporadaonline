@@ -10,6 +10,7 @@ const BUTTONS = [
             'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2',
             'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
         ],
+        href: '/perfil',
     },
     {
         label: 'Minhas Ligas',
@@ -42,7 +43,12 @@ export default function Dashboard() {
         <main className="mco-screen" style={backgroundStyles} aria-label="Tela inicial do MCO">
             <section className="dashboard-actions" aria-label="Ações rápidas">
                 {BUTTONS.map((button) => (
-                    <DashboardButton key={button.label} label={button.label} paths={button.paths} />
+                    <DashboardButton
+                        key={button.label}
+                        label={button.label}
+                        paths={button.paths}
+                        href={button.href}
+                    />
                 ))}
             </section>
             <Navbar active="home" />

@@ -20,6 +20,9 @@ return new class extends Migration
 
             Schema::rename('jogadores', 'jogadores_old');
 
+            DB::statement('DROP INDEX IF EXISTS jogadores_email_unique;');
+            DB::statement('DROP INDEX IF EXISTS jogadores_nickname_unique;');
+
             Schema::create('jogadores', function (Blueprint $table) {
                 $table->id();
                 $table->string('nome');
@@ -67,6 +70,9 @@ return new class extends Migration
             DB::statement('PRAGMA foreign_keys=OFF;');
 
             Schema::rename('jogadores', 'jogadores_old');
+
+            DB::statement('DROP INDEX IF EXISTS jogadores_email_unique;');
+            DB::statement('DROP INDEX IF EXISTS jogadores_nickname_unique;');
 
             Schema::create('jogadores', function (Blueprint $table) {
                 $table->id();

@@ -57,3 +57,9 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## Importando o elenco padrão (FC26)
+
+1. Rode `php artisan migrate` para criar a nova tabela `elencopadrao`.
+2. Execute `php artisan elenco:import FC26.csv fc26` para ler `storage/app/private/elenco/FC26.csv`, preencher os campos com os dados do arquivo e relacionar tudo ao `jogo` que possui `slug = "fc26"`.
+3. A cada importação o comando é idempotente (usa `long_name` + `jogo_id` como chave) e atualiza o registro caso ele já exista.

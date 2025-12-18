@@ -3,7 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\Jogador;
+use App\Models\Profile;
+use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,27 +31,33 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
-            'nome' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:jogadores,email'],
-            'whatsapp' => ['required', 'digits_between:10,15'],
+            'nome' => ['required_without:name', 'string', 'max:255'],
+            'name' => ['required_without:nome', 'string', 'max:255'],
+            'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
+            'whatsapp' => ['nullable', 'digits_between:10,15'],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
-        $jogador = Jogador::create([
-            'nome' => $validated['nome'],
-            'nickname' => $validated['nickname'] ?? null,
+        $name = $validated['nome'] ?? $validated['name'];
+
+        $user = User::create([
+            'name' => $name,
             'email' => $validated['email'],
-            'whatsapp' => $validated['whatsapp'],
             'password' => Hash::make($validated['password']),
+        ]);
+
+        Profile::create([
+            'user_id' => $user->id,
+            'whatsapp' => $validated['whatsapp'] ?? null,
             'regiao' => 'Brasil',
             'idioma' => 'Português do Brasil',
             'reputacao_score' => 99,
             'nivel' => 0,
         ]);
 
-        event(new Registered($jogador));
+        event(new Registered($user));
 
-        Auth::login($jogador);
+        Auth::login($user);
 
         if ($request->expectsJson()) {
             return response()->json([

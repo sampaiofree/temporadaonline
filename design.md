@@ -11,11 +11,6 @@
 
 ## 2. PALETA DE CORES (COLOR SCHEME)
 
-### Backgrounds (Sólidos)
-* [cite_start]**Base Background:** `#121212` (Preto Carvão Profundo)[cite: 5].
-* [cite_start]**Surface Level 1 (Cards/Containers):** `#1E1E1E` (Preto Fosco)[cite: 6].
-* [cite_start]**Surface Level 2 (Divisores/Linhas):** `#333333` (Cinza Escuro)[cite: 7].
-
 ### Accent Colors (Ação e Destaque)
 * [cite_start]**Primary Brand:** `#FFD700` (Ouro Vibrante) – Usado para CTAs, ícones ativos e números de destaque[cite: 9].
 * [cite_start]**Secondary Brand:** `#FFFFFF` (Branco Puro) – Usado para títulos e textos de leitura[cite: 10].
