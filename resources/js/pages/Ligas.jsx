@@ -211,11 +211,17 @@ export default function Ligas() {
                             </td>
                             <td className="col-action">
                                 {liga.registered ? (
-                                    <span className="table-action-badge neutral">Você participa</span>
+                                    <button
+                                        type="button"
+                                        className="table-action-badge primary btn-primary"
+                                        onClick={() => (window.location.href = `/minha_liga?liga_id=${liga.id}`)}
+                                    >
+                                        Ir para minha liga
+                                    </button>
                                 ) : (
                                     <button
                                         type="button"
-                                        className="table-action-badge primary"
+                                        className="table-action-badge primary btn-primary"
                                         onClick={() => openModal(liga)}
                                     >
                                         Entrar
