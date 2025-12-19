@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 
 const TYPE_LABELS = {
@@ -33,7 +33,43 @@ export default function Ligas() {
     const allLigas = getAllLigasFromWindow();
     const myLigas = getMyLigasFromWindow();
     const [filter, setFilter] = useState(() => (myLigas.length > 0 ? 'mine' : 'all'));
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [selectedJogo, setSelectedJogo] = useState('');
+    const [selectedPlataforma, setSelectedPlataforma] = useState('');
     const ligas = filter === 'mine' ? myLigas : allLigas;
+    const jogos = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    allLigas
+                        .map((liga) => liga.jogo)
+                        .filter((value) => value && value.toString().trim() !== ''),
+                ),
+            ),
+        [allLigas],
+    );
+    const plataformas = useMemo(
+        () =>
+            Array.from(
+                new Set(
+                    allLigas
+                        .map((liga) => liga.plataforma)
+                        .filter((value) => value && value.toString().trim() !== ''),
+                ),
+            ),
+        [allLigas],
+    );
+    const displayedLigas = useMemo(() => {
+        return ligas.filter((liga) => {
+            if (selectedJogo && liga.jogo !== selectedJogo) {
+                return false;
+            }
+            if (selectedPlataforma && liga.plataforma !== selectedPlataforma) {
+                return false;
+            }
+            return true;
+        });
+    }, [ligas, selectedJogo, selectedPlataforma]);
 
     const openModal = (liga) => {
         setJoinError('');
@@ -112,60 +148,158 @@ export default function Ligas() {
             <div className="ligas-filter-row">
                 <button
                     type="button"
-                    className={`filter-button${filter === 'mine' ? ' active' : ''}`}
+                    className={`filter-button${filter === 'mine' ? ' active' : ''} btn-primary`}
                     onClick={() => setFilter('mine')}
                 >
                     Minhas ligas
                 </button>
                 <button
                     type="button"
-                    className={`filter-button${filter === 'all' ? ' active' : ''}`}
+                    className={`filter-button${filter === 'all' ? ' active' : ''} btn-primary`}
                     onClick={() => setFilter('all')}
                 >
                     Todas as ligas
                 </button>
+                <button
+                    type="button"
+                    className="filter-button btn-primary"
+                    onClick={() => setFiltersOpen(true)}
+                >
+                    Filtrar
+                </button>
             </div>
-            <section className="ligas-list" aria-label="Cartas de ligas">
-                {ligas.length === 0 ? (
+            <section className="mercado-table-scroll" aria-label="Tabela de ligas">
+                {displayedLigas.length === 0 ? (
                     <p className="ligas-empty">{emptyMessage}</p>
                 ) : (
-                    <div className="ligas-grid">
-                        {ligas.map((liga) => (
-                            <article
-                                key={liga.id}
-                                className="liga-card"
-                                role="button"
-                                tabIndex={0}
-                                onClick={() => handleLeagueSelect(liga)}
-                                onKeyDown={(event) => handleCardKeyDown(event, liga)}
-                                aria-label={`Abrir detalhes da liga ${liga.nome}`}
-                            >
-                                <div className="liga-card-image">
+                    <table className="mercado-table">
+                        <thead>
+                            <tr>
+                                <th>Imagem</th>
+                                <th>Nome</th>
+                                <th>Jogo · Geração</th>
+                                <th>Plataforma</th>
+                                <th className="col-action">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                    {displayedLigas.map((liga) => (
+                        <tr key={liga.id}>
+                            <td className="mercado-player-cell">
+                                <div className="mercado-avatar-sm">
                                     {liga.imagem ? (
                                         <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
                                     ) : (
-                                        <span>Sem imagem</span>
+                                        <span>{liga.nome?.slice(0, 2).toUpperCase() || 'LG'}</span>
                                     )}
                                 </div>
-                                <div className="liga-card-body">
-                                    <p className="liga-card-title">{liga.nome}</p>
-                                    {liga.registered && (
-                                        <span className="liga-card-badge">Você já participa</span>
-                                    )}
-                                    <div className="liga-card-meta">
-                                        <span>{liga.jogo || 'Jogo não informado'}</span>
-                                        <span>{liga.geracao || 'Geração não informada'}</span>
-                                        <span>{liga.plataforma || 'Plataforma não informada'}</span>
-                                    </div>
-                                    <p className="liga-card-status">
-                                        {STATUS_LABELS[liga.status] ?? 'Status indefinido'}
-                                    </p>
+                            </td>
+                            <td>
+                                <div className="mercado-player-meta">
+                                    <strong>{liga.nome}</strong>
+                                    <span>{STATUS_LABELS[liga.status] ?? 'Status indefinido'}</span>
                                 </div>
-                            </article>
-                        ))}
-                    </div>
+                            </td>
+                            <td>
+                                <div className="mercado-player-meta">
+                                    <strong>{liga.jogo || '—'}</strong>
+                                    <span>{liga.geracao || '—'}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <span>{liga.plataforma || '—'}</span>
+                            </td>
+                            <td className="col-action">
+                                {liga.registered ? (
+                                    <span className="table-action-badge neutral">Você participa</span>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="table-action-badge primary"
+                                        onClick={() => openModal(liga)}
+                                    >
+                                        Entrar
+                                    </button>
+                                )}
+                            </td>
+                        </tr>
+                    ))}
+                        </tbody>
+                    </table>
                 )}
             </section>
+            {filtersOpen && (
+                <div
+                    className="mercado-drawer-backdrop"
+                    role="presentation"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setFiltersOpen(false);
+                        }
+                    }}
+                >
+                    <div className="mercado-drawer" role="dialog" aria-modal="true" aria-label="Filtros de ligas">
+                        <div className="mercado-drawer-header">
+                            <div>
+                                <p className="mercado-drawer-eyebrow">Filtrar ligas</p>
+                                <strong>Defina jogo e plataforma</strong>
+                            </div>
+                            <button type="button" className="btn-outline" onClick={() => setFiltersOpen(false)}>
+                                Fechar
+                            </button>
+                        </div>
+                        <div className="mercado-drawer-body">
+                            <div className="mercado-drawer-grid">
+                                <label htmlFor="filter-jogo" className="mercado-drawer-label">
+                                    Jogo
+                                </label>
+                                <select
+                                    id="filter-jogo"
+                                    value={selectedJogo}
+                                    onChange={(event) => setSelectedJogo(event.target.value)}
+                                >
+                                    <option value="">Todos</option>
+                                    {jogos.map((item) => (
+                                        <option key={item} value={item}>
+                                            {item}
+                                        </option>
+                                    ))}
+                                </select>
+                                <label htmlFor="filter-plataforma" className="mercado-drawer-label">
+                                    Plataforma
+                                </label>
+                                <select
+                                    id="filter-plataforma"
+                                    value={selectedPlataforma}
+                                    onChange={(event) => setSelectedPlataforma(event.target.value)}
+                                >
+                                    <option value="">Todas</option>
+                                    {plataformas.map((item) => (
+                                        <option key={item} value={item}>
+                                            {item}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="mercado-drawer-actions">
+                                <button
+                                    type="button"
+                                    className="btn-outline"
+                                    onClick={() => {
+                                        setSelectedJogo('');
+                                        setSelectedPlataforma('');
+                                    }}
+                                >
+                                    Limpar
+                                </button>
+                                <button type="button" className="btn-primary" onClick={() => setFiltersOpen(false)}>
+                                    Aplicar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
             {activeLiga && (
                 <div className="ligas-modal-overlay" role="presentation" onClick={closeModal}>
                     <div

@@ -312,13 +312,18 @@ export default function LigaMercado() {
 
     const getModalPaymentAmount = () => {
         if (!modalPlayer || !modalMode) return 0;
-        const baseValue = Number(modalPlayer.value_eur ?? 0);
-        if (modalMode === MODAL_MODES.BUY) {
-            return baseValue;
-        }
+    const baseValue = Number(
+        (modalMode === MODAL_MODES.MULTA ? modalPlayer.entry_value_eur : null) ??
+            modalPlayer.value_eur ??
+            0,
+    );
 
-        const multiplier = Number(liga?.multa_multiplicador ?? 2) || 2;
-        return Math.round(baseValue * multiplier);
+    if (modalMode === MODAL_MODES.BUY) {
+        return baseValue;
+    }
+
+    const multiplier = Number(liga?.multa_multiplicador ?? 2) || 2;
+    return Math.round(baseValue * multiplier);
     };
 
     const handleModalConfirm = async () => {

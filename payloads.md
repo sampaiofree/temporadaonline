@@ -139,10 +139,9 @@ Request:
 Sucesso `201`:
 ```json
 {
-  "message": "Clube salvo com sucesso.",
+  "message": "Nome do clube foi alterado com sucesso.",
   "clube": { "id": 42, "nome": "Time XPTO" },
-  "financeiro": { "saldo": 50000000 },
-  "redirect": "/liga/dashboard?liga_id=7"
+  "financeiro": { "saldo": 50000000 }
 }
 ```
 Erros: 422 em validação; 403 se não autenticado.

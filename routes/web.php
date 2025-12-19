@@ -11,7 +11,6 @@ use App\Http\Controllers\Admin\PlataformaController as AdminPlataformaController
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
-use App\Http\Controllers\LigaDashboardController;
 use App\Http\Controllers\LigaMercadoController;
 use App\Http\Controllers\LigaPartidasController;
 use App\Http\Controllers\LigaClubePerfilController;
@@ -47,7 +46,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
     Route::get('/minha_liga/meu-elenco', [MinhaLigaController::class, 'meuElenco'])->name('minha_liga.meu_elenco');
     Route::get('/minha_liga/financeiro', [MinhaLigaController::class, 'financeiro'])->name('minha_liga.financeiro');
-    Route::get('/liga/dashboard', [LigaDashboardController::class, 'show'])->name('liga.dashboard');
     Route::get('/liga/mercado', [LigaMercadoController::class, 'index'])->name('liga.mercado');
     Route::get('/liga/partidas', [LigaPartidasController::class, 'index'])->name('liga.partidas');
     Route::get('/liga/classificacao', [LigaClassificacaoController::class, 'index'])->name('liga.classificacao');

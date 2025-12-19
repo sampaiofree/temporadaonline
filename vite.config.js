@@ -15,7 +15,6 @@ export default defineConfig({
                 'resources/js/minha_liga.jsx',
                 'resources/js/minha_liga_financeiro.jsx',
                 'resources/js/minha_liga_meu_elenco.jsx',
-                'resources/js/liga_dashboard.jsx',
                 'resources/js/liga_mercado.jsx',
                 'resources/js/liga_partidas.jsx',
                 'resources/js/liga_classificacao.jsx',

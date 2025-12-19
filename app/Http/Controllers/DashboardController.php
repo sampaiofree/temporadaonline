@@ -60,8 +60,7 @@ class DashboardController extends Controller
                 'title' => 'Completar perfil',
                 'description' => 'Adicione plataforma, jogo, nickname e geração no seu perfil.',
                 'done' => $profileComplete,
-                'actionLabel' => 'Completar perfil',
-                'actionHref' => route('perfil'),
+                
             ],
             [
                 'id' => 'horarios',

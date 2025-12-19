@@ -188,12 +188,13 @@ class MinhaLigaController extends Controller
         $wallet = app(LeagueFinanceService::class)->initClubWallet($liga->id, $clube->id);
 
         return response()->json([
-            'message' => 'Clube salvo com sucesso.',
+            'message' => $clube->wasRecentlyCreated
+                ? 'Clube criado com sucesso.'
+                : 'Nome do clube foi alterado com sucesso.',
             'clube' => $clube,
             'financeiro' => [
                 'saldo' => (int) $wallet->saldo,
             ],
-            'redirect' => route('liga.dashboard', ['liga_id' => $liga->id]),
         ], 201);
     }
 

@@ -1,13 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import DashboardButton from '../components/app_publico/DashboardButton';
-import { useMemo } from 'react';
 import Alert from '../components/app_publico/Alert';
-
-const EDIT_ICON_PATHS = [
-    'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25z',
-    'M20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0L13.27 7.35l3.75 3.75 3.69-3.69z',
-];
 
 const TEXT_FIELDS = [
     {
@@ -253,7 +246,7 @@ export default function Perfil() {
             <div className="profile-tabs" role="tablist" aria-label="Seções do perfil">
                 <button
                     type="button"
-                    className={`profile-tab${activeTab === 'perfil' ? ' active' : ''}`}
+                    className={`profile-tab${activeTab === 'perfil' ? ' active' : ''} btn-primary`}
                     onClick={() => setActiveTab('perfil')}
                     role="tab"
                     aria-selected={activeTab === 'perfil'}
@@ -262,7 +255,7 @@ export default function Perfil() {
                 </button>
                 <button
                     type="button"
-                    className={`profile-tab${activeTab === 'horarios' ? ' active' : ''}`}
+                    className={`profile-tab${activeTab === 'horarios' ? ' active' : ''} btn-primary`}
                     onClick={() => setActiveTab('horarios')}
                     role="tab"
                     aria-selected={activeTab === 'horarios'}
@@ -390,11 +383,17 @@ export default function Perfil() {
                         )}
                     </>
                 )}
-                <div className="profile-footer">
-                    {!isEditing && (
-                        <DashboardButton label="Editar Perfil" paths={EDIT_ICON_PATHS} onClick={handleEditStart} />
-                    )}
-                </div>
+                        <div className="profile-footer">
+                            {!isEditing && (
+                                <button
+                                    type="button"
+                                    className="btn-primary profile-edit-button"
+                                    onClick={handleEditStart}
+                                >
+                                    Editar perfil
+                                </button>
+                            )}
+                        </div>
             </section>
             )}
 

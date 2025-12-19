@@ -53,7 +53,6 @@ Fonte: `php artisan route:list` + revisao de `routes/web.php`, `routes/api.php` 
 - `GET /minha_liga/financeiro` (`minha_liga.financeiro`) — `MinhaLigaController@financeiro`, exibe saldo, salario/rodada e ultimas transferencias do clube.
 
 ### Liga – paginas
-- `GET /liga/dashboard` (`liga.dashboard`) — `LigaDashboardController@show`, dashboard da liga com acoes e proxima partida simulada.
 - `GET /liga/mercado` (`liga.mercado`) — `LigaMercadoController@index`, renderiza view do mercado com todos os jogadores do jogo da liga e marca status/clubes.
 - `GET /liga/partidas` (`liga.partidas`) — `LigaPartidasController@index`, placeholder de partidas.
 - `GET /liga/classificacao` (`liga.classificacao`) — `LigaClassificacaoController@index`, ranking simples dos clubes da liga.

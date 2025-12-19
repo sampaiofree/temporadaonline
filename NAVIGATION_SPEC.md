@@ -54,7 +54,6 @@ O sistema funciona sempre em **um de dois estados**:
 
 **Rotas típicas:**
 
-* `/liga/dashboard`
 * `/liga/mercado`
 * `/liga/partidas`
 * `/liga/classificacao`

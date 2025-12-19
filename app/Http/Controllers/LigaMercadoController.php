@@ -81,6 +81,7 @@ class LigaMercadoController extends Controller
                     'is_free_agent' => $clubStatus === 'livre',
                     'can_buy' => $canBuy,
                     'can_multa' => $canMulta,
+                    'entry_value_eur' => $entry?->value_eur,
                     'player_face_url' => $player->player_face_url,
                 ];
             })

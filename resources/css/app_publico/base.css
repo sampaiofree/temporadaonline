@@ -332,22 +332,32 @@ a:focus-visible {
 }
 
 .dashboard-checklist-card-status {
-    width: 44px;
-    height: 44px;
+    width: 48px;
+    height: 48px;
     border-radius: 50%;
     font-size: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     background: rgba(255, 255, 255, 0.08);
+    border: 2px solid transparent;
+}
+
+.dashboard-checklist-card-status svg {
+    width: 24px;
+    height: 24px;
 }
 
 .dashboard-checklist-card-status.pending {
-    background: rgba(255, 82, 82, 0.1);
+    background: #ef4444;
+    color: #fff;
+    border-color: #d32f2f;
 }
 
 .dashboard-checklist-card-status.done {
-    background: rgba(76, 175, 80, 0.2);
+    background: #4caf50;
+    color: #fff;
+    border-color: #388e3c;
 }
 
 .dashboard-checklist-card-text h3 {
@@ -609,6 +619,20 @@ a:focus-visible {
 }
 
 .profile-tab:hover {
+    border-color: var(--gold);
+}
+
+.profile-tab.btn-primary {
+    clip-path: none;
+    border-radius: 8px;
+    padding: 12px 16px;
+    background: rgba(255, 215, 0, 0.05);
+    border-color: rgba(255, 215, 0, 0.4);
+}
+
+.profile-tab.btn-primary.active {
+    background: var(--gold);
+    color: var(--black);
     border-color: var(--gold);
 }
 
@@ -1211,6 +1235,7 @@ a:focus-visible {
     border: 1px solid rgba(255, 255, 255, 0.06);
     background: linear-gradient(135deg, #0b0b0b 0%, #161616 100%);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    margin-top: 20px;
 }
 
 .mercado-table {

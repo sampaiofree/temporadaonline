@@ -66,9 +66,6 @@ const resolveActiveId = (mode) => {
     const path = window.location.pathname;
 
     if (mode === 'liga') {
-        if (path.startsWith('/liga/dashboard')) {
-            return 'clube';
-        }
         if (path.startsWith('/liga/mercado')) {
             return 'mercado';
         }
