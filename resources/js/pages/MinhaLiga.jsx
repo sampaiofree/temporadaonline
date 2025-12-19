@@ -99,7 +99,7 @@ export default function MinhaLiga() {
             <section className="league-header">
                 <div className="league-logo">
                     {liga.imagem ? (
-                        <img src={liga.imagem} alt={`Escudo da ${liga.nome}`} />
+                        <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
                     ) : (
                         <span className="league-logo-initials">{getLeagueInitials(liga.nome)}</span>
                     )}
