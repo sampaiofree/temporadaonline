@@ -1,7 +1,7 @@
 /* Base pública MCO - Flat Neon Sport */
 :root {
     /* Cores */
-    --bg-main: #121212;
+    --bg-main: #2A2A2A;
     --bg-card: #1e1e1e;
     --bg-soft: #333333;
     --bg-stripe: #333333;
@@ -21,9 +21,6 @@
     --font-heading: 'Russo One', Impact, 'Montserrat', sans-serif;
     --font-body: 'Roboto Condensed', 'Oswald', sans-serif;
     /* Plano de fundo dinâmico */
-    --mco-cover-desktop: none;
-    --mco-cover-mobile: none;
-    --mco-cover-transform: none;
 }
 
 *,
@@ -123,24 +120,6 @@ a:focus-visible {
     z-index: 1;
     background-color: var(--bg-main);
     overflow: hidden;
-}
-
-.mco-screen::after,
-.liga-dashboard-screen::after,
-.liga-mercado-screen::after,
-.liga-partidas-screen::after,
-.liga-classificacao-screen::after,
-.liga-clube-perfil-screen::after,
-.meu-elenco-screen::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: var(--mco-cover, none);
-    background-repeat: no-repeat;
-    background-size: cover;
-    background-position: center;
-    pointer-events: none;
-    z-index: 0;
 }
 
 .mco-screen > *,
@@ -2395,17 +2374,6 @@ a:focus-visible {
 }
 
 @media (max-width: 768px) {
-    .mco-screen::after,
-    .liga-dashboard-screen::after,
-    .liga-mercado-screen::after,
-    .liga-partidas-screen::after,
-    .liga-classificacao-screen::after,
-    .liga-clube-perfil-screen::after,
-    .meu-elenco-screen::after {
-        background-image: var(--mco-cover-mobile, var(--mco-cover));
-        transform: none;
-    }
-
     .league-menu {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }

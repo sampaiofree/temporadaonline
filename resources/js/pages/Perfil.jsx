@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 import DashboardButton from '../components/app_publico/DashboardButton';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 import { useMemo } from 'react';
 import Alert from '../components/app_publico/Alert';
 
@@ -168,10 +166,6 @@ export default function Perfil() {
     ];
 
     const initials = getInitials(displayName);
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     const groupedAvailability = useMemo(() => {
         const groups = {};
@@ -255,7 +249,7 @@ export default function Perfil() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Perfil do jogador">
+        <main className="mco-screen" aria-label="Perfil do jogador">
             <div className="profile-tabs" role="tablist" aria-label="Seções do perfil">
                 <button
                     type="button"

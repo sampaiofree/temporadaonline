@@ -1,6 +1,4 @@
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -49,11 +47,6 @@ export default function FinanceiroClube() {
     const salario = financeiro.salarioPorRodada ?? 0;
     const rodadas = financeiro.rodadasRestantes;
 
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
-
     // Lógica de texto de fôlego do desenvolvedor
     const folegoText =
         rodadas === null
@@ -64,7 +57,7 @@ export default function FinanceiroClube() {
 
     if (!liga) {
         return (
-            <main className="mco-screen" style={backgroundStyles}>
+            <main className="mco-screen">
                 <p className="ligas-empty">Liga indisponível. Volte e tente novamente.</p>
                 <Navbar active="ligas" />
             </main>
@@ -74,7 +67,7 @@ export default function FinanceiroClube() {
     const minhaLigaHref = `/minha_liga?liga_id=${liga.id}`;
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Financeiro do clube">
+        <main className="mco-screen" aria-label="Financeiro do clube">
             <section className="league-header">
                 <p className="league-title">Financeiro</p>
                 <div className="league-meta">

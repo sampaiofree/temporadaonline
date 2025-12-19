@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const TYPE_LABELS = {
     publica: 'Liga pública · aberta para todos os jogadores',
@@ -13,8 +11,6 @@ const STATUS_LABELS = {
     encerrada: 'Liga encerrada · inscrições e jogos finalizados',
     aguardando: 'Liga aguardando · inscrições em breve',
 };
-
-const fallbackImage = 'https://via.placeholder.com/180?text=MCO';
 
 const getLeagueInitials = (name) => {
     if (!name) return 'MCO';
@@ -33,14 +29,10 @@ export default function MinhaLiga() {
     const liga = getLigaFromWindow();
     const appContext = getAppContext();
     const resolveExistingClubName = () => appContext?.clube?.nome ?? '';
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     if (!liga) {
         return (
-            <main className="mco-screen" style={backgroundStyles} aria-label="Minha liga">
+            <main className="mco-screen" aria-label="Minha liga">
                 <p className="ligas-empty">Sua liga não foi encontrada. Volte para a lista e tente novamente.</p>
                 <Navbar active="ligas" />
             </main>
@@ -103,7 +95,7 @@ export default function MinhaLiga() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Minha liga">
+        <main className="mco-screen" aria-label="Minha liga">
             <section className="league-header">
                 <div className="league-logo">
                     {liga.imagem ? (

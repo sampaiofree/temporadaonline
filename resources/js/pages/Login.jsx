@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const LOGIN_FIELDS = [
     {
@@ -30,11 +28,6 @@ export default function Login() {
     const [errors, setErrors] = useState({});
     const [statusMessage, setStatusMessage] = useState('');
     const [submitting, setSubmitting] = useState(false);
-
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -78,7 +71,7 @@ export default function Login() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Acesso ao painel do jogador">
+        <main className="mco-screen" aria-label="Acesso ao painel do jogador">
             <section className="auth-card" aria-labelledby="login-title">
                 <header className="auth-header">
                     <p className="auth-kicker">Operador veterano</p>

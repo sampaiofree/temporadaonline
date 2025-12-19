@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
@@ -27,14 +25,9 @@ export default function LigaPartidas() {
     const [openActionsFor, setOpenActionsFor] = useState(null);
     const [reclamacaoForm, setReclamacaoForm] = useState({ motivo: '', descricao: '', imagem: '' });
 
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
-
     if (!liga) {
         return (
-            <main className="liga-partidas-screen" style={backgroundStyles}>
+            <main className="liga-partidas-screen">
                 <p className="ligas-empty">Liga indisponível. Volte para o painel.</p>
                 <Navbar active="ligas" />
             </main>
@@ -1021,7 +1014,7 @@ export default function LigaPartidas() {
     };
 
     return (
-        <main className="liga-partidas-screen" style={backgroundStyles}>
+        <main className="liga-partidas-screen">
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">PARTIDAS</p>
                 <h1 className="ligas-title">Agenda da liga</h1>

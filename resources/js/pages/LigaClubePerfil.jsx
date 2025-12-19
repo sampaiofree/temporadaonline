@@ -1,6 +1,4 @@
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubePerfilFromWindow = () => window.__CLUBE_PERFIL__ ?? null;
@@ -8,14 +6,10 @@ const getClubePerfilFromWindow = () => window.__CLUBE_PERFIL__ ?? null;
 export default function LigaClubePerfil() {
     const liga = getLigaFromWindow();
     const clube = getClubePerfilFromWindow();
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     if (!liga || !clube) {
         return (
-            <main className="liga-clube-perfil-screen" style={backgroundStyles}>
+            <main className="liga-clube-perfil-screen">
                 <p className="ligas-empty">Clube ou liga indisponível.</p>
                 <Navbar active="ligas" />
             </main>
@@ -23,7 +17,7 @@ export default function LigaClubePerfil() {
     }
 
     return (
-        <main className="liga-clube-perfil-screen" style={backgroundStyles}>
+        <main className="liga-clube-perfil-screen">
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">CLUBE</p>
                 <h1 className="ligas-title">{clube.nome}</h1>

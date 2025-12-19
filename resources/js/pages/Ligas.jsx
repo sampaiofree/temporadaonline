@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const TYPE_LABELS = {
     publica: 'Liga pública · aberta para todos os jogadores',
@@ -13,8 +11,6 @@ const STATUS_LABELS = {
     encerrada: 'Liga encerrada · inscrições e jogos finalizados',
     aguardando: 'Liga aguardando · inscrições em breve',
 };
-
-const fallbackImage = 'https://via.placeholder.com/150?text=MCO';
 
 const getAllLigasFromWindow = () => {
     if (Array.isArray(window.__ALL_LIGAS__)) {
@@ -38,11 +34,6 @@ export default function Ligas() {
     const myLigas = getMyLigasFromWindow();
     const [filter, setFilter] = useState(() => (myLigas.length > 0 ? 'mine' : 'all'));
     const ligas = filter === 'mine' ? myLigas : allLigas;
-
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     const openModal = (liga) => {
         setJoinError('');
@@ -109,7 +100,7 @@ export default function Ligas() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Lista de ligas">
+        <main className="mco-screen" aria-label="Lista de ligas">
             <section className="ligas-hero" aria-label="Resumo">
                 <p className="ligas-eyebrow">LIGAS</p>
                 <h1 className="ligas-title">Escolha sua próxima competição</h1>
@@ -149,12 +140,7 @@ export default function Ligas() {
                                 onKeyDown={(event) => handleCardKeyDown(event, liga)}
                                 aria-label={`Abrir detalhes da liga ${liga.nome}`}
                             >
-                                <div
-                                    className="liga-card-image"
-                                    style={{
-                                        backgroundImage: `url(${liga.imagem || fallbackImage})`,
-                                    }}
-                                >
+                                <div className="liga-card-image">
                                     {!liga.imagem && <span>Sem imagem</span>}
                                 </div>
                                 <div className="liga-card-body">
@@ -185,13 +171,7 @@ export default function Ligas() {
                         aria-label={`Detalhes da liga ${activeLiga.nome}`}
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div
-                            className="ligas-modal-image"
-                            style={{
-                                backgroundImage: `url(${activeLiga.imagem || fallbackImage})`,
-                            }}
-                            aria-hidden="true"
-                        />
+                        <div className="ligas-modal-image" aria-hidden="true" />
                         <div className="ligas-modal-header">
                             <p className="ligas-modal-status">{modalStatusLabel}</p>
                             <h2>{activeLiga.nome}</h2>

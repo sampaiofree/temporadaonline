@@ -1,6 +1,4 @@
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const formatDate = (value) => {
     if (!value) {
@@ -29,14 +27,10 @@ export default function LigaDashboard() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const dashboard = getDashboardFromWindow();
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     if (!liga) {
         return (
-            <main className="liga-dashboard-screen" style={backgroundStyles}>
+            <main className="liga-dashboard-screen">
                 <p className="ligas-empty">Liga indisponível. Volte para o painel principal.</p>
                 <Navbar active="ligas" />
             </main>
@@ -48,7 +42,7 @@ export default function LigaDashboard() {
         : 'Crie seu clube para liberar todas as funcionalidades.';
 
     return (
-        <main className="liga-dashboard-screen" style={backgroundStyles}>
+        <main className="liga-dashboard-screen">
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">LIGA</p>
                 <h1 className="ligas-title">{liga.nome}</h1>

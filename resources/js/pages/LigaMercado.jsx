@@ -1,8 +1,6 @@
 import { useMemo, useState, useEffect } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 import Alert from '../components/app_publico/Alert';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 /* =========================
    Helpers
@@ -145,11 +143,6 @@ export default function LigaMercado() {
     const [sortDir, setSortDir] = useState('desc');
     const [page, setPage] = useState(1);
     const perPage = 25;
-
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     // Sync club context when it changes
     useEffect(() => {
@@ -417,7 +410,7 @@ export default function LigaMercado() {
 
     if (!liga) {
         return (
-            <main className="liga-mercado-screen" style={backgroundStyles}>
+            <main className="liga-mercado-screen">
                 <p className="ligas-empty">Liga indisponível.</p>
                 <Navbar active="ligas" />
             </main>
@@ -435,7 +428,7 @@ export default function LigaMercado() {
             : 'Veja o impacto financeiro antes de confirmar a compra.';
 
     return (
-        <main className="liga-mercado-screen" style={backgroundStyles}>
+        <main className="liga-mercado-screen">
             {/* HERO */}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">MERCADO</p>

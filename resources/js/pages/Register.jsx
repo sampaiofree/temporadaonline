@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const REGISTER_FIELDS = [
     {
@@ -64,11 +62,6 @@ export default function Register() {
     const [statusMessage, setStatusMessage] = useState('');
     const [submitting, setSubmitting] = useState(false);
 
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
-
     const handleChange = (event) => {
         const { name, value } = event.target;
 
@@ -112,7 +105,7 @@ export default function Register() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Cadastro de jogador">
+        <main className="mco-screen" aria-label="Cadastro de jogador">
             <section className="auth-card" aria-labelledby="register-title">
                 <header className="auth-header">
                     <p className="auth-kicker">Operador novo na área</p>

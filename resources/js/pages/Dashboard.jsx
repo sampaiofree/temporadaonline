@@ -1,6 +1,4 @@
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const getChecklistData = () => {
     const raw = window.__CHECKLIST__ ?? {};
@@ -14,11 +12,6 @@ const getChecklistData = () => {
 export default function Dashboard() {
     const checklist = getChecklistData();
 
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
-
     const handleAction = (href) => {
         if (!href) {
             return;
@@ -28,7 +21,7 @@ export default function Dashboard() {
     };
 
     return (
-        <main className="mco-screen" style={backgroundStyles} aria-label="Tela inicial do MCO">
+        <main className="mco-screen" aria-label="Tela inicial do MCO">
             {checklist.show && (
                 <section className="dashboard-checklist" aria-label="Checklist de jornada">
                     <header className="dashboard-checklist-header">

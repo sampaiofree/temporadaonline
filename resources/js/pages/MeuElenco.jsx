@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
-import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
-import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -116,11 +114,6 @@ export default function MeuElenco() {
     const [valueModalPercent, setValueModalPercent] = useState(PERCENT_OPTIONS[0]);
     const [valueModalError, setValueModalError] = useState('');
     const [isValueSaving, setIsValueSaving] = useState(false);
-
-    const backgroundStyles = {
-        '--mco-cover': `url(${backgroundDefault})`,
-        '--mco-cover-mobile': `url(${backgroundVertical})`,
-    };
 
     // Fechar drawer com ESC
     useEffect(() => {
@@ -310,7 +303,7 @@ export default function MeuElenco() {
 
     if (!liga) {
         return (
-            <main className="meu-elenco-screen" style={backgroundStyles} aria-label="Meu elenco">
+            <main className="meu-elenco-screen" aria-label="Meu elenco">
                 <p className="ligas-empty">Liga indisponível. Volte para o painel e tente novamente.</p>
                 <Navbar active="ligas" />
             </main>
@@ -332,7 +325,7 @@ export default function MeuElenco() {
     );
 
     return (
-        <main className="meu-elenco-screen" style={backgroundStyles}>
+        <main className="meu-elenco-screen">
             <section className="meu-elenco-hero">
                 <p className="meu-elenco-eyebrow">MEU</p>
                 <h1 className="meu-elenco-title">{title}</h1>
