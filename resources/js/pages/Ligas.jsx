@@ -141,7 +141,11 @@ export default function Ligas() {
                                 aria-label={`Abrir detalhes da liga ${liga.nome}`}
                             >
                                 <div className="liga-card-image">
-                                    {!liga.imagem && <span>Sem imagem</span>}
+                                    {liga.imagem ? (
+                                        <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
+                                    ) : (
+                                        <span>Sem imagem</span>
+                                    )}
                                 </div>
                                 <div className="liga-card-body">
                                     <p className="liga-card-title">{liga.nome}</p>
@@ -171,7 +175,13 @@ export default function Ligas() {
                         aria-label={`Detalhes da liga ${activeLiga.nome}`}
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="ligas-modal-image" aria-hidden="true" />
+                        <div className="ligas-modal-image">
+                            {activeLiga.imagem ? (
+                                <img src={`/storage/${activeLiga.imagem}`} alt={`Escudo da ${activeLiga.nome}`} />
+                            ) : (
+                                <span>Sem imagem</span>
+                            )}
+                        </div>
                         <div className="ligas-modal-header">
                             <p className="ligas-modal-status">{modalStatusLabel}</p>
                             <h2>{activeLiga.nome}</h2>

@@ -48,7 +48,7 @@ class ElencoPadraoController extends Controller
     {
         $data = $request->validate([
             'jogo_id' => 'required|exists:jogos,id',
-            'csv' => 'required|file|mimes:csv,txt|max:10240',
+            'csv' => 'required|file|mimes:csv,txt|max:20480',
         ]);
 
         $jogoId = $data['jogo_id'];

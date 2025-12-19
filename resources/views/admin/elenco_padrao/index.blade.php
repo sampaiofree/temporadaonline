@@ -71,7 +71,7 @@
                         {{ $jogos->isEmpty() ? 'disabled' : '' }}
                     >
                     <p class="mt-1 text-xs text-slate-500">
-                        UTF-8, separador ponto-e-vírgula, header obrigatória (nome;posicao;overall;clube).
+                        UTF-8, separador ponto-e-vírgula, header obrigatória (nome;posicao;overall;clube). Máximo 20 MB.
                     </p>
                     @error('csv')
                         <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
