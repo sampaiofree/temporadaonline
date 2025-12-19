@@ -23,6 +23,10 @@ class AdminUserSeeder extends Seeder
             ],
         );
 
+        if (! $user->is_admin) {
+            $user->forceFill(['is_admin' => true])->save();
+        }
+
         Profile::firstOrCreate(
             ['user_id' => $user->id],
             [

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
+
 class Plataforma extends Model
 {
     protected $fillable = [
@@ -15,5 +16,10 @@ class Plataforma extends Model
     public function profiles(): HasMany
     {
         return $this->hasMany(Profile::class);
+    }
+
+    public function ligas(): HasMany
+    {
+        return $this->hasMany(Liga::class);
     }
 }

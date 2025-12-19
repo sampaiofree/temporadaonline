@@ -3,6 +3,12 @@
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElencoController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ElencoPadraoController as AdminElencoPadraoController;
+use App\Http\Controllers\Admin\GeracaoController as AdminGeracaoController;
+use App\Http\Controllers\Admin\JogoController as AdminJogoController;
+use App\Http\Controllers\Admin\LigaController as AdminLigaController;
+use App\Http\Controllers\Admin\PlataformaController as AdminPlataformaController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
 use App\Http\Controllers\LigaDashboardController;
@@ -16,8 +22,16 @@ use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'dashboard');
 
-Route::prefix('admin')->name('admin.')->group(function () {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::resource('ligas', AdminLigaController::class)->except(['show']);
+    Route::resource('geracoes', AdminGeracaoController::class)->except(['show']);
+    Route::resource('jogos', AdminJogoController::class)->except(['show']);
+    Route::resource('plataformas', AdminPlataformaController::class)->except(['show']);
+    Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+    Route::get('/elenco-padrao', [AdminElencoPadraoController::class, 'index'])->name('elenco-padrao.index');
+    Route::post('/elenco-padrao/importar', [AdminElencoPadraoController::class, 'importar'])->name('elenco-padrao.importar');
+    Route::get('/elenco-padrao/jogadores', [AdminElencoPadraoController::class, 'jogadores'])->name('elenco-padrao.jogadores');
 });
 
 Route::middleware('auth')->group(function () {
