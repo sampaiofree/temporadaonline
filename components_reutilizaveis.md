@@ -6,6 +6,7 @@
 - Props: `show` (bool), `maxWidth` (`sm|md|lg|xl|2xl`, padrão `2xl`), `closeable` (bool), `onClose`.
 - Estilo: tailwind padrão (fundo branco, sombra, bordas arredondadas). Não segue o tema “MCO” dourado.
 - Não existe Drawer hoje.
+- Uso nas partidas: conteúdo interno segue o padrão Breeze (p-6, textos `text-gray-*`, botões `PrimaryButton/SecondaryButton`). As ações dentro dos cards continuam com `.table-action-badge`.
 
 ## Dropdown
 - Arquivo: `resources/js/components/Dropdown.jsx`

@@ -202,6 +202,7 @@ Uma partida pode estar em um dos seguintes estados:
 * Mandante tem poder limitado
 * Sistema evita abuso e dependência de chat
 * Escala para ligas grandes sem intervenção humana
+* **Conflito de Agenda**: o sistema nunca agenda, sugere ou aceita um horário em que qualquer um dos clubes já possua outra partida ativa (`agendada`, `confirmada`, `em_andamento`). Cada partida ocupa uma janela fixa de 120 minutos. Partidas sem `scheduled_at` não entram no cálculo.
 
 ---
 

@@ -439,6 +439,134 @@ a:focus-visible {
     width: 100%;
 }
 
+.profile-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+    margin: 0 auto var(--gap-md);
+    width: min(720px, 100%);
+}
+
+.profile-tab {
+    padding: 10px 14px;
+    border: 1px solid rgba(255, 215, 0, 0.4);
+    background: transparent;
+    color: var(--white);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-family: var(--font-heading);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.profile-tab.active {
+    background: var(--gold);
+    color: var(--black);
+    border-color: var(--gold);
+}
+
+.profile-tab:hover {
+    border-color: var(--gold);
+}
+
+.availability-panel {
+    width: min(720px, 100%);
+    margin: 24px auto 0;
+    background: linear-gradient(135deg, #0b0b0b, #161616);
+    border-bottom: 4px solid var(--gold);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.availability-header h2 {
+    font-family: var(--font-heading);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin: 4px 0;
+}
+
+.availability-eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    color: #bfbfbf;
+    font-size: 12px;
+}
+
+.availability-caption {
+    color: #cccccc;
+    font-size: 13px;
+}
+
+.availability-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: var(--gap-sm);
+    align-items: end;
+}
+
+.availability-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.availability-field input,
+.availability-field select {
+    padding: 10px 12px;
+    background: #111;
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    color: var(--white);
+    font-family: var(--font-body);
+}
+
+.availability-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.availability-day {
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    padding: var(--gap-sm);
+}
+
+.availability-day-label {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    margin-bottom: 6px;
+}
+
+.availability-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #0f0f0f;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    margin-bottom: 6px;
+    gap: 12px;
+}
+
+.availability-empty {
+    text-align: center;
+    color: #bfbfbf;
+    padding: 12px;
+}
+
+.availability-success {
+    color: #2ecc71;
+}
+
+.availability-error {
+    color: #ff6b6b;
+}
+
 /* Minha Liga */
 .league-header {
     width: min(520px, 100%);
@@ -1795,11 +1923,302 @@ a:focus-visible {
     outline-offset: -2px;
 }
 
-/* Partidas placeholder */
-.liga-partidas-list article {
+.partida-card {
+    background: linear-gradient(135deg, #0f0f0f, #1a1a1a);
+    border: 5px solid rgba(255, 255, 255, 0.08);
+    border-left: 4px solid var(--gold);
     padding: var(--gap-lg);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    background: rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    margin-bottom: 10px;
+}
+
+.partida-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+}
+
+.partida-clubes {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    flex-wrap: wrap;
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.partida-clube {
+    color: var(--white);
+}
+
+.partida-vs {
+    color: var(--gold);
+}
+
+.partida-estado {
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    background: rgba(255, 215, 0, 0.08);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 11px;
+}
+
+.partida-estado.info {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.45);
+    color: var(--gold);
+}
+
+.partida-estado.success {
+    background: rgba(0, 189, 126, 0.15);
+    border-color: rgba(0, 189, 126, 0.45);
+    color: #3df5b3;
+}
+
+.partida-estado.warning {
+    background: rgba(255, 170, 0, 0.15);
+    border-color: rgba(255, 170, 0, 0.45);
+    color: #ffda7f;
+}
+
+.partida-estado.danger {
+    background: rgba(255, 77, 77, 0.1);
+    border-color: rgba(255, 77, 77, 0.4);
+    color: #ff9b9b;
+}
+
+.partida-estado.muted {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #d9d9d9;
+}
+
+.clube-shield {
+    width: 52px;
+    height: 52px;
+    border: 2px solid rgba(255, 215, 0, 0.6);
+    background: #0b0b0b;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    overflow: hidden;
+}
+
+.clube-shield img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.partida-clube-info {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    min-width: 0;
+}
+
+.partida-clube-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    max-width: 150px;
+}
+
+.partida-clube,
+.partida-nickname {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    
+}
+
+.partida-nickname {
+    color: #bfbfbf;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 9px;
+}
+
+.partida-nickname {
+    color: #bfbfbf;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.partida-horario-badge {
+    padding: 6px 10px;
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    background: rgba(255, 215, 0, 0.08);
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 11px;
+}
+
+.partida-horario-badge.clickable {
+    cursor: pointer;
+}
+
+.partida-horario-badge.clickable:hover,
+.partida-horario-badge.clickable:focus-visible {
+    background: rgba(255, 215, 0, 0.18);
+}
+
+.partida-horario-badge:disabled {
+    opacity: 0.7;
+    cursor: default;
+}
+
+.partida-role.mandante {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: rgba(255, 215, 0, 0.45);
+    color: var(--gold);
+}
+
+.partida-role.visitante {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #d9d9d9;
+}
+
+.partida-option-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.partida-option {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.partida-option input {
+    width: 18px;
+    height: 18px;
+}
+
+.partida-option-empty {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+    align-items: flex-start;
+}
+
+.placar-resumo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.placar-resumo-row {
+    display: flex;
+    justify-content: space-between;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.placar-resumo-row strong {
+    font-family: var(--font-heading);
+}
+
+.denuncia-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: #e6e6e6;
+    resize: vertical;
+}
+
+.partida-meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--gap-md);
+}
+
+.partida-meta-item small {
+    display: block;
+    color: #9ea0a5;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+    margin-bottom: 4px;
+}
+
+.partida-meta-item p {
+    margin: 0;
+    color: #f3f3f3;
+    letter-spacing: 0.05em;
+}
+
+.partida-flags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+}
+
+.partida-chip {
+    padding: 6px 10px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #e5e5e5;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+}
+
+.partida-chip.warning {
+    background: rgba(255, 170, 0, 0.1);
+    border-color: rgba(255, 170, 0, 0.45);
+    color: #ffda7f;
+}
+
+.partida-chip.info {
+    background: rgba(255, 215, 0, 0.1);
+    border-color: rgba(255, 215, 0, 0.35);
+    color: var(--gold);
+}
+
+.partida-header-right {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-sm);
+    flex-wrap: wrap;
+}
+
+.partida-role {
+    padding: 4px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 11px;
+    color: #dcdcdc;
+}
+
+.partida-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    justify-content: flex-end;
+    margin-top: var(--gap-sm);
 }
 
 @media (max-width: 768px) {

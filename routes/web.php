@@ -10,6 +10,7 @@ use App\Http\Controllers\LigaPartidasController;
 use App\Http\Controllers\LigaClubePerfilController;
 use App\Http\Controllers\MinhaLigaController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\Api\UserDisponibilidadeController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'dashboard');
@@ -47,6 +48,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/elenco/{elenco}/vender-mercado', [ElencoController::class, 'venderMercado'])->name('elenco.venderMercado');
     Route::post('/elenco/{elenco}/listar-mercado', [ElencoController::class, 'listarMercado'])->name('elenco.listarMercado');
     Route::post('/minha_liga/clubes', [MinhaLigaController::class, 'storeClube'])->name('minha_liga.clubes');
+
+    // Disponibilidades (reuso do controller da API, para tela de perfil)
+    Route::get('/me/disponibilidades', [UserDisponibilidadeController::class, 'index'])->name('me.disponibilidades.index');
 });
 
 require __DIR__.'/auth.php';
