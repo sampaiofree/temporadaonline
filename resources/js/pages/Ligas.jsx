@@ -213,7 +213,7 @@ export default function Ligas() {
                                 {liga.registered ? (
                                     <button
                                         type="button"
-                                        className="table-action-badge primary btn-primary"
+                                        className="table-action-badge primary "
                                         onClick={() => (window.location.href = `/minha_liga?liga_id=${liga.id}`)}
                                     >
                                         Ir para minha liga
@@ -221,7 +221,7 @@ export default function Ligas() {
                                 ) : (
                                     <button
                                         type="button"
-                                        className="table-action-badge primary btn-primary"
+                                        className="table-action-badge primary "
                                         onClick={() => openModal(liga)}
                                     >
                                         Entrar
