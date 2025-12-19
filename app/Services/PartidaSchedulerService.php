@@ -29,16 +29,21 @@ class PartidaSchedulerService
      */
     public function generateMatchesForNewClub(LigaClube $novoClube): void
     {
-        $liga = $novoClube->liga()->firstOrFail();
+        $this->ensureMatchesForClub($novoClube, true);
+    }
+
+    public function ensureMatchesForClub(LigaClube $clube, bool $generatedByNewClub = false): void
+    {
+        $liga = $clube->liga()->firstOrFail();
 
         $outrosClubes = LigaClube::query()
             ->where('liga_id', $liga->id)
-            ->where('id', '<>', $novoClube->id)
+            ->where('id', '<>', $clube->id)
             ->get();
 
-        foreach ($outrosClubes as $clube) {
-            $this->createAndSchedulePartida($liga, $novoClube, $clube, true);
-            $this->createAndSchedulePartida($liga, $clube, $novoClube, false);
+        foreach ($outrosClubes as $oponente) {
+            $this->createAndSchedulePartida($liga, $clube, $oponente, $generatedByNewClub);
+            $this->createAndSchedulePartida($liga, $oponente, $clube, $generatedByNewClub);
         }
     }
 
@@ -47,6 +52,11 @@ class PartidaSchedulerService
      */
     public function createAndSchedulePartida(Liga $liga, LigaClube $mandante, LigaClube $visitante, bool $generatedByNewClub = false): Partida
     {
+        $existing = $this->findExistingMatch($liga, $mandante, $visitante);
+        if ($existing) {
+            return $existing;
+        }
+
         return DB::transaction(function () use ($liga, $mandante, $visitante, $generatedByNewClub): Partida {
             $partida = Partida::create([
                 'liga_id' => $liga->id,
@@ -64,6 +74,15 @@ class PartidaSchedulerService
 
             return $partida;
         });
+    }
+
+    private function findExistingMatch(Liga $liga, LigaClube $mandante, LigaClube $visitante): ?Partida
+    {
+        return Partida::query()
+            ->where('liga_id', $liga->id)
+            ->where('mandante_id', $mandante->id)
+            ->where('visitante_id', $visitante->id)
+            ->first();
     }
 
     /**
