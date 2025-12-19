@@ -1,56 +1,73 @@
 import Navbar from '../components/app_publico/Navbar';
-import DashboardButton from '../components/app_publico/DashboardButton';
 import backgroundDefault from '../../../storage/app/public/app/background/fundopadrao.jpg';
 import backgroundVertical from '../../../storage/app/public/app/background/fundopadrao.jpg';
 
-const BUTTONS = [
-    {
-        label: 'Perfil',
-        paths: [
-            'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2',
-            'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z',
-        ],
-        href: '/perfil',
-    },
-    {
-        label: 'Minhas Ligas',
-        paths: [
-            'M6 9H4.5a2.5 2.5 0 0 1 0-5H6',
-            'M18 9h1.5a2.5 2.5 0 0 0 0-5H18',
-            'M4 22h16',
-            'M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22',
-            'M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22',
-            'M18 2H6v7a6 6 0 0 0 12 0V2Z',
-        ],
-    },
-    {
-        label: 'Partidas',
-        paths: [
-            'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z',
-            'm6.7 6.7 10.6 10.6',
-            'm6.7 17.3 10.6-10.6',
-        ],
-    },
-];
+const getChecklistData = () => {
+    const raw = window.__CHECKLIST__ ?? {};
+    const items = Array.isArray(raw.items) ? raw.items : [];
+    return {
+        show: Boolean(raw.show) && items.length > 0,
+        items,
+    };
+};
 
 export default function Dashboard() {
+    const checklist = getChecklistData();
+
     const backgroundStyles = {
         '--mco-cover': `url(${backgroundDefault})`,
         '--mco-cover-mobile': `url(${backgroundVertical})`,
     };
 
+    const handleAction = (href) => {
+        if (!href) {
+            return;
+        }
+
+        window.location.href = href;
+    };
+
     return (
         <main className="mco-screen" style={backgroundStyles} aria-label="Tela inicial do MCO">
-            <section className="dashboard-actions" aria-label="Ações rápidas">
-                {BUTTONS.map((button) => (
-                    <DashboardButton
-                        key={button.label}
-                        label={button.label}
-                        paths={button.paths}
-                        href={button.href}
-                    />
-                ))}
-            </section>
+            {checklist.show && (
+                <section className="dashboard-checklist" aria-label="Checklist de jornada">
+                    <header className="dashboard-checklist-header">
+                        <h2>Checklist</h2>
+                        <p>Complete os próximos passos para estar 100% pronto para jogar.</p>
+                    </header>
+                    {checklist.items.map((item) => (
+                        <article key={item.id} className="dashboard-checklist-card">
+                            <div className="dashboard-checklist-card-header">
+                                <span
+                                    className={`dashboard-checklist-card-status ${item.done ? 'done' : 'pending'}`}
+                                    aria-hidden="true"
+                                >
+                                    {item.done ? '✅' : '❌'}
+                                </span>
+                                <div className="dashboard-checklist-card-text">
+                                    <h3>{item.title}</h3>
+                                    <p>{item.description}</p>
+                                </div>
+                            </div>
+                            <div className="dashboard-checklist-card-actions">
+                                <span
+                                    className={`dashboard-checklist-card-chip ${item.done ? 'is-done' : 'is-pending'}`}
+                                >
+                                    {item.done ? 'Concluído' : 'Pendente'}
+                                </span>
+                                <button
+                                    type="button"
+                                    className="btn-primary dashboard-checklist-cta"
+                                    onClick={() => handleAction(item.actionHref)}
+                                    disabled={item.done}
+                                >
+                                    {item.actionLabel}
+                                </button>
+                            </div>
+                        </article>
+                    ))}
+                </section>
+            )}
             <Navbar active="home" />
         </main>
     );

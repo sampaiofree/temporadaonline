@@ -10,7 +10,6 @@ export default defineConfig({
                 'resources/css/app.css',
                 'resources/js/app.jsx',
                 'resources/js/ligas.jsx',
-                'resources/js/minha_liga_elenco.jsx',
                 'resources/js/perfil.jsx',
                 'resources/js/minha_liga.jsx',
                 'resources/js/minha_liga_financeiro.jsx',

@@ -21,6 +21,8 @@ class Partida extends Model
         'wo_motivo',
         'placar_mandante',
         'placar_visitante',
+        'placar_registrado_por',
+        'placar_registrado_em',
         'checkin_mandante_at',
         'checkin_visitante_at',
     ];
@@ -31,6 +33,7 @@ class Partida extends Model
         'sem_slot_disponivel' => 'boolean',
         'checkin_mandante_at' => 'datetime',
         'checkin_visitante_at' => 'datetime',
+        'placar_registrado_em' => 'datetime',
     ];
 
     public function liga(): BelongsTo
@@ -66,5 +69,10 @@ class Partida extends Model
     public function eventos(): HasMany
     {
         return $this->hasMany(PartidaEvento::class);
+    }
+
+    public function reclamacoes(): HasMany
+    {
+        return $this->hasMany(ReclamacaoPartida::class);
     }
 }

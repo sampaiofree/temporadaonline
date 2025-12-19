@@ -12,10 +12,13 @@ class PartidaStateService
      * Mapa de transições permitidas.
      */
     private array $transitions = [
-        'confirmacao_necessaria' => ['agendada', 'confirmada', 'cancelada'],
-        'agendada' => ['confirmada', 'em_andamento', 'cancelada'],
+        'confirmacao_necessaria' => ['agendada', 'confirmada', 'cancelada', 'wo'],
+        'agendada' => ['confirmada', 'em_andamento', 'cancelada', 'wo'],
         'confirmada' => ['em_andamento', 'finalizada', 'wo', 'cancelada'],
-        'em_andamento' => ['finalizada', 'wo', 'cancelada'],
+        'em_andamento' => ['placar_registrado', 'wo', 'cancelada'],
+        'placar_registrado' => ['placar_confirmado', 'em_reclamacao'],
+        'placar_confirmado' => [],
+        'em_reclamacao' => ['placar_confirmado'],
         'finalizada' => [],
         'wo' => [],
         'cancelada' => [],

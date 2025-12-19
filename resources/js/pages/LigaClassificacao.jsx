@@ -27,7 +27,7 @@ export default function LigaClassificacao() {
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">CLASSIFICAÇÃO</p>
                 <h1 className="ligas-title">Ranking da liga</h1>
-                <p className="ligas-subtitle">Ordenação provisória baseada no nome dos clubes.</p>
+                <p className="ligas-subtitle">Classificação calculada em tempo real a partir dos resultados confirmados.</p>
             </section>
 
             <section className="liga-classificacao-table">
@@ -47,7 +47,14 @@ export default function LigaClassificacao() {
                             href={`/liga/clubes/${item.clube_id}`}
                         >
                             <span>#{item.posicao}</span>
-                            <span>{item.clube_nome}</span>
+                            <span className="classificacao-clube">
+                                <strong>{item.clube_nome}</strong>
+                                <small>
+                                    {item.empates} empates · {item.derrotas} derrotas ·
+                                    GM {item.gols_marcados} · GS {item.gols_sofridos} ·
+                                    saldo {item.saldo_gols}
+                                </small>
+                            </span>
                             <span>{item.pontos}</span>
                             <span>{item.vitorias}</span>
                         </a>

@@ -313,6 +313,114 @@ a:focus-visible {
     padding-top: 40px;
 }
 
+.dashboard-checklist {
+    width: min(960px, 100%);
+    margin: 32px auto 48px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    padding: 0 10px;
+}
+
+.dashboard-checklist-header {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+    font-family: var(--font-heading);
+    letter-spacing: 1px;
+}
+
+.dashboard-checklist-header h2 {
+    font-size: 28px;
+}
+
+.dashboard-checklist-card {
+    background: linear-gradient(135deg, #0b0b0b, #1f1f1f);
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dashboard-checklist-card-header {
+    display: flex;
+    gap: var(--gap-md);
+    align-items: flex-start;
+}
+
+.dashboard-checklist-card-status {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.dashboard-checklist-card-status.pending {
+    background: rgba(255, 82, 82, 0.1);
+}
+
+.dashboard-checklist-card-status.done {
+    background: rgba(76, 175, 80, 0.2);
+}
+
+.dashboard-checklist-card-text h3 {
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.dashboard-checklist-card-text p {
+    margin-top: 2px;
+    color: #bfbfbf;
+    font-size: 14px;
+}
+
+.dashboard-checklist-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);
+    flex-wrap: wrap;
+}
+
+.dashboard-checklist-card-chip {
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-checklist-card-chip.is-done {
+    color: var(--gold);
+    border-color: rgba(255, 215, 0, 0.6);
+}
+
+.dashboard-checklist-card-chip.is-pending {
+    color: #f0f0f0;
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.dashboard-checklist-cta {
+    min-width: 160px;
+    text-align: center;
+}
+
+.dashboard-checklist-cta:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 .dashboard-btn {
     position: relative;
     width: 100%;
@@ -1904,6 +2012,26 @@ a:focus-visible {
     align-items: center;
 }
 
+.classificacao-clube {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.classificacao-clube strong {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.classificacao-clube small {
+    color: #bfbfbf;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-size: 9px;
+}
+
 .classificacao-row.header {
     background: rgba(255, 255, 255, 0.04);
     font-size: 12px;
@@ -1967,6 +2095,13 @@ a:focus-visible {
     text-transform: uppercase;
     letter-spacing: 0.12em;
     font-size: 11px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    appearance: none;
+    cursor: default;
 }
 
 .partida-estado.info {
@@ -1991,6 +2126,16 @@ a:focus-visible {
     background: rgba(255, 77, 77, 0.1);
     border-color: rgba(255, 77, 77, 0.4);
     color: #ff9b9b;
+}
+
+.partida-estado.clickable {
+    cursor: pointer;
+}
+
+.partida-estado.clickable:focus-visible,
+.partida-estado.clickable:focus {
+    outline: 2px solid rgba(255, 215, 0, 0.6);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.2);
 }
 
 .partida-estado.muted {
@@ -2211,6 +2356,34 @@ a:focus-visible {
     text-transform: uppercase;
     font-size: 11px;
     color: #dcdcdc;
+}
+
+.partida-role-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+    color: #dcdcdc;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-top: 4px;
+}
+
+.partida-role-pill.mandante {
+    background: rgba(255, 215, 0, 0.12);
+    border-color: rgba(255, 215, 0, 0.45);
+    color: var(--gold);
+}
+
+.partida-role-pill.visitante {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(255, 255, 255, 0.28);
+    color: #d9d9d9;
 }
 
 .partida-actions {

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElencoController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\LigaClassificacaoController;
@@ -20,7 +21,7 @@ Route::prefix('admin')->name('admin.')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ligas', [LigaController::class, 'index'])->name('ligas');
     Route::post('/ligas/{liga}/entrar', [LigaController::class, 'join'])->name('ligas.join');
     Route::get('/perfil', [ProfileController::class, 'show'])->name('perfil');

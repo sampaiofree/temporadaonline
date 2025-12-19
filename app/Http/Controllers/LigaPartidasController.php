@@ -3,8 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesLiga;
-use App\Models\Partida;
 use App\Models\Liga;
+use App\Models\Partida;
+use App\Services\PartidaPlacarService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -12,16 +13,24 @@ class LigaPartidasController extends Controller
 {
     use ResolvesLiga;
 
+    public function __construct(private readonly PartidaPlacarService $placarService)
+    {
+    }
+
     public function index(Request $request): View
     {
         $liga = $this->resolveUserLiga($request);
         $clube = $this->resolveUserClub($request);
 
-        $partidas = Partida::query()
+        $partidasCollection = Partida::query()
             ->with(['mandante.user', 'visitante.user'])
             ->where('liga_id', $liga->id)
             ->orderByRaw('scheduled_at IS NULL, scheduled_at ASC, created_at DESC')
-            ->get()
+            ->get();
+
+        $partidasCollection->each(fn (Partida $partida) => $this->placarService->maybeAutoConfirm($partida));
+
+        $partidas = $partidasCollection
             ->map(function (Partida $partida) use ($liga) {
                 $tz = $liga->timezone ?? 'UTC';
 
@@ -43,6 +52,8 @@ class LigaPartidasController extends Controller
                     'sem_slot_disponivel' => (bool) $partida->sem_slot_disponivel,
                     'placar_mandante' => $partida->placar_mandante,
                     'placar_visitante' => $partida->placar_visitante,
+                    'placar_registrado_por' => $partida->placar_registrado_por,
+                    'placar_registrado_em' => $partida->placar_registrado_em?->toIso8601String(),
                     'wo_para_user_id' => $partida->wo_para_user_id,
                     'wo_motivo' => $partida->wo_motivo,
                     'checkin_mandante_at' => $partida->checkin_mandante_at?->timezone($tz)->toIso8601String(),

@@ -1,60 +1,70 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Services;
 
-use App\Http\Controllers\Concerns\ResolvesLiga;
+use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\Partida;
-use Illuminate\Http\Request;
+use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\View\View;
 
-class LigaClassificacaoController extends Controller
+class LigaClassificacaoService
 {
-    use ResolvesLiga;
-
-    public function index(Request $request): View
+    /**
+     * Retorna a classificação completa de uma liga.
+     */
+    public function rankingForLiga(Liga $liga): Collection
     {
-        $liga = $this->resolveUserLiga($request);
+        $stats = $this->computeStats($liga);
 
-        $clube = $this->resolveUserClub($request);
-
-        $clubs = LigaClube::query()
-            ->where('liga_id', $liga->id)
-            ->orderBy('nome')
-            ->get(['id', 'nome']);
-
-        $stats = $this->initializeStats($clubs);
-
-        $partidas = Partida::query()
-            ->where('liga_id', $liga->id)
-            ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
-            ->get(['mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante']);
-
-        $this->aggregateMatches($stats, $partidas);
-
-        $classification = $this->buildRanking($stats);
-
-        return view('liga_classificacao', [
-            'liga' => [
-                'id' => $liga->id,
-                'nome' => $liga->nome,
-            ],
-            'classification' => $classification,
-            'appContext' => $this->makeAppContext($liga, $clube, 'tabela'),
-        ]);
+        return $this->buildRanking($stats);
     }
 
     /**
-     * @param Collection<LigaClube> $clubs
+     * Informa se o usuário já soma ao menos 1 ponto em alguma liga.
      */
-    private function initializeStats(Collection $clubs): array
+    public function userHasPoints(User $user): bool
     {
-        return $clubs->values()->mapWithKeys(function (LigaClube $clube, $index) {
+        $clubs = $user->clubesLiga()->with('liga')->get();
+        $leagueCache = [];
+
+        foreach ($clubs->groupBy('liga_id') as $ligaId => $group) {
+            $liga = $group->first()->liga;
+
+            if (! $liga) {
+                continue;
+            }
+
+            if (! isset($leagueCache[$ligaId])) {
+                $leagueCache[$ligaId] = $this->buildRanking($this->computeStats($liga));
+            }
+
+            foreach ($group as $club) {
+                $stats = $leagueCache[$ligaId]->firstWhere('clube_id', $club->id);
+
+                if ($stats && ($stats['pontos'] ?? 0) >= 1) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Calcula as estatísticas brutas para cada clube da liga.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function computeStats(Liga $liga): array
+    {
+        $clubs = $liga->clubes()->orderBy('nome')->get(['id', 'nome']);
+
+        $stats = $clubs->mapWithKeys(function (LigaClube $club, $index) {
             return [
-                $clube->id => [
-                    'clube_id' => $clube->id,
-                    'clube_nome' => $clube->nome,
+                $club->id => [
+                    'clube_id' => $club->id,
+                    'clube_nome' => $club->nome,
                     'pontos' => 0,
                     'vitorias' => 0,
                     'empates' => 0,
@@ -67,11 +77,19 @@ class LigaClassificacaoController extends Controller
                 ],
             ];
         })->all();
+
+        $partidas = Partida::query()
+            ->where('liga_id', $liga->id)
+            ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
+            ->get(['mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante']);
+
+        $this->aggregateMatches($stats, $partidas);
+
+        return $stats;
     }
 
     /**
      * @param array<int, array<string, mixed>> $stats
-     * @param Collection<int, Partida> $partidas
      */
     private function aggregateMatches(array &$stats, Collection $partidas): void
     {
@@ -116,10 +134,11 @@ class LigaClassificacaoController extends Controller
      */
     private function buildRanking(array $stats): Collection
     {
-        $ranking = collect($stats)->map(function ($item) {
-            $item['saldo_gols'] = $item['gols_marcados'] - $item['gols_sofridos'];
-            return $item;
-        })
+        $ranking = collect($stats)
+            ->map(function ($item) {
+                $item['saldo_gols'] = $item['gols_marcados'] - $item['gols_sofridos'];
+                return $item;
+            })
             ->values()
             ->sort(function ($a, $b) {
                 if ($a['pontos'] !== $b['pontos']) {
@@ -147,6 +166,7 @@ class LigaClassificacaoController extends Controller
                 'gols_sofridos' => $item['gols_sofridos'],
                 'saldo_gols' => $item['saldo_gols'],
                 'partidas_jogadas' => $item['partidas_jogadas'],
+                'club_order' => $item['club_order'],
             ];
         });
     }
