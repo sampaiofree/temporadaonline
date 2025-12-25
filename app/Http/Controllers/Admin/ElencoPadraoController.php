@@ -8,6 +8,7 @@ use App\Models\Jogo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -277,6 +278,48 @@ class ElencoPadraoController extends Controller
         }
     }
 
+    private function normalizePayloadDates(array &$payload): void
+    {
+        foreach (['dob', 'club_joined_date'] as $field) {
+            if (! array_key_exists($field, $payload)) {
+                continue;
+            }
+
+            $payload[$field] = $this->parseDateString($payload[$field]);
+        }
+    }
+
+    private function parseDateString(?string $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $value = trim($value);
+        if ($value === '') {
+            return null;
+        }
+
+        $formats = [
+            'd/m/Y',
+            'd/M/Y',
+            'Y-m-d',
+            'Y-m-d H:i:s',
+        ];
+
+        foreach ($formats as $format) {
+            try {
+                $date = Carbon::createFromFormat($format, $value);
+            } catch (\Exception $exception) {
+                continue;
+            }
+
+            return $date->toDateString();
+        }
+
+        return null;
+    }
+
     private function sanitizeMapping(array $mapping, array $fields, array $columns): array
     {
         $sanitized = array_fill_keys($fields, '');
@@ -424,6 +467,8 @@ class ElencoPadraoController extends Controller
                     ? (int) $payload['potential']
                     : null;
             }
+
+            $this->normalizePayloadDates($payload);
 
             Elencopadrao::updateOrCreate(
                 [
