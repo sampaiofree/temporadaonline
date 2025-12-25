@@ -9,7 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         // Ajuste de default de timezone
-        DB::statement("ALTER TABLE ligas ALTER COLUMN timezone SET DEFAULT 'America/Sao_Paulo'");
+        if (app('db')->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE ligas ALTER COLUMN timezone SET DEFAULT 'America/Sao_Paulo'");
+        }
+
         DB::statement("UPDATE ligas SET timezone = 'America/Sao_Paulo' WHERE timezone IS NULL OR timezone = ''");
 
         // Índices adicionais (usando IF NOT EXISTS para evitar colisão)
@@ -23,6 +26,8 @@ return new class extends Migration
         DB::statement('DROP INDEX IF EXISTS partidas_scheduled_at_index');
         DB::statement('DROP INDEX IF EXISTS partida_confirmacoes_partida_datetime_idx');
         DB::statement('DROP INDEX IF EXISTS user_disponibilidades_user_day_idx');
-        DB::statement("ALTER TABLE ligas ALTER COLUMN timezone SET DEFAULT 'UTC'");
+        if (app('db')->getDriverName() !== 'sqlite') {
+            DB::statement("ALTER TABLE ligas ALTER COLUMN timezone SET DEFAULT 'UTC'");
+        }
     }
 };

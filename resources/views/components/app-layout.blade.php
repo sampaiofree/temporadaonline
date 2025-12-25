@@ -37,6 +37,15 @@
                         <a href="{{ route('admin.plataformas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Plataformas
                         </a>
+                        <a href="{{ route('admin.paises.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Países
+                        </a>
+                        <a href="{{ route('admin.ligas-escudos.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Escudos de ligas
+                        </a>
+                        <a href="{{ route('admin.escudos-clubes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Escudos de clubes
+                        </a>
                         <a href="{{ route('admin.elenco-padrao.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Elenco padrão
                         </a>

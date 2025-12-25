@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\GeracaoController as AdminGeracaoController;
 use App\Http\Controllers\Admin\JogoController as AdminJogoController;
 use App\Http\Controllers\Admin\LigaController as AdminLigaController;
 use App\Http\Controllers\Admin\PlataformaController as AdminPlataformaController;
+use App\Http\Controllers\Admin\PaisController as AdminPaisController;
+use App\Http\Controllers\Admin\LigaEscudoController as AdminLigaEscudoController;
+use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
@@ -27,6 +30,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('geracoes', AdminGeracaoController::class)->except(['show']);
     Route::resource('jogos', AdminJogoController::class)->except(['show']);
     Route::resource('plataformas', AdminPlataformaController::class)->except(['show']);
+    Route::resource('paises', AdminPaisController::class, ['parameters' => ['paises' => 'pais']])
+        ->except(['show', 'create']);
+    Route::resource('ligas-escudos', AdminLigaEscudoController::class)->except(['show', 'create']);
+    Route::resource('escudos-clubes', AdminEscudoClubeController::class)->except(['show', 'create']);
     Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
     Route::get('/elenco-padrao', [AdminElencoPadraoController::class, 'index'])->name('elenco-padrao.index');
     Route::post('/elenco-padrao/importar', [AdminElencoPadraoController::class, 'importar'])->name('elenco-padrao.importar');
