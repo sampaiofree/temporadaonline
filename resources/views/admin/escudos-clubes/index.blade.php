@@ -169,6 +169,10 @@
                 </table>
             </div>
         </div>
+
+        <div>
+            {{ $escudos->links() }}
+        </div>
     </div>
 
     <script>

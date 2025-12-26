@@ -20,6 +20,11 @@
                 {{ session('success') }}
             </div>
         @endif
+        @if(session('error'))
+            <div class="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                {{ session('error') }}
+            </div>
+        @endif
 
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -62,6 +67,7 @@
                             <th class="px-4 py-3 font-semibold">Overall</th>
                             <th class="px-4 py-3 font-semibold">Clube</th>
                             <th class="px-4 py-3 font-semibold">Jogo</th>
+                            <th class="px-4 py-3 font-semibold">Acoes</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -89,10 +95,31 @@
                                 <td class="px-4 py-4 align-middle text-slate-600">{{ $player->overall ?? '—' }}</td>
                                 <td class="px-4 py-4 align-middle text-slate-600">{{ $player->club_name ?? '—' }}</td>
                                 <td class="px-4 py-4 align-middle text-slate-600">{{ $player->jogo?->nome ?? '—' }}</td>
+                                <td class="px-4 py-4 align-middle">
+                                    <div class="flex flex-wrap gap-2">
+                                        <a
+                                            href="{{ route('admin.elenco-padrao.jogadores.edit', ['player' => $player->id, 'redirect' => request()->fullUrl()]) }}"
+                                            class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                        >
+                                            Editar
+                                        </a>
+                                        <form action="{{ route('admin.elenco-padrao.jogadores.destroy-player', $player) }}" method="POST" class="inline">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button
+                                                type="submit"
+                                                onclick="return confirm('Tem certeza que deseja excluir este jogador?');"
+                                                class="inline-flex items-center rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                                            >
+                                                Excluir
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Nenhum jogador importado ainda.
                                 </td>
                             </tr>

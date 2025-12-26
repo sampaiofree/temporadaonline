@@ -18,7 +18,7 @@ class EscudoClubeController extends Controller
     {
         $paises = Pais::orderBy('nome')->get();
         $ligas = LigaEscudo::orderBy('liga_nome')->get();
-        $escudos = EscudoClube::with(['pais', 'liga'])->orderBy('clube_nome')->get();
+        $escudos = EscudoClube::with(['pais', 'liga'])->orderBy('clube_nome')->paginate();
 
         return view('admin.escudos-clubes.index', compact('paises', 'ligas', 'escudos'));
     }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Models\Jogo;
 
 class Elencopadrao extends Model
@@ -145,5 +146,15 @@ class Elencopadrao extends Model
     public function jogo(): BelongsTo
     {
         return $this->belongsTo(Jogo::class);
+    }
+
+    public function ligaClubeElencos(): HasMany
+    {
+        return $this->hasMany(LigaClubeElenco::class, 'elencopadrao_id');
+    }
+
+    public function ligaTransferencias(): HasMany
+    {
+        return $this->hasMany(LigaTransferencia::class, 'elencopadrao_id');
     }
 }

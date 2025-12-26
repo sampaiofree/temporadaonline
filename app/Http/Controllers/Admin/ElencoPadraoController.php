@@ -85,12 +85,75 @@ class ElencoPadraoController extends Controller
 
     public function destroyJogadores(Jogo $jogo): RedirectResponse
     {
-        $deleted = $jogo->elencoPadrao()->delete();
+        $total = $jogo->elencoPadrao()->count();
+        $deleted = $jogo->elencoPadrao()
+            ->whereDoesntHave('ligaClubeElencos')
+            ->whereDoesntHave('ligaTransferencias')
+            ->delete();
+        $blocked = $total - $deleted;
+
+        if ($deleted === 0 && $blocked > 0) {
+            return redirect()
+                ->route('admin.elenco-padrao.jogadores')
+                ->with('error', 'Nenhum jogador removido. Existem jogadores vinculados a ligas ou transferencias.');
+        }
+
         $label = $deleted === 1 ? 'jogador' : 'jogadores';
+        $message = sprintf('%d %s removidos do jogo %s.', $deleted, $label, $jogo->nome);
+
+        if ($blocked > 0) {
+            $message .= sprintf(' %d jogadores nao puderam ser removidos por estarem vinculados a ligas ou transferencias.', $blocked);
+        }
 
         return redirect()
             ->route('admin.elenco-padrao.jogadores')
-            ->with('success', sprintf('%d %s removidos do jogo %s.', $deleted, $label, $jogo->nome));
+            ->with('success', $message);
+    }
+
+    public function edit(Request $request, Elencopadrao $player): View
+    {
+        $fields = $this->editableFields();
+
+        return view('admin.elenco_padrao.edit', [
+            'player' => $player->load('jogo'),
+            'fields' => $fields,
+            'labels' => $this->fieldLabels($fields),
+            'casts' => $player->getCasts(),
+            'redirectTo' => $request->query('redirect', route('admin.elenco-padrao.jogadores')),
+        ]);
+    }
+
+    public function update(Request $request, Elencopadrao $player): RedirectResponse
+    {
+        $fields = $this->editableFields();
+        $casts = $player->getCasts();
+        $rules = $this->buildEditRules($fields, $casts);
+
+        $validated = $request->validate($rules);
+        $payload = $this->normalizeEditPayload($validated, $casts);
+
+        $player->update($payload);
+
+        $redirectTo = $request->input('redirect_to', route('admin.elenco-padrao.jogadores'));
+
+        return redirect()
+            ->to($redirectTo)
+            ->with('success', 'Jogador atualizado com sucesso.');
+    }
+
+    public function destroyJogador(Elencopadrao $player): RedirectResponse
+    {
+        if ($player->ligaClubeElencos()->exists() || $player->ligaTransferencias()->exists()) {
+            return redirect()
+                ->back()
+                ->with('error', 'Nao e possivel excluir este jogador porque ele esta vinculado a ligas ou transferencias.');
+        }
+
+        $player->delete();
+
+        return redirect()
+            ->back()
+            ->with('success', 'Jogador removido com sucesso.');
     }
 
     public function importar(Request $request): RedirectResponse
@@ -189,6 +252,61 @@ class ElencoPadraoController extends Controller
         $blocked = ['id', 'jogo_id', 'created_at', 'updated_at'];
 
         return array_values(array_filter($columns, fn ($column) => ! in_array($column, $blocked, true)));
+    }
+
+    private function editableFields(): array
+    {
+        $columns = Schema::getColumnListing('elencopadrao');
+        $blocked = ['id', 'jogo_id', 'created_at', 'updated_at'];
+
+        return array_values(array_filter($columns, fn ($column) => ! in_array($column, $blocked, true)));
+    }
+
+    private function buildEditRules(array $fields, array $casts): array
+    {
+        $rules = [];
+
+        foreach ($fields as $field) {
+            $cast = $casts[$field] ?? null;
+            $rule = 'nullable';
+
+            if ($cast === 'integer') {
+                $rule .= '|integer';
+            } elseif ($cast === 'boolean') {
+                $rule .= '|boolean';
+            } elseif ($cast === 'date') {
+                $rule .= '|date';
+            } else {
+                $rule .= '|string';
+            }
+
+            $rules[$field] = $rule;
+        }
+
+        return $rules;
+    }
+
+    private function normalizeEditPayload(array $payload, array $casts): array
+    {
+        foreach ($payload as $field => $value) {
+            if (is_string($value)) {
+                $value = trim($value);
+                $payload[$field] = $value === '' ? null : $value;
+            }
+
+            if ($payload[$field] === null) {
+                continue;
+            }
+
+            $cast = $casts[$field] ?? null;
+            if ($cast === 'integer') {
+                $payload[$field] = (int) $payload[$field];
+            } elseif ($cast === 'boolean') {
+                $payload[$field] = (bool) $payload[$field];
+            }
+        }
+
+        return $payload;
     }
 
     private function readColumns(string $path): array
