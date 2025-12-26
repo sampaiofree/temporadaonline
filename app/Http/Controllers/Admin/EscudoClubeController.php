@@ -32,7 +32,7 @@ class EscudoClubeController extends Controller
             'uploads.*.clube_nome' => 'required|string|max:150',
             'uploads.*.pais_id' => 'required|exists:paises,id',
             'uploads.*.liga_id' => 'required|exists:ligas_escudos,id',
-            'uploads.*.clube_imagem' => 'required|image|max:4096',
+            'uploads.*.clube_imagem' => 'required|image:allow_svg|max:4096',
         ]);
 
         $created = 0;
@@ -78,7 +78,7 @@ class EscudoClubeController extends Controller
             'clube_nome' => 'required|string|max:150',
             'pais_id' => 'required|exists:paises,id',
             'liga_id' => 'required|exists:ligas_escudos,id',
-            'imagem' => 'nullable|image|max:4096',
+            'imagem' => 'nullable|image:allow_svg|max:4096',
         ]);
 
         $data = [

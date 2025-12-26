@@ -27,7 +27,7 @@ class PaisController extends Controller
         $validated = $request->validate([
             'uploads' => 'required|array|min:1',
             'uploads.*.nome' => 'required|string|max:150',
-            'uploads.*.imagem' => 'required|image|max:4096',
+            'uploads.*.imagem' => 'required|image:allow_svg|max:4096',
         ]);
 
         $created = 0;
@@ -72,7 +72,7 @@ class PaisController extends Controller
     {
         $validated = $request->validate([
             'nome' => 'required|string|max:150',
-            'imagem' => 'nullable|image|max:4096',
+            'imagem' => 'nullable|image:allow_svg|max:4096',
             'ativo' => 'required|boolean',
         ]);
 

@@ -50,7 +50,7 @@ class LigaController extends Controller
             'plataforma_id' => 'required|exists:plataformas,id',
             'max_times' => 'required|integer|min:1',
             'status' => 'required|in:ativa,aguardando',
-            'imagem' => 'nullable|image|max:2048',
+            'imagem' => 'nullable|image:allow_svg|max:2048',
         ]);
 
         $data = array_merge($data, [
@@ -89,7 +89,7 @@ class LigaController extends Controller
             'nome' => 'required|string|max:255',
             'max_times' => 'required|integer|min:1',
             'status' => 'required|in:ativa,aguardando',
-            'imagem' => 'nullable|image|max:2048',
+            'imagem' => 'nullable|image:allow_svg|max:2048',
         ];
 
         if (! $hasClubes) {

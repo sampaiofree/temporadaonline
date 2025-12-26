@@ -31,7 +31,7 @@ class LigaEscudoController extends Controller
             'uploads' => 'required|array|min:1',
             'uploads.*.liga_nome' => 'required|string|max:150',
             'uploads.*.pais_id' => 'required|exists:paises,id',
-            'uploads.*.liga_imagem' => 'required|image|max:4096',
+            'uploads.*.liga_imagem' => 'required|image:allow_svg|max:4096',
         ]);
 
         $created = 0;
@@ -77,7 +77,7 @@ class LigaEscudoController extends Controller
         $validated = $request->validate([
             'liga_nome' => 'required|string|max:150',
             'pais_id' => 'required|exists:paises,id',
-            'imagem' => 'nullable|image|max:4096',
+            'imagem' => 'nullable|image:allow_svg|max:4096',
         ]);
 
         $data = [
