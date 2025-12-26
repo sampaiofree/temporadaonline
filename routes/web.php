@@ -33,7 +33,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('paises', AdminPaisController::class, ['parameters' => ['paises' => 'pais']])
         ->except(['show', 'create']);
     Route::resource('ligas-escudos', AdminLigaEscudoController::class)->except(['show', 'create']);
-    Route::resource('escudos-clubes', AdminEscudoClubeController::class)->except(['show', 'create']);
+    Route::resource('escudos-clubes', AdminEscudoClubeController::class, [
+        'parameters' => ['escudos-clubes' => 'escudo_clube'],
+    ])->except(['show', 'create']);
     Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
     Route::get('/elenco-padrao', [AdminElencoPadraoController::class, 'index'])->name('elenco-padrao.index');
     Route::post('/elenco-padrao/importar', [AdminElencoPadraoController::class, 'importar'])->name('elenco-padrao.importar');
