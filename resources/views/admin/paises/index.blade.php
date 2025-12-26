@@ -143,6 +143,11 @@
                     </tbody>
                 </table>
             </div>
+            @if($paises->hasPages())
+                <div class="border-t border-slate-100 px-6 py-4">
+                    {{ $paises->links() }}
+                </div>
+            @endif
         </div>
     </div>
 

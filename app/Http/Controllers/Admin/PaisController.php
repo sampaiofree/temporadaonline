@@ -15,7 +15,7 @@ class PaisController extends Controller
 {
     public function index(): View
     {
-        $paises = Pais::orderBy('nome')->get();
+        $paises = Pais::orderBy('nome')->paginate();
 
         return view('admin.paises.index', [
             'paises' => $paises,

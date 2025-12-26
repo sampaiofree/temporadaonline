@@ -15,6 +15,11 @@
                 {{ session('success') }}
             </div>
         @endif
+        @if(session('error'))
+            <div class="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">
+                {{ session('error') }}
+            </div>
+        @endif
 
         @if($errors->has('mapping'))
             <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
@@ -194,5 +199,11 @@
                 </form>
             @endif
         </div>
+
+        @include('admin.elenco_padrao._jogadores_list', [
+            'players' => $players,
+            'jogos' => $jogosResumo,
+            'totalPlayers' => $totalPlayers,
+        ])
     </div>
 </x-app-layout>

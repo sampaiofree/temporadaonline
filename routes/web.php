@@ -32,7 +32,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('plataformas', AdminPlataformaController::class)->except(['show']);
     Route::resource('paises', AdminPaisController::class, ['parameters' => ['paises' => 'pais']])
         ->except(['show', 'create']);
-    Route::resource('ligas-escudos', AdminLigaEscudoController::class)->except(['show', 'create']);
+    Route::resource('ligas-escudos', AdminLigaEscudoController::class, [
+        'parameters' => ['ligas-escudos' => 'liga_escudo'],
+    ])->except(['show', 'create']);
     Route::resource('escudos-clubes', AdminEscudoClubeController::class, [
         'parameters' => ['escudos-clubes' => 'escudo_clube'],
     ])->except(['show', 'create']);

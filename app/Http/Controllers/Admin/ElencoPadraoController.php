@@ -19,6 +19,24 @@ class ElencoPadraoController extends Controller
     {
         $import = session('elenco_import');
         $jogos = Jogo::orderBy('nome')->get(['id', 'nome']);
+        $jogosResumo = Jogo::withCount('elencoPadrao')
+            ->orderByDesc('elenco_padrao_count')
+            ->get(['id', 'nome']);
+        $totalPlayers = $jogosResumo->sum('elenco_padrao_count');
+        $players = Elencopadrao::query()
+            ->select([
+                'id',
+                'jogo_id',
+                'long_name',
+                'short_name',
+                'player_positions',
+                'overall',
+                'club_name',
+                'player_face_url',
+            ])
+            ->with('jogo:id,nome')
+            ->orderBy('long_name')
+            ->paginate(100);
         $fields = $this->importableFields();
         $labels = $this->fieldLabels($fields);
 
@@ -46,6 +64,9 @@ class ElencoPadraoController extends Controller
 
         return view('admin.elenco_padrao.index', [
             'jogos' => $jogos,
+            'jogosResumo' => $jogosResumo,
+            'totalPlayers' => $totalPlayers,
+            'players' => $players,
             'fields' => $fields,
             'labels' => $labels,
             'step' => $step,
@@ -83,8 +104,9 @@ class ElencoPadraoController extends Controller
         ]);
     }
 
-    public function destroyJogadores(Jogo $jogo): RedirectResponse
+    public function destroyJogadores(Request $request, Jogo $jogo): RedirectResponse
     {
+        $redirectTo = $request->input('redirect_to', route('admin.elenco-padrao.jogadores'));
         $total = $jogo->elencoPadrao()->count();
         $deleted = $jogo->elencoPadrao()
             ->whereDoesntHave('ligaClubeElencos')
@@ -94,7 +116,7 @@ class ElencoPadraoController extends Controller
 
         if ($deleted === 0 && $blocked > 0) {
             return redirect()
-                ->route('admin.elenco-padrao.jogadores')
+                ->to($redirectTo)
                 ->with('error', 'Nenhum jogador removido. Existem jogadores vinculados a ligas ou transferencias.');
         }
 
@@ -106,7 +128,7 @@ class ElencoPadraoController extends Controller
         }
 
         return redirect()
-            ->route('admin.elenco-padrao.jogadores')
+            ->to($redirectTo)
             ->with('success', $message);
     }
 
