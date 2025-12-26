@@ -38,6 +38,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/elenco-padrao', [AdminElencoPadraoController::class, 'index'])->name('elenco-padrao.index');
     Route::post('/elenco-padrao/importar', [AdminElencoPadraoController::class, 'importar'])->name('elenco-padrao.importar');
     Route::get('/elenco-padrao/jogadores', [AdminElencoPadraoController::class, 'jogadores'])->name('elenco-padrao.jogadores');
+    Route::delete('/elenco-padrao/jogos/{jogo}/jogadores', [AdminElencoPadraoController::class, 'destroyJogadores'])
+        ->name('elenco-padrao.jogadores.destroy');
 });
 
 Route::middleware('auth')->group(function () {

@@ -83,6 +83,16 @@ class ElencoPadraoController extends Controller
         ]);
     }
 
+    public function destroyJogadores(Jogo $jogo): RedirectResponse
+    {
+        $deleted = $jogo->elencoPadrao()->delete();
+        $label = $deleted === 1 ? 'jogador' : 'jogadores';
+
+        return redirect()
+            ->route('admin.elenco-padrao.jogadores')
+            ->with('success', sprintf('%d %s removidos do jogo %s.', $deleted, $label, $jogo->nome));
+    }
+
     public function importar(Request $request): RedirectResponse
     {
         $step = $request->input('step', 'upload');

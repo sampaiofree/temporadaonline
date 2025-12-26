@@ -15,6 +15,12 @@
     </x-slot>
 
     <div class="space-y-6">
+        @if(session('success'))
+            <div class="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+                {{ session('success') }}
+            </div>
+        @endif
+
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Total geral</p>
@@ -24,6 +30,23 @@
                 <div class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                     <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">{{ $jogo->nome }}</p>
                     <p class="mt-2 text-2xl font-bold text-slate-900">{{ $jogo->elenco_padrao_count }}</p>
+                    @if($jogo->elenco_padrao_count > 0)
+                        <form
+                            action="{{ route('admin.elenco-padrao.jogadores.destroy', $jogo) }}"
+                            method="POST"
+                            class="mt-3"
+                        >
+                            @csrf
+                            @method('DELETE')
+                            <button
+                                type="submit"
+                                onclick="return confirm('Tem certeza que deseja excluir todos os jogadores deste jogo?');"
+                                class="inline-flex items-center rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
+                            >
+                                Excluir tudo
+                            </button>
+                        </form>
+                    @endif
                 </div>
             @endforeach
         </div>
