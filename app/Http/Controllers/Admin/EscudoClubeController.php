@@ -6,21 +6,37 @@ use App\Http\Controllers\Controller;
 use App\Models\EscudoClube;
 use App\Models\LigaEscudo;
 use App\Models\Pais;
+use Carbon\Exceptions\InvalidFormatException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class EscudoClubeController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
         $paises = Pais::orderBy('nome')->get();
         $ligas = LigaEscudo::orderBy('liga_nome')->get();
-        $escudos = EscudoClube::with(['pais', 'liga'])->orderBy('clube_nome')->paginate();
+        $filters = [
+            'search' => (string) $request->query('search', ''),
+            'pais_id' => (string) $request->query('pais_id', ''),
+            'liga_id' => (string) $request->query('liga_id', ''),
+            'created_from' => (string) $request->query('created_from', ''),
+            'created_until' => (string) $request->query('created_until', ''),
+        ];
 
-        return view('admin.escudos-clubes.index', compact('paises', 'ligas', 'escudos'));
+        $escudos = $this->applyFilters(
+            EscudoClube::with(['pais', 'liga'])->orderBy('clube_nome'),
+            $request
+        )
+            ->paginate()
+            ->withQueryString();
+
+        return view('admin.escudos-clubes.index', compact('paises', 'ligas', 'escudos', 'filters'));
     }
 
     public function store(Request $request): RedirectResponse|JsonResponse
@@ -64,12 +80,14 @@ class EscudoClubeController extends Controller
         return redirect()->route('admin.escudos-clubes.index');
     }
 
-    public function edit(EscudoClube $escudoClube): View
+    public function edit(EscudoClube $escudoClube, Request $request): View
     {
         $paises = Pais::orderBy('nome')->get();
         $ligas = LigaEscudo::orderBy('liga_nome')->get();
 
-        return view('admin.escudos-clubes.edit', compact('escudoClube', 'paises', 'ligas'));
+        $returnQuery = $request->getQueryString();
+
+        return view('admin.escudos-clubes.edit', compact('escudoClube', 'paises', 'ligas', 'returnQuery'));
     }
 
     public function update(Request $request, EscudoClube $escudoClube): RedirectResponse
@@ -100,7 +118,7 @@ class EscudoClubeController extends Controller
         return redirect()->route('admin.escudos-clubes.index')->with('success', 'Escudo atualizado com sucesso.');
     }
 
-    public function destroy(EscudoClube $escudoClube): RedirectResponse
+    public function destroy(Request $request, EscudoClube $escudoClube): RedirectResponse
     {
         if ($escudoClube->clube_imagem) {
             Storage::disk('public')->delete($escudoClube->clube_imagem);
@@ -108,6 +126,70 @@ class EscudoClubeController extends Controller
 
         $escudoClube->delete();
 
-        return redirect()->route('admin.escudos-clubes.index')->with('success', 'Escudo removido com sucesso.');
+        return redirect()->route('admin.escudos-clubes.index', $request->query())->with('success', 'Escudo removido com sucesso.');
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $deleted = 0;
+        $this->applyFilters(EscudoClube::query()->orderBy('id'), $request)
+            ->chunkById(100, function ($escudos) use (&$deleted) {
+                foreach ($escudos as $escudo) {
+                    if ($escudo->clube_imagem) {
+                        Storage::disk('public')->delete($escudo->clube_imagem);
+                    }
+
+                    $escudo->delete();
+                    $deleted++;
+                }
+            });
+
+        $message = $deleted
+            ? "{$deleted} escudo(s) removido(s)."
+            : 'Nenhum escudo encontrado para exclusão.';
+
+        return redirect()->route('admin.escudos-clubes.index', $request->query())->with('success', $message);
+    }
+
+    private function applyFilters(Builder $query, Request $request): Builder
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        if ($search !== '') {
+            $like = "%{$search}%";
+            $query->where(function (Builder $query) use ($like) {
+                $query->where('clube_nome', 'like', $like)
+                    ->orWhereHas('pais', fn (Builder $query) => $query->where('nome', 'like', $like))
+                    ->orWhereHas('liga', fn (Builder $query) => $query->where('liga_nome', 'like', $like));
+            });
+        }
+
+        if ($paisId = $request->query('pais_id')) {
+            $query->where('pais_id', (int) $paisId);
+        }
+
+        if ($ligaId = $request->query('liga_id')) {
+            $query->where('liga_id', (int) $ligaId);
+        }
+
+        if ($from = $request->query('created_from')) {
+            try {
+                $fromDate = Carbon::parse($from);
+                $query->whereDate('created_at', '>=', $fromDate->startOfDay());
+            } catch (InvalidFormatException) {
+                //
+            }
+        }
+
+        if ($until = $request->query('created_until')) {
+            try {
+                $untilDate = Carbon::parse($until);
+                $query->whereDate('created_at', '<=', $untilDate->endOfDay());
+            } catch (InvalidFormatException) {
+                //
+            }
+        }
+
+        return $query;
     }
 }

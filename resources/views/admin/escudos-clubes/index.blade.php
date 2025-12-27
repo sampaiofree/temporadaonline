@@ -10,6 +10,7 @@
                 <p class="text-sm text-slate-500">Associe clubes a países e ligas, com upload em massa.</p>
             </div>
         </div>
+
     </x-slot>
 
     <div class="space-y-6">
@@ -18,6 +19,19 @@
                 {{ session('success') }}
             </div>
         @endif
+
+        @php
+            $filters = array_merge([
+                'search' => '',
+                'pais_id' => '',
+                'liga_id' => '',
+                'created_from' => '',
+                'created_until' => '',
+            ], $filters ?? []);
+            $filtersActive = collect($filters)->filter(fn ($value) => $value !== null && $value !== '')->isNotEmpty();
+            $queryString = request()->getQueryString() ?? '';
+            $listingQuery = $queryString ? '?'.$queryString : '';
+        @endphp
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div class="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 pb-4">
@@ -93,86 +107,258 @@
         </div>
 
         <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div class="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-                <div>
-                    <h3 class="text-lg font-semibold text-slate-900">Escudos cadastrados</h3>
-                    <p class="text-sm text-slate-500">Lista por clube, liga e país.</p>
+            <div class="border-b border-slate-100 px-6 py-5">
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">Escudos cadastrados</h3>
+                        <p class="text-sm text-slate-500">Lista por clube, liga e país.</p>
+                    </div>
+                    <form
+                        id="escudos-clubes-bulk-delete-form"
+                        action="{{ route('admin.escudos-clubes.bulk-destroy') }}{{ $listingQuery }}"
+                        method="POST"
+                        class="inline-flex"
+                    >
+                        @csrf
+                        @method('DELETE')
+                        <button
+                            type="submit"
+                            data-bulk-delete
+                            class="inline-flex items-center rounded-xl border border-rose-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                        >
+                            Excluir todos os escudos
+                        </button>
+                    </form>
+                </div>
+                <div class="mt-5 flex flex-wrap items-center gap-3">
+                    <form
+                        id="escudos-clubes-search-form"
+                        action="{{ route('admin.escudos-clubes.index') }}"
+                        method="GET"
+                        class="flex flex-1 min-w-[260px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm"
+                    >
+                        <label class="sr-only" for="escudos-clubes-search-input">Buscar escudos</label>
+                        <input
+                            id="escudos-clubes-search-input"
+                            type="search"
+                            name="search"
+                            value="{{ $filters['search'] }}"
+                            placeholder="Buscar clube, liga ou país"
+                            class="flex-1 rounded-xl border border-transparent bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        >
+                        <button
+                            type="submit"
+                            class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        >
+                            Buscar
+                        </button>
+                        @foreach(['pais_id', 'liga_id', 'created_from', 'created_until'] as $filterKey)
+                            <input type="hidden" name="{{ $filterKey }}" value="{{ $filters[$filterKey] }}">
+                        @endforeach
+                    </form>
+                    <button
+                        type="button"
+                        data-open-escudos-filters
+                        class="inline-flex items-center rounded-xl border px-4 py-2 text-xs font-semibold uppercase tracking-wide transition focus:outline-none focus:ring-2 focus:ring-blue-100 {{ $filtersActive ? 'border-blue-500 text-blue-600 shadow-sm' : 'border-slate-200 text-slate-600' }}"
+                    >
+                        Filtros avançados
+                    </button>
+                    @if($filtersActive)
+                        <a
+                            href="{{ route('admin.escudos-clubes.index') }}"
+                            class="text-sm font-semibold text-blue-600 transition hover:text-blue-500"
+                        >
+                            Limpar filtros
+                        </a>
+                    @endif
                 </div>
             </div>
-
-            <div class="overflow-x-auto">
-                <table class="min-w-full text-left text-sm">
-                    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                        <tr>
-                            <th class="px-4 py-3 font-semibold">Clube</th>
-                            <th class="px-4 py-3 font-semibold">Liga</th>
-                            <th class="px-4 py-3 font-semibold">País</th>
-                            <th class="px-4 py-3 font-semibold">Criado em</th>
-                            <th class="px-4 py-3 font-semibold">Ações</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-                        @forelse($escudos as $escudo)
-                            <tr class="hover:bg-slate-50 transition-colors">
-                                <td class="px-4 py-4 align-top">
-                                    <div class="flex items-center gap-3">
-                                        @if($escudo->clube_imagem)
-                                            <span class="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
-                                                <img
-                                                    src="{{ Storage::disk('public')->url($escudo->clube_imagem) }}"
-                                                    alt="{{ $escudo->clube_nome }}"
-                                                    class="h-full w-full object-cover"
-                                                >
-                                            </span>
-                                        @else
-                                            <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold uppercase text-slate-500">
-                                                {{ strtoupper(substr($escudo->clube_nome, 0, 2)) }}
-                                            </span>
-                                        @endif
-                                        <div>
-                                            <div class="text-sm font-semibold text-slate-900">{{ $escudo->clube_nome }}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->liga?->liga_nome }}</td>
-                                <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->pais?->nome }}</td>
-                                <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->created_at?->format('d/m/Y H:i') }}</td>
-                                <td class="px-4 py-4 align-top">
-                                    <div class="flex flex-wrap gap-2">
-                                        <a
-                                            href="{{ route('admin.escudos-clubes.edit', $escudo) }}"
-                                            class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-                                        >
-                                            Editar
-                                        </a>
-                                        <form action="{{ route('admin.escudos-clubes.destroy', $escudo) }}" method="POST" class="inline">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button
-                                                type="submit"
-                                                class="inline-flex items-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
-                                            >
-                                                Excluir
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
+            <div class="px-6 py-4">
+                <div class="mb-4">
+                    {{ $escudos->links() }}
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-left text-sm">
+                        <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                             <tr>
-                                <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
-                                    Ainda não existem escudos de clubes cadastrados.
-                                </td>
+                                <th class="px-4 py-3 font-semibold">Clube</th>
+                                <th class="px-4 py-3 font-semibold">Liga</th>
+                                <th class="px-4 py-3 font-semibold">País</th>
+                                <th class="px-4 py-3 font-semibold">Criado em</th>
+                                <th class="px-4 py-3 font-semibold">Ações</th>
                             </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            @forelse($escudos as $escudo)
+                                <tr class="hover:bg-slate-50 transition-colors">
+                                    <td class="px-4 py-4 align-top">
+                                        <div class="flex items-center gap-3">
+                                            @if($escudo->clube_imagem)
+                                                <span class="inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                                                    <img
+                                                        src="{{ Storage::disk('public')->url($escudo->clube_imagem) }}"
+                                                        alt="{{ $escudo->clube_nome }}"
+                                                        class="h-full w-full object-cover"
+                                                    >
+                                                </span>
+                                            @else
+                                                <span class="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-xs font-semibold uppercase text-slate-500">
+                                                    {{ strtoupper(substr($escudo->clube_nome, 0, 2)) }}
+                                                </span>
+                                            @endif
+                                            <div>
+                                                <div class="text-sm font-semibold text-slate-900">{{ $escudo->clube_nome }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->liga?->liga_nome }}</td>
+                                    <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->pais?->nome }}</td>
+                                    <td class="px-4 py-4 align-top text-slate-600">{{ $escudo->created_at?->format('d/m/Y H:i') }}</td>
+                                    <td class="px-4 py-4 align-top">
+                                        <div class="flex flex-wrap gap-2">
+                                            <a
+                                                href="{{ route('admin.escudos-clubes.edit', $escudo) }}{{ $listingQuery }}"
+                                                class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                            >
+                                                Editar
+                                            </a>
+                                            <form action="{{ route('admin.escudos-clubes.destroy', $escudo) }}{{ $listingQuery }}" method="POST" class="inline">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:bg-rose-50"
+                                                >
+                                                    Excluir
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
+                                        Ainda não existem escudos de clubes cadastrados.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div class="mt-4">
+                    {{ $escudos->links() }}
+                </div>
+            </div>
+        </div>
+        <div
+            id="escudos-clubes-filters-modal"
+            class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-black/40 p-4"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div class="w-full max-w-2xl rounded-2xl bg-white p-6 shadow-xl">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-semibold text-slate-900">Filtros avançados</h3>
+                        <p class="text-sm text-slate-500">Refine a lista por liga, país ou período.</p>
+                    </div>
+                    <button
+                        type="button"
+                        data-close-escudos-filters
+                        class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-300 hover:text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                        Fechar
+                    </button>
+                </div>
+
+                <form
+                    id="escudos-clubes-filters-form"
+                    action="{{ route('admin.escudos-clubes.index') }}"
+                    method="GET"
+                    class="mt-6 space-y-4"
+                >
+                    <input type="hidden" name="search" value="{{ $filters['search'] }}">
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700" for="escudos-clubes-filter-pais">País</label>
+                            <select
+                                id="escudos-clubes-filter-pais"
+                                name="pais_id"
+                                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                                <option value="">Todos os países</option>
+                                @foreach ($paises as $pais)
+                                    <option value="{{ $pais->id }}" {{ $pais->id === (int) $filters['pais_id'] ? 'selected' : '' }}>
+                                        {{ $pais->nome }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700" for="escudos-clubes-filter-liga">Liga</label>
+                            <select
+                                id="escudos-clubes-filter-liga"
+                                name="liga_id"
+                                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                                <option value="">Todas as ligas</option>
+                                @foreach ($ligas as $liga)
+                                    <option value="{{ $liga->id }}" {{ $liga->id === (int) $filters['liga_id'] ? 'selected' : '' }}>
+                                        {{ $liga->liga_nome }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700" for="escudos-clubes-filter-created-from">Criado a partir de</label>
+                            <input
+                                id="escudos-clubes-filter-created-from"
+                                name="created_from"
+                                type="date"
+                                value="{{ $filters['created_from'] }}"
+                                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                        </div>
+                        <div>
+                            <label class="text-sm font-semibold text-slate-700" for="escudos-clubes-filter-created-until">Criado até</label>
+                            <input
+                                id="escudos-clubes-filter-created-until"
+                                name="created_until"
+                                type="date"
+                                value="{{ $filters['created_until'] }}"
+                                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 pt-4">
+                        <a href="{{ route('admin.escudos-clubes.index') }}" class="text-sm font-semibold text-slate-500 transition hover:text-slate-700">
+                            Limpar filtros
+                        </a>
+                        <div class="flex gap-2">
+                            <button
+                                type="button"
+                                data-close-escudos-filters
+                                class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="submit"
+                                class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                            >
+                                Aplicar filtros
+                            </button>
+                        </div>
+                    </div>
+                </form>
             </div>
         </div>
 
-        <div>
-            {{ $escudos->links() }}
-        </div>
     </div>
 
     <script>
@@ -422,11 +608,52 @@
                     } else {
                         throw new Error('Não foi possível enviar os arquivos.');
                     }
-                } catch (error) {
-                    errorContainer.textContent = error.message || 'Erro ao enviar os arquivos.';
-                    errorContainer.classList.remove('hidden');
-                } finally {
-                    submitButton.removeAttribute('disabled');
+            } catch (error) {
+                errorContainer.textContent = error.message || 'Erro ao enviar os arquivos.';
+                errorContainer.classList.remove('hidden');
+            } finally {
+                submitButton.removeAttribute('disabled');
+            }
+        });
+    })();
+    </script>
+    <script>
+        (function () {
+            const modal = document.getElementById('escudos-clubes-filters-modal');
+            if (! modal) {
+                return;
+            }
+
+            const openButton = document.querySelector('[data-open-escudos-filters]');
+            const closeButtons = modal.querySelectorAll('[data-close-escudos-filters]');
+            const bulkDeleteForm = document.getElementById('escudos-clubes-bulk-delete-form');
+
+            const openModal = () => {
+                modal.classList.remove('hidden');
+            };
+
+            const closeModal = () => {
+                modal.classList.add('hidden');
+            };
+
+            openButton?.addEventListener('click', openModal);
+            closeButtons.forEach((button) => button.addEventListener('click', closeModal));
+
+            modal.addEventListener('click', (event) => {
+                if (event.target === modal) {
+                    closeModal();
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                    closeModal();
+                }
+            });
+
+            bulkDeleteForm?.addEventListener('submit', (event) => {
+                if (! window.confirm('Tem certeza que deseja excluir todos os escudos? Esta ação não pode ser desfeita.')) {
+                    event.preventDefault();
                 }
             });
         })();
