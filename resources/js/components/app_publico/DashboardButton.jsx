@@ -5,7 +5,7 @@ export default function DashboardButton({ label, paths = [], onClick, href }) {
         }
 
         if (href && !event.defaultPrevented) {
-            window.location.href = href;
+            window.navigateWithLoader(href);
         }
     };
 

@@ -1899,6 +1899,26 @@ a:focus-visible {
     text-transform: uppercase;
 }
 
+.mercado-player-value-button {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    text-align: right;
+    cursor: pointer;
+}
+
+.mercado-player-value-button:focus-visible {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
 .mercado-player-salary {
     font-size: 10px;
     color: rgba(255, 255, 255, 0.7);
@@ -1928,6 +1948,14 @@ a:focus-visible {
 
 .mercado-player-card.status-meu {
     border-color: rgba(0, 255, 136, 0.2);
+}
+
+.mercado-player-card.status-ativo {
+    border-color: rgba(0, 255, 136, 0.25);
+}
+
+.mercado-player-card.status-inativo {
+    border-color: rgba(255, 59, 48, 0.3);
 }
 
 .mercado-player-card.status-outro {

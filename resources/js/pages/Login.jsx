@@ -56,7 +56,7 @@ export default function Login() {
                 { headers: { Accept: 'application/json' } },
             );
 
-            window.location.href = response?.data?.redirect ?? '/dashboard';
+            window.navigateWithLoader(response?.data?.redirect ?? '/dashboard');
         } catch (error) {
             if (error.response?.status === 422) {
                 setErrors(error.response.data.errors ?? {});

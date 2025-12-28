@@ -312,18 +312,6 @@ export default function MeuElenco() {
 
     const title = `${clube?.nome ? `ELENCO • ${clube.nome}` : 'MEU ELENCO'}`;
 
-    const resolveStatusBadge = (entry) => (
-        <span
-            className="mercado-pos-badge"
-            style={{
-                borderColor: entry?.ativo ? 'rgba(46,204,113,0.6)' : 'rgba(255,59,48,0.6)',
-                color: entry?.ativo ? '#2ecc71' : '#ff6b6b',
-            }}
-        >
-            {entry?.ativo ? 'Ativo' : 'Inativo'}
-        </span>
-    );
-
     return (
         <main className="meu-elenco-screen">
             <section className="meu-elenco-hero">
@@ -443,96 +431,81 @@ export default function MeuElenco() {
                 </div>
             )}
 
-            {/* Tabela única */}
-            <section
-                className="mercado-table-wrap"
-                aria-label="Tabela do elenco"
-                style={{ marginTop: 20 }}
-            >
-                <div className="mercado-table-scroll">
-                    <table className="mercado-table" style={{ textAlign: 'left' }}>
-                        <thead>
-                            <tr>
-                                <th>Jogador</th>
-                                <th className="col-compact">OVR</th>
-                                <th className="col-compact">POS</th>
-                                <th style={{ textAlign: 'left' }}>Valor</th>
-                                <th className="numeric">Salário</th>
-                                <th>Status</th>
-                                <th className="col-action">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredPlayers.length === 0 ? (
-                                <tr>
-                                    <td colSpan={7} style={{ padding: 16, opacity: 0.85 }}>
-                                        Nenhum jogador encontrado. Ajuste os filtros ou vá ao mercado.
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredPlayers.map((entry) => {
-                                    const elencopadrao = entry?.elencopadrao ?? {};
-                                    const name = elencopadrao.short_name || elencopadrao.long_name || '—';
-                                    const positions =
-                                        elencopadrao.player_positions?.split(',').map((pos) => pos.trim()) ?? [];
-                                    const pos = positions[0] || '—';
-                                    const ovr = elencopadrao.overall ?? '—';
-                                    const imageUrl = proxyFaceUrl(elencopadrao.player_face_url);
-                                    const statusBadge = resolveStatusBadge(entry);
-                                    const ovrTone = resolveOvrTone(ovr);
+            {/* Lista mobile no estilo Mercado */}
+            <section className="mercado-table-wrap" aria-label="Tabela do elenco" style={{ marginTop: 20 }}>
+                <div className="mercado-list-header">
+                    <span>Jogador / OVR</span>
+                    <span>Valores / Ação</span>
+                </div>
+                <div className="mercado-player-list">
+                    {filteredPlayers.length === 0 ? (
+                        <p className="mercado-no-results">
+                            Nenhum jogador encontrado. Ajuste os filtros ou vá ao mercado.
+                        </p>
+                    ) : (
+                        filteredPlayers.map((entry) => {
+                            const elencopadrao = entry?.elencopadrao ?? {};
+                            const name = elencopadrao.short_name || elencopadrao.long_name || '—';
+                            const positions =
+                                elencopadrao.player_positions?.split(',').map((pos) => pos.trim()) ?? [];
+                            const pos = positions[0] || '—';
+                            const ovr = elencopadrao.overall ?? '—';
+                            const imageUrl = proxyFaceUrl(elencopadrao.player_face_url);
+                            const ovrTone = resolveOvrTone(ovr);
+                            const statusLabel = entry?.ativo ? 'Ativo' : 'Inativo';
 
-                                    return (
-                                        <tr key={entry.id}>
-                                            <td>
-                                                <div className="mercado-player-cell">
-                                                    <div className="mercado-avatar-sm">
-                                                        <PlayerAvatar
-                                                            src={imageUrl}
-                                                            alt={name}
-                                                            fallback={getInitials(name)}
-                                                        />
-                                                    </div>
-                                                    <div className="mercado-player-meta">
-                                                        <strong>{name}</strong>
-                                                        <span>{positions.filter(Boolean).join(' · ') || 'Sem posição'}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td>
-                                                <span className={`mercado-ovr-badge ovr-${ovrTone}`}>{ovr}</span>
-                                            </td>
-                                            <td>
-                                                <span className="mercado-pos-badge">{pos}</span>
-                                            </td>
-                                            <td className="numeric text-left">
-                                                <button
-                                                    type="button"
-                                                    className="table-action-badge outline"
-                                                    onClick={() => openValueModal(entry)}
-                                                    aria-label={`Editar valor de ${name}`}
-                                                >
-                                                    {formatCurrency(entry.value_eur)}
-                                                </button>
-                                            </td>
-                                            <td className="numeric text-left">{formatCurrency(entry.wage_eur)}</td>
-                                            <td>{statusBadge}</td>
-                                            <td>
-                                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                                    <button
-                                                        type="button"
-                                                        className="table-action-badge outline"
-                                                        onClick={() => openModal(entry)}
-                                                    >
-                                                        Vender
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                            return (
+                                <article
+                                    key={entry.id}
+                                    className={`mercado-player-card status-${entry?.ativo ? 'ativo' : 'inativo'}`}
+                                >
+                                    <div className="mercado-player-card-content">
+                                        <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
+                                            {ovr}
+                                        </span>
+                                        <span className="mercado-player-avatar">
+                                            <PlayerAvatar
+                                                src={imageUrl}
+                                                alt={name}
+                                                fallback={getInitials(name)}
+                                            />
+                                            <span className="mercado-player-position">{pos}</span>
+                                        </span>
+                                        <div className="mercado-player-info">
+                                            <strong>{name}</strong>
+                                            <span style={{ color: entry?.ativo ? '#00ff88' : '#ff6b6b' }}>
+                                                {statusLabel}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className="mercado-player-card-right">
+                                        <div className="mercado-player-values">
+                                            <button
+                                                type="button"
+                                                className="mercado-player-value-button"
+                                                onClick={() => openValueModal(entry)}
+                                                aria-label={`Editar valor de ${name}`}
+                                            >
+                                                {formatCurrency(entry.value_eur)}
+                                            </button>
+                                            <span className="mercado-player-salary">
+                                                SAL: {formatCurrency(entry.wage_eur)}
+                                            </span>
+                                        </div>
+                                        <div className="mercado-player-action">
+                                            <button
+                                                type="button"
+                                                className="table-action-badge outline"
+                                                onClick={() => openModal(entry)}
+                                            >
+                                                Vender
+                                            </button>
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })
+                    )}
                 </div>
             </section>
 

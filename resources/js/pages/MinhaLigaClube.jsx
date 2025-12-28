@@ -114,7 +114,7 @@ export default function MinhaLigaClube() {
 
             const { data: response } = await window.axios.post('/minha_liga/clubes', payload);
             setFeedback(response?.message ?? 'Clube atualizado com sucesso.');
-            window.location.href = `/minha_liga?liga_id=${liga.id}`;
+            window.navigateWithLoader(`/minha_liga?liga_id=${liga.id}`);
         } catch (error) {
             const message =
                 error.response?.data?.message ??
@@ -133,17 +133,17 @@ export default function MinhaLigaClube() {
             escudo_liga_id: filters.escudo_liga_id,
             only_available: filters.only_available ? '1' : '',
         });
-        window.location.href = url;
+        window.navigateWithLoader(url);
     };
 
     const clearFilters = () => {
         setFilters(getInitialFilters({}));
-        window.location.href = buildUrl(liga.id, {});
+        window.navigateWithLoader(buildUrl(liga.id, {}));
     };
 
     const goToPage = (url) => {
         if (!url) return;
-        window.location.href = url;
+        window.navigateWithLoader(url);
     };
 
     return (
@@ -358,7 +358,7 @@ export default function MinhaLigaClube() {
                     type="button"
                     className="btn-outline"
                     onClick={() => {
-                        window.location.href = `/minha_liga?liga_id=${liga.id}`;
+                        window.navigateWithLoader(`/minha_liga?liga_id=${liga.id}`);
                     }}
                 >
                     Voltar

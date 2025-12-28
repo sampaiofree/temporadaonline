@@ -36,7 +36,7 @@ export default function Dashboard() {
             return;
         }
 
-        window.location.href = href;
+        window.navigateWithLoader(href);
     };
 
     return (

@@ -42,6 +42,21 @@ const hideLoader = () => {
     document.body.classList.remove(LOADER_ACTIVE_CLASS);
 };
 
+const navigateWithLoader = (url) => {
+    if (!url) return;
+    showLoader();
+    requestAnimationFrame(() => {
+        window.location.href = url;
+    });
+};
+
+window.MCOPageLoader = {
+    show: showLoader,
+    hide: hideLoader,
+    navigate: navigateWithLoader,
+};
+window.navigateWithLoader = navigateWithLoader;
+
 const shouldIgnoreLink = (link) => {
     if (!link) return true;
     if (link.dataset.noLoader === 'true') return true;

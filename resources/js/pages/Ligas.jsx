@@ -117,7 +117,7 @@ export default function Ligas() {
 
     const handleLeagueSelect = (liga) => {
         if (liga.registered) {
-            window.location.href = `/minha_liga?liga_id=${liga.id}`;
+            window.navigateWithLoader(`/minha_liga?liga_id=${liga.id}`);
             return;
         }
 
@@ -159,7 +159,7 @@ export default function Ligas() {
 
         try {
             const { data } = await window.axios.post(`/ligas/${activeLiga.id}/entrar`);
-            window.location.href = data.redirect;
+            window.navigateWithLoader(data.redirect);
         } catch (error) {
             const message =
                 error.response?.data?.message ??
@@ -267,7 +267,7 @@ export default function Ligas() {
                                                 className="liga-mobile-action"
                                                 onClick={() => {
                                                     if (liga.registered) {
-                                                        window.location.href = `/minha_liga?liga_id=${liga.id}`;
+                                                        window.navigateWithLoader(`/minha_liga?liga_id=${liga.id}`);
                                                     } else {
                                                         openModal(liga);
                                                     }
@@ -322,7 +322,9 @@ export default function Ligas() {
                                                 <button
                                                     type="button"
                                                     className="table-action-badge primary "
-                                                    onClick={() => (window.location.href = `/minha_liga?liga_id=${liga.id}`)}
+                                                    onClick={() =>
+                                                        window.navigateWithLoader(`/minha_liga?liga_id=${liga.id}`)
+                                                    }
                                                 >
                                                     Ir para minha liga
                                                 </button>
