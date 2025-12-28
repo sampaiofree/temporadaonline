@@ -418,30 +418,37 @@ export default function Ligas() {
             {blocked && (
                 <div className="ligas-modal-overlay" role="presentation">
                     <div
-                        className="ligas-modal"
+                        className="ligas-modal ligas-modal--blocked"
                         role="dialog"
                         aria-modal="true"
                         aria-label="Completar perfil e registrar disponibilidade"
                     >
+                        <div className="ligas-modal-blocked-icon">
+                            <span>🔒</span>
+                        </div>
                         <div className="ligas-modal-header">
                             <p className="ligas-modal-status">Acesso bloqueado</p>
                             <h2>Finalize seu perfil para desbloquear as ligas</h2>
                         </div>
                         <div className="ligas-modal-body">
-                            <p>Cadastre plataforma, jogo, nickname e geração e adicione ao menos um horário disponível.</p>
+                            <p>
+                                Detectamos dados pendentes. Cadastre{' '}
+                                <span>plataforma, jogo, nickname</span> e ao menos um{' '}
+                                <span>horário disponível</span> para competir.
+                            </p>
                         </div>
                         <div className="ligas-modal-actions">
-                            <a
-                                className="ligas-modal-button ligas-modal-button--ghost"
-                                href={PROFILE_URL}
-                            >
-                                Completar perfil
-                            </a>
                             <a
                                 className="ligas-modal-button ligas-modal-button--primary"
                                 href={PROFILE_HORARIOS_URL}
                             >
                                 Registrar horário
+                            </a>
+                            <a
+                                className="ligas-modal-button ligas-modal-button--ghost"
+                                href={PROFILE_URL}
+                            >
+                                Completar perfil
                             </a>
                         </div>
                     </div>

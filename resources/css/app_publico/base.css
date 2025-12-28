@@ -46,6 +46,53 @@ body {
     overflow-x: hidden;
 }
 
+.page-loader {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.86);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+}
+
+.page-loader-spinner {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: 3px solid rgba(237, 255, 5, 0.2);
+    border-top-color: var(--gold);
+    box-shadow: 0 0 18px rgba(237, 255, 5, 0.35);
+    animation: page-loader-spin 0.8s linear infinite;
+    position: relative;
+}
+
+.page-loader-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+body.is-loading .page-loader {
+    opacity: 1;
+    pointer-events: all;
+}
+
+@keyframes page-loader-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
 #app {
     min-height: 100vh;
     display: flex;
@@ -2709,6 +2756,16 @@ a:focus-visible {
     overflow: hidden;
 }
 
+.ligas-modal.ligas-modal--blocked {
+    width: min(360px, 100%);
+    background: #1a1a1a;
+    border-radius: 16px;
+    border-top: 4px solid #ff4d4d;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+}
+
 .ligas-modal-hero {
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(13, 13, 13, 0.75));
     padding: 32px 24px 24px;
@@ -2750,6 +2807,49 @@ a:focus-visible {
     font-size: 11px;
     color: #00ff88;
     margin-bottom: 4px;
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-status {
+    color: #ff4d4d;
+    letter-spacing: 0.2em;
+}
+
+.ligas-modal-blocked-icon {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 77, 77, 0.1);
+    border-radius: 50%;
+    border: 1px solid rgba(255, 77, 77, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 30px;
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-header h2 {
+    font-family: 'Russo One', Impact, 'Montserrat', sans-serif;
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    margin: 0;
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-body {
+    padding: 0;
+    margin-bottom: 25px;
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-body p {
+    color: #aaa;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-body span {
+    color: #eee;
+    font-weight: 700;
 }
 
 .ligas-modal-body {
@@ -2858,6 +2958,13 @@ a:focus-visible {
     padding: 16px 20px 24px;
     border-top: 1px solid rgba(255, 255, 255, 0.08);
     background: rgba(0, 0, 0, 0.7);
+}
+
+.ligas-modal.ligas-modal--blocked .ligas-modal-actions {
+    flex-direction: column;
+    border: none;
+    background: transparent;
+    padding: 0;
 }
 
 .ligas-modal-button {
