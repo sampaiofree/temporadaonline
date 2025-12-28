@@ -580,51 +580,244 @@ export default function MeuElenco() {
                 </div>
             )}
 
-            {valueModalPlayer && (
-                <div className="meu-elenco-modal-overlay" role="dialog" aria-modal="true">
-                    <div className="meu-elenco-modal">
-                        <h3>Editar valor de mercado</h3>
-                        <p className="meu-elenco-modal-description">
-                            Selecione um reajuste. Aplicaremos o mesmo percentual ao valor e ao salário deste jogador.
-                        </p>
-                        <div className="modal-field">
-                            <span>Escolha um reajuste</span>
-                            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                                {PERCENT_OPTIONS.map((pct) => (
-                                    <button
-                                        key={pct}
-                                        type="button"
-                                        className={`btn-outline small${valueModalPercent === pct ? ' active' : ''}`}
-                                        onClick={() => setValueModalPercent(pct)}
-                                    >
-                                        +{pct}%
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="modal-field">
-                            <span>Novo valor de mercado</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(computedValue)}</p>
-                        </div>
-
-                        <div className="modal-field">
-                            <span>Novo salário</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(computedWage)}</p>
-                        </div>
-                        {valueModalError && <p className="modal-error">{valueModalError}</p>}
-                        <div className="meu-elenco-modal-actions">
-                            <button type="button" className="btn-outline" onClick={closeValueModal} disabled={isValueSaving}>
-                                Cancelar
-                            </button>
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={handleValueSubmit}
-                                disabled={isValueSaving}
+{valueModalPlayer && (
+                <div
+                    className="meu-elenco-modal-overlay"
+                    role="dialog"
+                    aria-modal="true"
+                    style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 1000,
+                        backdropFilter: 'blur(4px)',
+                        padding: '20px',
+                    }}
+                >
+                    <div
+                        className="meu-elenco-modal"
+                        style={{
+                            background: '#1a1a1a',
+                            width: '100%',
+                            maxWidth: '420px',
+                            borderRadius: '14px',
+                            border: '1px solid #333',
+                            overflow: 'hidden',
+                            fontFamily: 'sans-serif',
+                            color: '#fff',
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
+                        }}
+                    >
+                        <div
+                            style={{
+                                background: 'linear-gradient(90deg, #edff05 0%, #1a1a1a 100%)',
+                                height: '4px',
+                            }}
+                        />
+                        <div style={{ padding: '24px' }}>
+                            <h3
+                                style={{
+                                    textTransform: 'uppercase',
+                                    fontWeight: 900,
+                                    margin: '0 0 10px 0',
+                                    fontSize: '18px',
+                                    letterSpacing: '1px',
+                                }}
                             >
-                                {isValueSaving ? 'Salvando...' : 'Salvar'}
-                            </button>
+                                Ajuste de Valor Mercadológico
+                            </h3>
+                            <div
+                                style={{
+                                    backgroundColor: 'rgba(237, 255, 5, 0.1)',
+                                    borderLeft: '4px solid #edff05',
+                                    padding: '12px',
+                                    marginBottom: '20px',
+                                    borderRadius: '6px',
+                                }}
+                            >
+                                <p
+                                    style={{
+                                        margin: 0,
+                                        color: '#edff05',
+                                        fontSize: '12px',
+                                        fontWeight: 800,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                    }}
+                                >
+                                    ⚠️ Atenção Irreversível
+                                </p>
+                                <p
+                                    style={{
+                                        margin: '5px 0 0 0',
+                                        color: '#eee',
+                                        fontSize: '13px',
+                                        lineHeight: 1.4,
+                                    }}
+                                >
+                                    Ao aumentar o valor, você não poderá revertê-lo futuramente. O novo salário entra em vigor imediatamente.
+                                </p>
+                            </div>
+                            <div className="modal-field" style={{ marginBottom: '20px' }}>
+                                <span
+                                    style={{
+                                        fontSize: '11px',
+                                        textTransform: 'uppercase',
+                                        color: '#888',
+                                        fontWeight: 700,
+                                        display: 'block',
+                                        marginBottom: '10px',
+                                    }}
+                                >
+                                    Selecione o reajuste
+                                </span>
+                                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                                    {PERCENT_OPTIONS.map((pct) => (
+                                        <button
+                                            key={pct}
+                                            type="button"
+                                            onClick={() => setValueModalPercent(pct)}
+                                            style={{
+                                                flex: '1 0 30%',
+                                                padding: '12px 5px',
+                                                borderRadius: '6px',
+                                                border: valueModalPercent === pct ? '2px solid #edff05' : '1px solid #444',
+                                                background: valueModalPercent === pct ? '#edff05' : 'transparent',
+                                                color: valueModalPercent === pct ? '#000' : '#fff',
+                                                fontWeight: 900,
+                                                fontSize: '14px',
+                                                cursor: 'pointer',
+                                                transition: 'all 0.2s',
+                                            }}
+                                        >
+                                            +{pct}%
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                            <div
+                                style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr 1fr',
+                                    gap: '15px',
+                                    background: '#222',
+                                    padding: '15px',
+                                    borderRadius: '8px',
+                                    marginBottom: '20px',
+                                }}
+                            >
+                                <div className="modal-field">
+                                    <span
+                                        style={{
+                                            fontSize: '10px',
+                                            color: '#888',
+                                            textTransform: 'uppercase',
+                                            display: 'block',
+                                        }}
+                                    >
+                                        Novo valor
+                                    </span>
+                                    <p
+                                        style={{
+                                            fontWeight: 800,
+                                            fontSize: '15px',
+                                            margin: '5px 0 0 0',
+                                            color: '#fff',
+                                        }}
+                                    >
+                                        {formatCurrency(computedValue)}
+                                    </p>
+                                </div>
+                                <div className="modal-field">
+                                    <span
+                                        style={{
+                                            fontSize: '10px',
+                                            color: '#888',
+                                            textTransform: 'uppercase',
+                                            display: 'block',
+                                        }}
+                                    >
+                                        Novo salário
+                                    </span>
+                                    <p
+                                        style={{
+                                            fontWeight: 800,
+                                            fontSize: '15px',
+                                            margin: '5px 0 0 0',
+                                            color: '#edff05',
+                                        }}
+                                    >
+                                        {formatCurrency(computedWage)}
+                                    </p>
+                                </div>
+                            </div>
+                            {valueModalError && (
+                                <p
+                                    className="modal-error"
+                                    style={{
+                                        color: '#ff4d4d',
+                                        fontSize: '12px',
+                                        textAlign: 'center',
+                                        marginBottom: '10px',
+                                        fontWeight: 600,
+                                    }}
+                                >
+                                    {valueModalError}
+                                </p>
+                            )}
+                            <div
+                                className="meu-elenco-modal-actions"
+                                style={{
+                                    display: 'flex',
+                                    gap: '10px',
+                                }}
+                            >
+                                <button
+                                    type="button"
+                                    onClick={closeValueModal}
+                                    disabled={isValueSaving}
+                                    style={{
+                                        flex: 1,
+                                        padding: '14px',
+                                        borderRadius: '6px',
+                                        border: '1px solid #444',
+                                        background: 'transparent',
+                                        color: '#888',
+                                        fontWeight: 700,
+                                        textTransform: 'uppercase',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleValueSubmit}
+                                    disabled={isValueSaving}
+                                    style={{
+                                        flex: 2,
+                                        padding: '14px',
+                                        borderRadius: '6px',
+                                        border: 'none',
+                                        background: '#edff05',
+                                        color: '#000',
+                                        fontWeight: 900,
+                                        textTransform: 'uppercase',
+                                        fontSize: '12px',
+                                        cursor: 'pointer',
+                                        boxShadow: '0 4px 0 #b3c200',
+                                    }}
+                                >
+                                    {isValueSaving ? 'Salvando...' : 'Confirmar Reajuste'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

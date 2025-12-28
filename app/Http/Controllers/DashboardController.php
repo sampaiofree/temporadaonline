@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ChecksProfileCompletion;
 use App\Models\LigaClubeElenco;
 use App\Models\Partida;
-use App\Models\Profile;
 use App\Models\UserDisponibilidade;
 use App\Services\LigaClassificacaoService;
 use Illuminate\Http\Request;
@@ -12,6 +12,8 @@ use Illuminate\View\View;
 
 class DashboardController extends Controller
 {
+    use ChecksProfileCompletion;
+
     public function __construct(private LigaClassificacaoService $classificationService)
     {
     }
@@ -120,15 +122,4 @@ class DashboardController extends Controller
         ]);
     }
 
-    private function hasCompleteProfile(?Profile $profile): bool
-    {
-        if (! $profile) {
-            return false;
-        }
-
-        return filled($profile->plataforma)
-            && filled($profile->jogo)
-            && filled($profile->nickname)
-            && filled($profile->geracao);
-    }
 }

@@ -7,9 +7,11 @@ use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
 use App\Models\Plataforma;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class LigaController extends Controller
@@ -49,8 +51,12 @@ class LigaController extends Controller
             'geracao_id' => 'required|exists:geracoes,id',
             'plataforma_id' => 'required|exists:plataformas,id',
             'max_times' => 'required|integer|min:1',
+            'saldo_inicial' => 'required|integer|min:0',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
+            'periodos' => 'array',
+            'periodos.*.inicio' => 'nullable|date',
+            'periodos.*.fim' => 'nullable|date',
         ]);
 
         $data = array_merge($data, [
@@ -59,11 +65,17 @@ class LigaController extends Controller
             'tipo' => 'publica',
         ]);
 
+        unset($data['periodos']);
+
+        $periodos = $this->normalizePeriodos($request->input('periodos', []));
         if ($request->hasFile('imagem')) {
             $data['imagem'] = $request->file('imagem')->store('ligas', 'public');
         }
 
-        Liga::create($data);
+        $liga = Liga::create($data);
+        if ($periodos) {
+            $liga->periodos()->createMany($periodos);
+        }
 
         return redirect()->route('admin.ligas.index')->with('success', 'Liga criada com sucesso.');
     }
@@ -71,7 +83,7 @@ class LigaController extends Controller
     public function edit(Liga $liga): View
     {
         return view('admin.ligas.edit', [
-            'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma']),
+            'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'periodos']),
             'jogos' => Jogo::orderBy('nome')->get(),
             'geracoes' => Geracao::orderBy('nome')->get(),
             'plataformas' => Plataforma::orderBy('nome')->get(),
@@ -88,8 +100,12 @@ class LigaController extends Controller
         $rules = [
             'nome' => 'required|string|max:255',
             'max_times' => 'required|integer|min:1',
+            'saldo_inicial' => 'required|integer|min:0',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
+            'periodos' => 'array',
+            'periodos.*.inicio' => 'nullable|date',
+            'periodos.*.fim' => 'nullable|date',
         ];
 
         if (! $hasClubes) {
@@ -114,9 +130,66 @@ class LigaController extends Controller
             unset($data['jogo_id'], $data['geracao_id'], $data['plataforma_id']);
         }
 
+        unset($data['periodos']);
+
+        $periodos = $this->normalizePeriodos($request->input('periodos', []));
+
         $liga->update($data);
+        $liga->periodos()->delete();
+        if ($periodos) {
+            $liga->periodos()->createMany($periodos);
+        }
 
         return redirect()->route('admin.ligas.index')->with('success', 'Liga atualizada com sucesso.');
+    }
+
+    private function normalizePeriodos(array $periodos): array
+    {
+        $normalized = [];
+
+        foreach ($periodos as $index => $periodo) {
+            $inicio = $periodo['inicio'] ?? null;
+            $fim = $periodo['fim'] ?? null;
+
+            if (! $inicio && ! $fim) {
+                continue;
+            }
+
+            if (! $inicio || ! $fim) {
+                throw ValidationException::withMessages([
+                    'periodos' => ['Informe data inicial e final para todos os periodos.'],
+                ]);
+            }
+
+            $inicioDate = Carbon::parse($inicio)->startOfDay();
+            $fimDate = Carbon::parse($fim)->startOfDay();
+
+            if ($inicioDate->gt($fimDate)) {
+                throw ValidationException::withMessages([
+                    'periodos' => ['A data inicial precisa ser menor ou igual a data final.'],
+                ]);
+            }
+
+            $normalized[] = [
+                'inicio' => $inicioDate->toDateString(),
+                'fim' => $fimDate->toDateString(),
+            ];
+        }
+
+        usort($normalized, fn ($a, $b) => strcmp($a['inicio'], $b['inicio']));
+
+        for ($i = 1; $i < count($normalized); $i++) {
+            $prev = $normalized[$i - 1];
+            $current = $normalized[$i];
+
+            if ($current['inicio'] <= $prev['fim']) {
+                throw ValidationException::withMessages([
+                    'periodos' => ['Existe sobreposicao entre periodos cadastrados.'],
+                ]);
+            }
+        }
+
+        return $normalized;
     }
 
     public function destroy(Liga $liga): RedirectResponse

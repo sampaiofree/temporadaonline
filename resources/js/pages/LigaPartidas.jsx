@@ -3,8 +3,16 @@ import Navbar from '../components/app_publico/Navbar';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
-const getPartidasFromWindow = () =>
-    window.__PARTIDAS__ ?? { minhas_partidas: [], todas_partidas: [] };
+const getPartidasFromWindow = () => {
+    const data = window.__PARTIDAS__;
+    if (Array.isArray(data)) {
+        return data;
+    }
+    if (data?.partidas && Array.isArray(data.partidas)) {
+        return data.partidas;
+    }
+    return [];
+};
 
 export default function LigaPartidas() {
     const liga = getLigaFromWindow();
@@ -12,17 +20,14 @@ export default function LigaPartidas() {
     const ligaTimezone =
         liga?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const [partidasState, setPartidasState] = useState(getPartidasFromWindow());
-    const [activeTab, setActiveTab] = useState('minhas');
+    const [filters, setFilters] = useState({ role: 'all', status: 'all' });
     const [modal, setModal] = useState({ type: null, partida: null });
-    const [optionsState, setOptionsState] = useState({ loading: false, opcoes: [], sugestoes: [] });
-    const [selectedOptions, setSelectedOptions] = useState([]);
-    const [selectedAlterSlot, setSelectedAlterSlot] = useState('');
-    const [manualAlterDatetime, setManualAlterDatetime] = useState('');
+    const [calendarState, setCalendarState] = useState({ loading: false, days: [] });
+    const [selectedSlot, setSelectedSlot] = useState('');
     const [modalError, setModalError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [placarForm, setPlacarForm] = useState({ mandante: '', visitante: '' });
     const [denunciaForm, setDenunciaForm] = useState({ motivo: '', descricao: '' });
-    const [openActionsFor, setOpenActionsFor] = useState(null);
     const [reclamacaoForm, setReclamacaoForm] = useState({ motivo: '', descricao: '', imagem: '' });
 
     if (!liga) {
@@ -33,9 +38,6 @@ export default function LigaPartidas() {
             </main>
         );
     }
-
-    const tabContent =
-        activeTab === 'minhas' ? partidasState.minhas_partidas : partidasState.todas_partidas;
 
     const estadoLabels = {
         agendada: 'Agendada',
@@ -99,49 +101,27 @@ export default function LigaPartidas() {
         return chips;
     };
 
-    const getWoWinner = (partida) => {
-        if (!partida.wo_para_user_id) return null;
-        if (partida.wo_para_user_id === partida.mandante_user_id) {
-            return partida.mandante_nickname ?? partida.mandante;
-        }
-        if (partida.wo_para_user_id === partida.visitante_user_id) {
-            return partida.visitante_nickname ?? partida.visitante;
-        }
-        return null;
-    };
-
-
     const isParticipant = (partida) =>
         clube &&
         (Number(partida.mandante_id) === Number(clube.id) ||
             Number(partida.visitante_id) === Number(clube.id));
 
     const isMandante = (partida) => clube && Number(partida.mandante_id) === Number(clube.id);
+    const isVisitante = (partida) => clube && Number(partida.visitante_id) === Number(clube.id);
 
-    const isRegistrante = (partida) =>
-        clube && Number(partida.placar_registrado_por) === Number(clube.user_id);
-
-    const alreadyCheckedIn = (partida) => {
-        if (!clube) return false;
-        if (isMandante(partida)) return Boolean(partida.checkin_mandante_at);
-        return Boolean(partida.checkin_visitante_at);
-    };
-
-    const withinCheckinWindow = (partida) => {
-        if (!partida.scheduled_at) return false;
-        const now = new Date();
-        const start = new Date(partida.scheduled_at);
-        start.setMinutes(start.getMinutes() - 30);
-        const end = new Date(partida.scheduled_at);
-        end.setMinutes(end.getMinutes() + 15);
-        return now >= start && now <= end;
+    const resolveTeamLogo = (partida, side) => {
+        const baseLogo = side === 'mandante' ? partida.mandante_logo : partida.visitante_logo;
+        if (baseLogo) return baseLogo;
+        if (!clube?.escudo_url) return null;
+        if (side === 'mandante' && isMandante(partida)) return clube.escudo_url;
+        if (side === 'visitante' && isVisitante(partida)) return clube.escudo_url;
+        return null;
     };
 
     const canDesistir = (partida) => {
         if (!isParticipant(partida)) return false;
-        const allowed = ['confirmacao_necessaria', 'agendada', 'confirmada'];
-        if (!allowed.includes(partida.estado)) return false;
-        if (!partida.scheduled_at) return true;
+        if (partida.estado !== 'confirmada') return false;
+        if (!partida.scheduled_at) return false;
 
         const now = new Date();
         const start = new Date(partida.scheduled_at);
@@ -150,27 +130,75 @@ export default function LigaPartidas() {
         return now < limit;
     };
 
-    const updatePartida = (partidaId, updater) => {
-        setPartidasState((prev) => {
-            const apply = (arr) =>
-                arr.map((item) => {
-                    if (item.id !== partidaId) return item;
-                    const patch = typeof updater === 'function' ? updater(item) : updater;
-                    return { ...item, ...patch };
-                });
+    const roleFilters = [
+        { id: 'all', label: 'Todas' },
+        { id: 'mandante', label: 'Mandante' },
+        { id: 'visitante', label: 'Visitante' },
+    ];
 
-            return {
-                minhas_partidas: apply(prev.minhas_partidas),
-                todas_partidas: apply(prev.todas_partidas),
-            };
-        });
+    const statusFilters = [
+        { id: 'all', label: 'Todas' },
+        { id: 'aguardando', label: 'Aguardando confirmação' },
+        { id: 'confirmadas', label: 'Confirmadas' },
+        { id: 'em_andamento', label: 'Em andamento' },
+        { id: 'finalizadas', label: 'Finalizadas' },
+    ];
+
+    const pendingVisitorCount = partidasState.filter(
+        (partida) =>
+            isVisitante(partida) &&
+            partida.estado === 'confirmacao_necessaria' &&
+            !partida.scheduled_at,
+    ).length;
+
+    const hasActiveFilters = filters.role !== 'all' || filters.status !== 'all';
+
+    const matchesRole = (partida) => {
+        if (filters.role === 'all') return true;
+        if (filters.role === 'mandante') return isMandante(partida);
+        if (filters.role === 'visitante') return isVisitante(partida);
+        return true;
+    };
+
+    const matchesStatus = (partida) => {
+        switch (filters.status) {
+            case 'aguardando':
+                return partida.estado === 'confirmacao_necessaria';
+            case 'confirmadas':
+                return ['confirmada', 'agendada'].includes(partida.estado);
+            case 'em_andamento':
+                return partida.estado === 'em_andamento';
+            case 'finalizadas':
+                return [
+                    'finalizada',
+                    'placar_confirmado',
+                    'placar_registrado',
+                    'em_reclamacao',
+                    'wo',
+                    'cancelada',
+                ].includes(partida.estado);
+            default:
+                return true;
+        }
+    };
+
+    const filteredPartidas = partidasState.filter(
+        (partida) => matchesRole(partida) && matchesStatus(partida),
+    );
+
+    const updatePartida = (partidaId, updater) => {
+        setPartidasState((prev) =>
+            prev.map((item) => {
+                if (item.id !== partidaId) return item;
+                const patch = typeof updater === 'function' ? updater(item) : updater;
+                return { ...item, ...patch };
+            }),
+        );
     };
 
     const resetModalState = () => {
-        setOptionsState({ loading: false, opcoes: [], sugestoes: [] });
-        setSelectedOptions([]);
-        setSelectedAlterSlot('');
-        setManualAlterDatetime('');
+        setCalendarState({ loading: false, days: [] });
+        setSelectedSlot('');
         setModalError('');
         setPlacarForm({ mandante: '', visitante: '' });
         setDenunciaForm({ motivo: '', descricao: '' });
@@ -179,10 +207,9 @@ export default function LigaPartidas() {
 
     const openModal = (type, partida) => {
         resetModalState();
-        setOpenActionsFor(null);
         setModal({ type, partida });
-        if (type === 'confirm' || type === 'alterar') {
-            loadOpcoes(partida.id);
+        if (type === 'agendar') {
+            loadSlots(partida.id);
         }
         if (type === 'placar' && partida) {
             setPlacarForm({
@@ -197,30 +224,29 @@ export default function LigaPartidas() {
         resetModalState();
     };
 
-    const loadOpcoes = async (partidaId) => {
-        setOptionsState((prev) => ({ ...prev, loading: true }));
+    const loadSlots = async (partidaId) => {
+        setCalendarState((prev) => ({ ...prev, loading: true }));
         setModalError('');
 
         try {
-            const { data } = await window.axios.get(`/api/partidas/${partidaId}/opcoes`);
-            setOptionsState({
+            const { data } = await window.axios.get(`/api/partidas/${partidaId}/slots`);
+            setCalendarState({
                 loading: false,
-                opcoes: data.opcoes ?? [],
-                sugestoes: data.sugestoes_alteracao ?? [],
+                days: data.days ?? [],
             });
-            if (!selectedAlterSlot && (data.sugestoes_alteracao ?? []).length > 0) {
-                setSelectedAlterSlot(data.sugestoes_alteracao[0].datetime_utc);
-            }
         } catch (error) {
-            setModalError('Não foi possível carregar os horários.');
-            setOptionsState({ loading: false, opcoes: [], sugestoes: [] });
+            const message =
+                error.response?.data?.message ??
+                'Não foi possível carregar os horários.';
+            setModalError(message);
+            setCalendarState({ loading: false, days: [] });
         }
     };
 
-    const handleConfirmSubmit = async () => {
+    const handleScheduleSubmit = async () => {
         if (!modal.partida) return;
-        if (selectedOptions.length === 0) {
-            setModalError('Selecione ao menos um horário.');
+        if (!selectedSlot) {
+            setModalError('Selecione um horário.');
             return;
         }
 
@@ -228,12 +254,12 @@ export default function LigaPartidas() {
         setModalError('');
         try {
             const { data } = await window.axios.post(
-                `/api/partidas/${modal.partida.id}/confirmar-horario`,
-                { datetimes: selectedOptions },
+                `/api/partidas/${modal.partida.id}/agendar`,
+                { datetime: selectedSlot },
             );
 
             updatePartida(modal.partida.id, {
-                estado: data.estado ?? modal.partida.estado,
+                estado: 'confirmada',
                 scheduled_at: data.scheduled_at ?? modal.partida.scheduled_at,
                 sem_slot_disponivel: false,
                 forced_by_system: false,
@@ -242,43 +268,9 @@ export default function LigaPartidas() {
         } catch (error) {
             const message =
                 error.response?.data?.message ??
-                error.response?.data?.errors?.datetimes?.[0] ??
-                'Não foi possível confirmar.';
-            setModalError(message);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handleAlterarSubmit = async () => {
-        if (!modal.partida) return;
-        const datetime = selectedAlterSlot || manualAlterDatetime;
-
-        if (!datetime) {
-            setModalError('Selecione um horário ou informe data/hora manualmente.');
-            return;
-        }
-
-        setSubmitting(true);
-        setModalError('');
-        try {
-            const { data } = await window.axios.post(
-                `/api/partidas/${modal.partida.id}/alterar-horario`,
-                { datetime },
-            );
-
-            updatePartida(modal.partida.id, {
-                estado: 'agendada',
-                scheduled_at: data.scheduled_at ?? datetime,
-                sem_slot_disponivel: false,
-                forced_by_system: false,
-            });
-            closeModal();
-        } catch (error) {
-            const message =
-                error.response?.data?.message ??
                 error.response?.data?.errors?.datetime?.[0] ??
-                'Não foi possível alterar o horário.';
+                error.response?.data?.errors?.estado?.[0] ??
+                'Não foi possível agendar.';
             setModalError(message);
         } finally {
             setSubmitting(false);
@@ -459,204 +451,47 @@ export default function LigaPartidas() {
         }
     };
 
-    const getActionItems = (partida) => {
-        const actions = [];
-        const participant = isParticipant(partida);
-        const userId = clube?.user_id;
-
-        const canConfirm =
-            participant && partida.estado === 'confirmacao_necessaria';
-
-        const canAlter =
-            participant &&
-            isMandante(partida) &&
-            ['agendada', 'confirmada', 'confirmacao_necessaria'].includes(partida.estado) &&
-            Boolean(partida.scheduled_at);
-
-        const canCheckin =
-            participant &&
-            partida.estado === 'confirmada' &&
-            withinCheckinWindow(partida) &&
-            !alreadyCheckedIn(partida);
-
-        if (canConfirm) {
-            actions.push({
-                label: 'Confirmar horário',
-                onClick: () => openModal('confirm', partida),
-            });
-        }
-
-        if (canAlter) {
-            actions.push({
-                label: 'Alterar horário',
-                onClick: () => openModal('alterar', partida),
-            });
-        }
-
-        if (canCheckin) {
-            actions.push({
-                label: 'Check-in',
-                onClick: () => openModal('checkin', partida),
-            });
-        }
-
-        if (participant && partida.estado === 'em_andamento') {
-            actions.push({
-                label: 'Registrar placar',
-                onClick: () => openModal('placar', partida),
-            });
-            actions.push({
-                label: 'Denunciar partida',
-                onClick: () => openModal('denuncia', partida),
-            });
-        }
-
-        if (
-            participant &&
-            partida.estado === 'placar_registrado' &&
-            Number(partida.placar_registrado_por) !== Number(userId)
-        ) {
-            actions.push({
-                label: 'Confirmar placar',
-                onClick: () => openModal('confirmar_placar', partida),
-            });
-            actions.push({
-                label: 'Contestar placar',
-                onClick: () => openModal('reclamacao', partida),
-            });
-        }
-
-        if (canDesistir(partida)) {
-            actions.push({
-                label: 'Desistir (W.O.)',
-                onClick: () => openModal('desistir', partida),
-            });
-        }
-
-        if (['placar_confirmado', 'finalizada'].includes(partida.estado)) {
-            actions.push({
-                label: 'Ver placar',
-                onClick: () => openModal('ver-placar', partida),
-            });
-        }
-
-        if (partida.estado === 'wo') {
-            actions.push({
-                label: 'Ver W.O',
-                onClick: () => openModal('ver-wo', partida),
-            });
-        }
-
-        return actions;
-    };
-
-    const renderActionMenu = (partida) => {
-        const items = getActionItems(partida);
-
-        if (items.length === 0) {
-            if (partida.estado === 'placar_registrado' && isRegistrante(partida)) {
-                return <span style={{ opacity: 0.8 }}>Aguardando confirmação do adversário</span>;
-            }
-            if (partida.estado === 'em_reclamacao') {
-                return <span style={{ opacity: 0.8 }}>Partida em análise</span>;
-            }
-            return <span style={{ opacity: 0.6 }}>—</span>;
-        }
-
-        const isOpen = openActionsFor === partida.id;
-
-        return (
-            <div className="actions-menu" style={{ position: 'relative', display: 'inline-block' }}>
-                <button
-                    type="button"
-                    className={`table-action-badge primary${isOpen ? ' active' : ''}`}
-                    onClick={() => setOpenActionsFor(isOpen ? null : partida.id)}
-                >
-                    Ações
-                </button>
-                {isOpen && (
-                    <div
-                        className="actions-menu-list"
-                        style={{
-                            position: 'absolute',
-                            right: 0,
-                            zIndex: 10,
-                            marginTop: 8,
-                            minWidth: 200,
-                            background: '#0f0f11',
-                            border: '1px solid #2b2b32',
-                            borderRadius: 8,
-                            boxShadow: '0 8px 18px rgba(0, 0, 0, 0.35)',
-                            padding: 8,
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: 6,
-                        }}
-                    >
-                        {items.map((item) => (
-                            <button
-                                key={item.label}
-                                type="button"
-                                className="table-action-badge outline"
-                                style={{ width: '100%', textAlign: 'left' }}
-                                onClick={() => {
-                                    setOpenActionsFor(null);
-                                    item.onClick();
-                                }}
-                            >
-                                {item.label}
-                            </button>
-                        ))}
-                    </div>
-                )}
-            </div>
-        );
-    };
-
     const renderModalContent = () => {
         if (!modal.partida) return null;
 
         const partida = modal.partida;
 
-        if (modal.type === 'confirm') {
+        if (modal.type === 'agendar') {
             return (
                 <div className="meu-elenco-modal">
-                    <h3>Confirmar horário</h3>
+                    <h3>Agendar partida</h3>
                     <p className="meu-elenco-modal-description">
-                        Selecione os horários em que você pode jogar. Confirmamos quando ambos escolherem o mesmo horário.
+                        Escolha um horário disponível com base na disponibilidade do mandante.
                     </p>
+                    <small className="partida-calendar-timezone">Fuso da liga: {ligaTimezone}</small>
 
-                    {optionsState.loading ? (
+                    {calendarState.loading ? (
                         <p>Carregando horários...</p>
-                    ) : optionsState.opcoes.length === 0 ? (
+                    ) : calendarState.days.length === 0 ? (
                         <div className="partida-option-empty">
-                            <p>Você não tem horários disponíveis para confirmar agora.</p>
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={() => (window.location.href = '/perfil#horarios')}
-                            >
-                                Adicionar horários
-                            </button>
+                            <p>Nenhum horário disponível no período da liga.</p>
+                            <span className="partida-calendar-help">
+                                Aguarde o mandante atualizar sua disponibilidade.
+                            </span>
                         </div>
                     ) : (
-                        <div className="partida-option-list">
-                            {optionsState.opcoes.map((option) => (
-                                <label key={option.datetime_utc} className="partida-option">
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedOptions.includes(option.datetime_utc)}
-                                        onChange={(event) => {
-                                            const checked = event.target.checked;
-                                            setSelectedOptions((prev) =>
-                                                checked
-                                                    ? [...prev, option.datetime_utc]
-                                                    : prev.filter((item) => item !== option.datetime_utc),
-                                            );
-                                        }}
-                                    />
-                                    <span>{formatDate(option.datetime_local)}</span>
-                                </label>
+                        <div className="partida-calendar">
+                            {calendarState.days.map((day) => (
+                                <div key={day.date} className="partida-calendar-day">
+                                    <p className="partida-calendar-label">{day.label}</p>
+                                    <div className="partida-calendar-slots">
+                                        {day.slots.map((slot) => (
+                                            <button
+                                                key={slot.datetime_utc}
+                                                type="button"
+                                                className={`partida-slot${selectedSlot === slot.datetime_utc ? ' is-selected' : ''}`}
+                                                onClick={() => setSelectedSlot(slot.datetime_utc)}
+                                            >
+                                                {slot.time_label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
                             ))}
                         </div>
                     )}
@@ -670,70 +505,10 @@ export default function LigaPartidas() {
                         <button
                             type="button"
                             className="btn-primary"
-                            onClick={handleConfirmSubmit}
-                            disabled={submitting}
+                            onClick={handleScheduleSubmit}
+                            disabled={submitting || !selectedSlot}
                         >
-                            {submitting ? 'Enviando...' : 'Confirmar horários'}
-                        </button>
-                    </div>
-                </div>
-            );
-        }
-
-        if (modal.type === 'alterar') {
-            return (
-                <div className="meu-elenco-modal">
-                    <h3>Alterar horário</h3>
-                    <p className="meu-elenco-modal-description">
-                        Escolha uma opção sugerida. A alteração pode exigir nova confirmação do visitante.
-                    </p>
-
-                    {optionsState.loading ? (
-                        <p>Carregando sugestões...</p>
-                    ) : optionsState.sugestoes.length === 0 ? (
-                        <p>Nenhuma sugestão disponível agora.</p>
-                    ) : (
-                        <div className="partida-option-list">
-                            {optionsState.sugestoes.map((option) => (
-                                <label key={option.datetime_utc} className="partida-option">
-                                    <input
-                                        type="radio"
-                                        name="alter-slot"
-                                        checked={selectedAlterSlot === option.datetime_utc}
-                                        onChange={() => setSelectedAlterSlot(option.datetime_utc)}
-                                    />
-                                    <span>{formatDate(option.datetime_local)}</span>
-                                </label>
-                            ))}
-                        </div>
-                    )}
-
-                    {modalError && <p className="modal-error">{modalError}</p>}
-
-                    <div className="modal-field">
-                        <span>Ou escolher dia e horário</span>
-                        <input
-                            type="datetime-local"
-                            value={manualAlterDatetime}
-                            onChange={(e) => setManualAlterDatetime(e.target.value)}
-                            aria-label="Escolher dia e horário"
-                        />
-                        <small style={{ color: '#bfbfbf', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                            Fuso da liga: {ligaTimezone}
-                        </small>
-                    </div>
-
-                    <div className="meu-elenco-modal-actions">
-                        <button type="button" className="btn-outline" onClick={closeModal} disabled={submitting}>
-                            Cancelar
-                        </button>
-                        <button
-                            type="button"
-                            className="btn-primary"
-                            onClick={handleAlterarSubmit}
-                            disabled={submitting}
-                        >
-                            {submitting ? 'Enviando...' : 'Salvar horário'}
+                            {submitting ? 'Enviando...' : 'Confirmar horário'}
                         </button>
                     </div>
                 </div>
@@ -1025,187 +800,158 @@ export default function LigaPartidas() {
                 </p>
             </section>
 
-            <section className="liga-partidas-tabs">
-                <button
-                    type="button"
-                    className={`filter-pill${activeTab === 'minhas' ? ' active' : ''}`}
-                    onClick={() => {
-                        setActiveTab('minhas');
-                        setOpenActionsFor(null);
-                    }}
-                >
-                    Minhas partidas
-                </button>
-                <button
-                    type="button"
-                    className={`filter-pill${activeTab === 'todas' ? ' active' : ''}`}
-                    onClick={() => {
-                        setActiveTab('todas');
-                        setOpenActionsFor(null);
-                    }}
-                >
-                    Todas as partidas
-                </button>
+            <section className="liga-partidas-filters">
+                <div className="partidas-toolbar">
+                    <button
+                        type="button"
+                        className={`btn-primary partida-confirmar-btn${filters.role === 'visitante' && filters.status === 'aguardando' ? ' active' : ''}`}
+                        onClick={() => setFilters({ role: 'visitante', status: 'aguardando' })}
+                    >
+                        <span>Confirmar partidas</span>
+                        <span className="partida-confirmar-count">{pendingVisitorCount}</span>
+                    </button>
+                    {hasActiveFilters && (
+                        <button
+                            type="button"
+                            className="btn-outline partida-clear-btn"
+                            onClick={() => setFilters({ role: 'all', status: 'all' })}
+                        >
+                            Limpar filtros
+                        </button>
+                    )}
+                </div>
+                <div className="partidas-filter-group">
+                    <span className="filter-group-label">Papel</span>
+                    <div className="filter-pill-row">
+                        {roleFilters.map((filter) => (
+                            <button
+                                key={filter.id}
+                                type="button"
+                                className={`filter-pill${filters.role === filter.id ? ' active' : ''}`}
+                                onClick={() => setFilters((prev) => ({ ...prev, role: filter.id }))}
+                            >
+                                {filter.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="partidas-filter-group">
+                    <span className="filter-group-label">Status</span>
+                    <div className="filter-pill-row">
+                        {statusFilters.map((filter) => (
+                            <button
+                                key={filter.id}
+                                type="button"
+                                className={`filter-pill${filters.status === filter.id ? ' active' : ''}`}
+                                onClick={() => setFilters((prev) => ({ ...prev, status: filter.id }))}
+                            >
+                                {filter.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </section>
 
-            <section className="liga-partidas-table" style={{ marginTop: 20 }}>
-                {tabContent.length === 0 ? (
-                    <p className="ligas-empty">Nenhuma partida disponível no momento.</p>
+            <section className="liga-partidas-cards">
+                {filteredPartidas.length === 0 ? (
+                    <p className="ligas-empty">
+                        {filters.role === 'visitante' && filters.status === 'aguardando'
+                            ? 'Nenhuma partida aguardando confirmação para você.'
+                            : 'Você ainda não tem partidas nesta liga.'}
+                    </p>
                 ) : (
-                    <div className="mercado-table-wrap" aria-label="Tabela de partidas">
-                        <div className="mercado-table-scroll">
-                            <table className="mercado-table">
-                                <thead>
-                                    <tr>
-                                        <th>Clube mandante</th>
-                                        <th>Clube visitante</th>
-                                        <th className="col-compact">Status</th>
-                                        <th className="col-compact">Dia da partida</th>
-                                        <th className="col-action">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {tabContent.map((partida) => {
-                                        const label = estadoLabels[partida.estado] ?? partida.estado;
-                                        const badgeClass = estadoClass[partida.estado] ?? 'muted';
-                                        const horario = partida.sem_slot_disponivel
-                                            ? 'Sem horário disponível'
-                                            : formatDate(partida.scheduled_at);
-                                        const roleMandanteText = isMandante(partida) ? 'Você mandante' : null;
-                                        const roleVisitanteText =
-                                            clube && Number(partida.visitante_id) === Number(clube.id)
-                                                ? 'Você visitante'
-                                                : null;
-                                        const chips = chipsForPartida(partida);
-                                        const woWinner = getWoWinner(partida);
-                                        const registrante = isRegistrante(partida);
-                                        const hasScore = [
-                                            'finalizada',
-                                            'wo',
-                                            'placar_registrado',
-                                            'placar_confirmado',
-                                            'em_reclamacao',
-                                        ].includes(partida.estado);
-                                        const placarLabel =
-                                            partida.placar_mandante !== undefined &&
-                                            partida.placar_visitante !== undefined
-                                                ? `${partida.placar_mandante ?? '—'} x ${partida.placar_visitante ?? '—'}`
-                                                : null;
-                                        const isConfirmPending = partida.estado === 'confirmacao_necessaria';
-                                        const canOpenStatusConfirm = isConfirmPending && isParticipant(partida);
-                                        const statusClassName = `partida-estado ${badgeClass}${canOpenStatusConfirm ? ' clickable' : ''}`;
-                                        const statusNote =
-                                            partida.estado === 'placar_registrado'
-                                                ? registrante
-                                                    ? 'Aguardando confirmação do adversário'
-                                                    : 'Confirme ou conteste o placar registrado'
-                                                : partida.estado === 'em_reclamacao'
-                                                ? 'Partida em análise'
-                                                : null;
+                    <div className="partida-card-grid">
+                        {filteredPartidas.map((partida) => {
+                            const label = estadoLabels[partida.estado] ?? partida.estado;
+                            const badgeClass = estadoClass[partida.estado] ?? 'muted';
+                            const horario = partida.sem_slot_disponivel
+                                ? 'Sem horário disponível'
+                                : formatDate(partida.scheduled_at);
+                            const chips = chipsForPartida(partida);
+                            const canSchedule =
+                                isVisitante(partida) &&
+                                partida.estado === 'confirmacao_necessaria' &&
+                                !partida.scheduled_at;
+                            const canWo = canDesistir(partida);
 
-                                        const statusElement = canOpenStatusConfirm ? (
+                            return (
+                                <article key={partida.id} className="partida-card">
+                                    <div className="partida-card-head">
+                                        <div className="partida-card-team">
+                                            <div className="partida-card-shield">
+                                                {resolveTeamLogo(partida, 'mandante') ? (
+                                                    <img
+                                                        src={resolveTeamLogo(partida, 'mandante')}
+                                                        alt={partida.mandante}
+                                                    />
+                                                ) : (
+                                                    <span>{getInitials(partida.mandante)}</span>
+                                                )}
+                                            </div>
+                                            <div className="partida-card-team-info">
+                                                <strong>{partida.mandante ?? 'Mandante indefinido'}</strong>
+                                                <span>{partida.mandante_nickname ?? 'Sem nickname'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="partida-card-vs">
+                                            <span>VS</span>
+                                        </div>
+                                        <div className="partida-card-team">
+                                            <div className="partida-card-shield">
+                                                {resolveTeamLogo(partida, 'visitante') ? (
+                                                    <img
+                                                        src={resolveTeamLogo(partida, 'visitante')}
+                                                        alt={partida.visitante}
+                                                    />
+                                                ) : (
+                                                    <span>{getInitials(partida.visitante)}</span>
+                                                )}
+                                            </div>
+                                            <div className="partida-card-team-info">
+                                                <strong>{partida.visitante ?? 'Visitante indefinido'}</strong>
+                                                <span>{partida.visitante_nickname ?? 'Sem nickname'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="partida-card-meta">
+                                        <span className={`partida-estado ${badgeClass}`}>{label}</span>
+                                        <span className="partida-card-time">{horario}</span>
+                                    </div>
+                                    {chips.length > 0 && (
+                                        <div className="partida-card-chips">
+                                            {chips.map((chip) => (
+                                                <span key={chip} className="partida-chip">
+                                                    {chip}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div className="partida-card-actions">
+                                        {canSchedule && (
                                             <button
                                                 type="button"
-                                                className={statusClassName}
-                                                onClick={() => openModal('confirm', partida)}
+                                                className="btn-primary"
+                                                onClick={() => openModal('agendar', partida)}
                                             >
-                                                {label}
+                                                Agendar horário
                                             </button>
-                                        ) : (
-                                            <span className={statusClassName}>{label}</span>
-                                        );
-
-                                        return (
-                                            <tr key={partida.id}>
-                                                <td>
-                                                    <div className="partida-clube-info">
-                                                        <div className="clube-shield">
-                                                            {partida.mandante_logo ? (
-                                                                <img src={partida.mandante_logo} alt={partida.mandante} />
-                                                            ) : (
-                                                                <span>{getInitials(partida.mandante)}</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="partida-clube-text">
-                                                            <strong className="partida-clube">
-                                                                {partida.mandante ?? 'Mandante indefinido'}
-                                                            </strong>
-                                                            {partida.mandante_nickname && (
-                                                                <small className="partida-nickname">
-                                                                    {partida.mandante_nickname}
-                                                                </small>
-                                                            )}
-                                                            {roleMandanteText && (
-                                                                <span className="partida-role-pill mandante">
-                                                                    {roleMandanteText}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div className="partida-clube-info">
-                                                        <div className="clube-shield">
-                                                            {partida.visitante_logo ? (
-                                                                <img src={partida.visitante_logo} alt={partida.visitante} />
-                                                            ) : (
-                                                                <span>{getInitials(partida.visitante)}</span>
-                                                            )}
-                                                        </div>
-                                                        <div className="partida-clube-text">
-                                                            <strong className="partida-clube">
-                                                                {partida.visitante ?? 'Visitante indefinido'}
-                                                            </strong>
-                                                            {partida.visitante_nickname && (
-                                                                <small className="partida-nickname">
-                                                                    {partida.visitante_nickname}
-                                                                </small>
-                                                            )}
-                                                            {roleVisitanteText && (
-                                                                <span className="partida-role-pill visitante">
-                                                                    {roleVisitanteText}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="col-compact">
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                        {statusElement}
-                                                        {statusNote && (
-                                                            <small style={{ opacity: 0.7 }}>{statusNote}</small>
-                                                        )}
-                                                        {hasScore && placarLabel && (
-                                                            <small style={{ opacity: 0.75 }}>Placar: {placarLabel}</small>
-                                                        )}
-                                                        {partida.estado === 'wo' && woWinner && (
-                                                            <small style={{ color: '#ffb347' }}>
-                                                                W.O por {partida.wo_motivo ?? 'desistência'} — vitória de {woWinner}
-                                                            </small>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="col-compact">
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                                                        <span>{horario}</span>
-                                                        {chips.length > 0 && (
-                                                            <div className="partida-flags" style={{ gap: 6 }}>
-                                                                {chips.map((chip) => (
-                                                                    <span key={chip} className="partida-chip">
-                                                                        {chip}
-                                                                    </span>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="col-action">{renderActionMenu(partida)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
+                                        )}
+                                        {canWo && (
+                                            <button
+                                                type="button"
+                                                className="btn-outline"
+                                                onClick={() => openModal('desistir', partida)}
+                                            >
+                                                Desistir (W.O.)
+                                            </button>
+                                        )}
+                                        {!canSchedule && !canWo && (
+                                            <span className="partida-card-empty">Sem ações disponíveis.</span>
+                                        )}
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </section>

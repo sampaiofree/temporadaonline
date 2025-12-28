@@ -21,8 +21,9 @@ class LigaClassificacaoController extends Controller
 
         $clubs = LigaClube::query()
             ->where('liga_id', $liga->id)
+            ->with('escudo')
             ->orderBy('nome')
-            ->get(['id', 'nome']);
+            ->get();
 
         $stats = $this->initializeStats($clubs);
 
@@ -63,6 +64,7 @@ class LigaClassificacaoController extends Controller
                     'gols_sofridos' => 0,
                     'saldo_gols' => 0,
                     'partidas_jogadas' => 0,
+                    'clube_escudo_url' => $clube->escudo?->clube_imagem,
                     'club_order' => $index,
                 ],
             ];
@@ -147,6 +149,7 @@ class LigaClassificacaoController extends Controller
                 'gols_sofridos' => $item['gols_sofridos'],
                 'saldo_gols' => $item['saldo_gols'],
                 'partidas_jogadas' => $item['partidas_jogadas'],
+                'clube_escudo_url' => $item['clube_escudo_url'] ?? null,
             ];
         });
     }

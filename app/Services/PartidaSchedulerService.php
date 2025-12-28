@@ -5,9 +5,6 @@ namespace App\Services;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\Partida;
-use App\Models\PartidaConfirmacao;
-use App\Models\PartidaEvento;
-use App\Models\PartidaOpcaoHorario;
 use App\Models\User;
 use App\Models\UserDisponibilidade;
 use Carbon\Carbon;
@@ -16,16 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class PartidaSchedulerService
 {
-    private const MAX_OPTIONS = 5;
-    private const MAX_DAYS_LOOKAHEAD = 30;
     private const BLOCK_MINUTES = 30;
 
-    public function __construct(private readonly PartidaStateService $state)
-    {
-    }
-
     /**
-     * Gera turno e returno para um clube recém-criado e tenta agendar cada partida.
+     * Gera turno e returno para um clube recém-criado.
      */
     public function generateMatchesForNewClub(LigaClube $novoClube): void
     {
@@ -48,7 +39,7 @@ class PartidaSchedulerService
     }
 
     /**
-     * Cria uma partida e tenta agendar automaticamente.
+     * Cria uma partida (sem agendamento automático).
      */
     public function createAndSchedulePartida(Liga $liga, LigaClube $mandante, LigaClube $visitante, bool $generatedByNewClub = false): Partida
     {
@@ -65,13 +56,6 @@ class PartidaSchedulerService
                 'estado' => 'confirmacao_necessaria',
             ]);
 
-            $this->attemptAutoSchedule($partida->fresh());
-
-            $this->logEvent($partida, 'confirmacao_horario', null, [
-                'auto_generated' => true,
-                'generated_by_new_club' => $generatedByNewClub,
-            ]);
-
             return $partida;
         });
     }
@@ -86,224 +70,139 @@ class PartidaSchedulerService
     }
 
     /**
-     * Tenta agendar automaticamente. Se não houver cruzamento, cria opções.
+     * Calcula slots para o visitante (UTC) usando periodos da liga e disponibilidade do mandante.
      */
-    public function attemptAutoSchedule(Partida $partida): void
+    public function availableVisitorSlots(Partida $partida): Collection
     {
-        $partida->loadMissing(['liga', 'mandante.user', 'visitante.user']);
-        $liga = $partida->liga;
-        $slots = $this->candidateSlots($partida, self::MAX_OPTIONS);
-
-        if ($slots->isNotEmpty()) {
-            $slot = $slots->first();
-            $this->state->transitionTo(
-                $partida,
-                'agendada',
-                ['scheduled_at' => $slot],
-                null
-            );
-            $this->persistOptions($partida, $slots);
-
-            return;
-        }
-
-        if ($partida->estado !== 'confirmacao_necessaria') {
-            $this->state->transitionTo($partida, 'confirmacao_necessaria');
-        }
-
-        $this->persistOptions($partida, $slots);
-    }
-
-    /**
-     * Força horário após expirar prazo de confirmação.
-     */
-    public function forceSchedule(Partida $partida): void
-    {
-        $partida->loadMissing(['liga', 'mandante.user', 'visitante.user']);
-        $slots = $this->candidateSlots($partida, 1);
-
-        if ($slots->isEmpty()) {
-            $partida->sem_slot_disponivel = true;
-            $partida->save();
-
-            $this->logEvent($partida, 'confirmacao_horario', null, [
-                'forced' => false,
-                'reason' => 'sem_slot_disponivel',
-            ]);
-
-            return;
-        }
-
-        $slot = $slots->first();
-        $this->state->transitionTo(
-            $partida,
-            'confirmada',
-            [
-                'scheduled_at' => $slot,
-                'forced_by_system' => true,
-            ],
-            'confirmacao_horario',
-            null,
-            [
-                'forced' => true,
-                'scheduled_at' => $slot?->toISOString(),
-            ],
-        );
-    }
-
-    /**
-     * Usuário marca horário aceito; se houver match com oponente, confirma.
-     */
-    public function confirmHorarios(Partida $partida, User $user, Collection $datetimesUtc): void
-    {
-        $partida->loadMissing(['liga', 'mandante.user', 'visitante.user']);
-
-        // Apenas partidas pendentes de confirmação permitem marcação
-        $this->state->assertActionAllowed($partida, ['confirmacao_necessaria', 'agendada']);
-        $tz = $partida->liga->timezone ?? 'UTC';
-
-        // Limpa confirmações anteriores do usuário que não estejam na seleção atual
-        PartidaConfirmacao::query()
-            ->where('partida_id', $partida->id)
-            ->where('user_id', $user->id)
-            ->whereNotIn('datetime', $datetimesUtc)
-            ->delete();
-
-        $mandanteUserId = $partida->mandante->user_id;
-        $visitanteUserId = $partida->visitante->user_id;
-        $opponentId = $user->id === $mandanteUserId ? $visitanteUserId : $mandanteUserId;
-
-        $matched = null;
-
-        foreach ($datetimesUtc as $datetime) {
-            PartidaConfirmacao::firstOrCreate([
-                'partida_id' => $partida->id,
-                'user_id' => $user->id,
-                'datetime' => $datetime,
-            ]);
-
-            $existsOther = PartidaConfirmacao::query()
-                ->where('partida_id', $partida->id)
-                ->where('user_id', $opponentId)
-                ->where('datetime', $datetime)
-                ->exists();
-
-            if ($existsOther) {
-                $matched = $datetime;
-                break;
-            }
-        }
-
-        if ($matched) {
-            // Revalida conflito antes de confirmar
-            if (
-                $this->hasScheduleConflict($partida->mandante_id, $matched) ||
-                $this->hasScheduleConflict($partida->visitante_id, $matched)
-            ) {
-                throw ValidationException::withMessages([
-                    'datetime' => ['Um dos clubes já possui partida nesse horário.'],
-                ]);
-            }
-
-            $this->state->transitionTo(
-                $partida,
-                'confirmada',
-                ['scheduled_at' => $matched],
-                'confirmacao_horario',
-                $user->id,
-                [
-                    'datetime' => $matched->copy()->setTimezone($tz)->toIso8601String(),
-                    'match' => true,
-                ],
-            );
-        } else {
-            $this->logEvent($partida, 'confirmacao_horario', $user->id, [
-                'datetimes' => $datetimesUtc->map(
-                    fn (Carbon $dt) => $dt->copy()->setTimezone($tz)->toIso8601String()
-                ),
-                'match' => false,
-            ]);
-        }
-    }
-
-    private function persistOptions(Partida $partida, Collection $slots): void
-    {
-        foreach ($slots as $slot) {
-            PartidaOpcaoHorario::firstOrCreate([
-                'partida_id' => $partida->id,
-                'datetime' => $slot,
-            ]);
-        }
-    }
-
-    /**
-     * Calcula os slots válidos (UTC) respeitando liga + mandante + visitante.
-     */
-    /**
-     * Slots candidatos para confirmação/alteração (UTC).
-     */
-    public function candidateSlots(Partida $partida, int $limit = self::MAX_OPTIONS): Collection
-    {
+        $partida->loadMissing(['liga.periodos', 'mandante.user', 'visitante.user']);
         $liga = $partida->liga;
         $tz = $liga->timezone ?? 'UTC';
-        $now = Carbon::now($tz);
+        $nowLocal = Carbon::now($tz);
+        $periodos = ($liga->periodos ?? collect())->sortBy('inicio')->values();
 
-        $allowedDays = $this->normalizeDays($liga->dias_permitidos ?? []);
-        $ligaRanges = $this->normalizeRanges($liga->horarios_permitidos ?? []);
+        if ($periodos->isEmpty()) {
+            return collect();
+        }
 
         $mandanteRanges = $this->groupDisponibilidades($partida->mandante->user);
-        $visitanteRanges = $this->groupDisponibilidades($partida->visitante->user);
+        if (empty($mandanteRanges)) {
+            return collect();
+        }
 
         $slots = collect();
 
-        for ($i = 0; $i < self::MAX_DAYS_LOOKAHEAD && $slots->count() < $limit; $i++) {
-            $day = $now->copy()->addDays($i);
-            $dayOfWeek = $day->dayOfWeek;
+        foreach ($periodos as $periodo) {
+            $startDate = Carbon::parse($periodo->inicio, $tz)->startOfDay();
+            $endDate = Carbon::parse($periodo->fim, $tz)->startOfDay();
 
-            if (! in_array($dayOfWeek, $allowedDays, true)) {
-                continue;
-            }
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+                if ($date->lt($nowLocal->copy()->startOfDay())) {
+                    continue;
+                }
 
-            $mandanteDayRanges = $mandanteRanges[$dayOfWeek] ?? [];
-            $visitanteDayRanges = $visitanteRanges[$dayOfWeek] ?? [];
+                $dayOfWeek = $date->dayOfWeek;
+                $dayRanges = $mandanteRanges[$dayOfWeek] ?? [];
 
-            if (empty($mandanteDayRanges) || empty($visitanteDayRanges)) {
-                continue;
-            }
+                if (empty($dayRanges)) {
+                    continue;
+                }
 
-            foreach ($ligaRanges as $ligaRange) {
-                foreach ($mandanteDayRanges as $mRange) {
-                    foreach ($visitanteDayRanges as $vRange) {
-                        $start = max($ligaRange['start'], $mRange['start'], $vRange['start']);
-                        $end = min($ligaRange['end'], $mRange['end'], $vRange['end']);
+                foreach ($dayRanges as $range) {
+                    $rangeSlots = $this->buildSlotsForRange($date, $range, $tz);
 
-                        if ($start >= $end) {
+                    foreach ($rangeSlots as $slotLocal) {
+                        if ($slotLocal->lessThanOrEqualTo($nowLocal)) {
                             continue;
                         }
 
-                        $candidate = $day->copy()->setTimeFromTimeString($start)->setTimezone('UTC');
-                        if ($candidate->lessThanOrEqualTo(Carbon::now('UTC'))) {
-                            continue;
-                        }
+                        $slotUtc = $slotLocal->copy()->setTimezone('UTC');
 
                         if (
-                            $this->hasScheduleConflict($partida->mandante_id, $candidate) ||
-                            $this->hasScheduleConflict($partida->visitante_id, $candidate)
+                            $this->hasScheduleConflict($partida->mandante_id, $slotUtc) ||
+                            $this->hasScheduleConflict($partida->visitante_id, $slotUtc)
                         ) {
                             continue;
                         }
 
-                        $slots->push($candidate);
-
-                        if ($slots->count() >= $limit) {
-                            break 3;
-                        }
+                        $slots->push($slotUtc);
                     }
                 }
             }
         }
 
-        return $slots->sort()->values();
+        return $slots
+            ->unique(fn (Carbon $slot) => $slot->toIso8601String())
+            ->sortBy(fn (Carbon $slot) => $slot->timestamp)
+            ->values();
+    }
+
+    private function buildSlotsForRange(Carbon $date, array $range, string $tz): array
+    {
+        $startRaw = $range['start'] ?? null;
+        $endRaw = $range['end'] ?? null;
+
+        if (! $startRaw || ! $endRaw) {
+            return [];
+        }
+
+        $start = Carbon::parse($date->toDateString().' '.$startRaw, $tz);
+        $end = Carbon::parse($date->toDateString().' '.$endRaw, $tz);
+
+        if ($end->lessThanOrEqualTo($start)) {
+            return [];
+        }
+
+        $start = $this->roundUpToSlot($start);
+        $end = $this->roundDownToSlot($end);
+        $lastStart = $end->copy()->subMinutes(self::BLOCK_MINUTES);
+
+        if ($lastStart->lt($start)) {
+            return [];
+        }
+
+        $slots = [];
+        for ($cursor = $start->copy(); $cursor->lte($lastStart); $cursor->addMinutes(self::BLOCK_MINUTES)) {
+            $slots[] = $cursor->copy();
+        }
+
+        return $slots;
+    }
+
+    private function roundUpToSlot(Carbon $time): Carbon
+    {
+        $minute = $time->minute;
+        $remainder = $minute % self::BLOCK_MINUTES;
+
+        if ($remainder === 0) {
+            return $time->copy()->second(0);
+        }
+
+        return $time->copy()->addMinutes(self::BLOCK_MINUTES - $remainder)->second(0);
+    }
+
+    private function roundDownToSlot(Carbon $time): Carbon
+    {
+        $minute = $time->minute;
+        $remainder = $minute % self::BLOCK_MINUTES;
+
+        return $time->copy()->subMinutes($remainder)->second(0);
+    }
+
+    /**
+     * Verifica se a data local esta dentro de algum periodo cadastrado da liga.
+     */
+    public function isWithinLigaPeriod(Liga $liga, Carbon $dateLocal): bool
+    {
+        $liga->loadMissing('periodos');
+        $periodos = $liga->periodos ?? collect();
+        if ($periodos->isEmpty()) {
+            return true;
+        }
+
+        $date = $dateLocal->toDateString();
+
+        return $periodos->contains(fn ($periodo) => $date >= $periodo->inicio->toDateString()
+            && $date <= $periodo->fim->toDateString());
     }
 
     /**
@@ -322,81 +221,12 @@ class PartidaSchedulerService
             })
             ->where(function ($q) use ($candidateStart, $candidateEnd): void {
                 $q->where('scheduled_at', '<', $candidateEnd)
-                    ->whereRaw("scheduled_at + interval '120 minutes' > ?", [$candidateStart->toDateTimeString()]);
+                    ->whereRaw(
+                        "scheduled_at + interval '".self::BLOCK_MINUTES." minutes' > ?",
+                        [$candidateStart->toDateTimeString()]
+                    );
             })
             ->exists();
-    }
-
-    /**
-     * Converte dias permitidos para array de inteiros (Carbon dayOfWeek).
-     */
-    public function normalizeDays(array|string $days): array
-    {
-        if (is_string($days)) {
-            $decoded = json_decode($days, true);
-            $days = is_array($decoded) ? $decoded : [];
-        }
-
-        $map = [
-            'dom' => Carbon::SUNDAY,
-            'domingo' => Carbon::SUNDAY,
-            'seg' => Carbon::MONDAY,
-            'segunda' => Carbon::MONDAY,
-            'ter' => Carbon::TUESDAY,
-            'terça' => Carbon::TUESDAY,
-            'terca' => Carbon::TUESDAY,
-            'qua' => Carbon::WEDNESDAY,
-            'quarta' => Carbon::WEDNESDAY,
-            'qui' => Carbon::THURSDAY,
-            'quinta' => Carbon::THURSDAY,
-            'sex' => Carbon::FRIDAY,
-            'sexta' => Carbon::FRIDAY,
-            'sab' => Carbon::SATURDAY,
-            'sábado' => Carbon::SATURDAY,
-        ];
-
-        return collect($days)
-            ->map(function ($day) use ($map) {
-                if (is_numeric($day)) {
-                    return (int) $day;
-                }
-
-                $key = mb_strtolower((string) $day);
-
-                return $map[$key] ?? null;
-            })
-            ->filter(fn ($v) => $v !== null)
-            ->unique()
-            ->values()
-            ->all();
-    }
-
-    /**
-     * Normaliza faixas de horário para strings HH:MM.
-     */
-    public function normalizeRanges(array|string $ranges): array
-    {
-        if (is_string($ranges)) {
-            $decoded = json_decode($ranges, true);
-            $ranges = is_array($decoded) ? $decoded : [];
-        }
-
-        return collect($ranges)
-            ->map(function ($range) {
-                $start = $range['inicio'] ?? null;
-                $end = $range['fim'] ?? null;
-                if (! $start || ! $end) {
-                    return null;
-                }
-
-                return [
-                    'start' => substr($start, 0, 5),
-                    'end' => substr($end, 0, 5),
-                ];
-            })
-            ->filter()
-            ->values()
-            ->all();
     }
 
     /**
@@ -425,13 +255,4 @@ class PartidaSchedulerService
         return $grouped;
     }
 
-    private function logEvent(Partida $partida, string $tipo, ?int $userId = null, array $payload = []): void
-    {
-        PartidaEvento::create([
-            'partida_id' => $partida->id,
-            'tipo' => $tipo,
-            'user_id' => $userId,
-            'payload' => $payload,
-        ]);
-    }
 }

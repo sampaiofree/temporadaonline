@@ -115,7 +115,7 @@ class EscudoClubeController extends Controller
 
         $escudoClube->update($data);
 
-        return redirect()->route('admin.escudos-clubes.index')->with('success', 'Escudo atualizado com sucesso.');
+        return redirect()->route('admin.escudos-clubes.index', $request->query())->with('success', 'Escudo atualizado com sucesso.');
     }
 
     public function destroy(Request $request, EscudoClube $escudoClube): RedirectResponse

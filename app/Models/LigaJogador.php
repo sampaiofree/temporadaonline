@@ -2,26 +2,22 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PartidaConfirmacao extends Model
+class LigaJogador extends Model
 {
-    protected $table = 'partida_confirmacoes';
+    protected $table = 'liga_jogador';
 
     protected $fillable = [
-        'partida_id',
+        'liga_id',
         'user_id',
-        'datetime',
     ];
 
-    protected $casts = [
-        'datetime' => 'datetime',
-    ];
-
-    public function partida(): BelongsTo
+    public function liga(): BelongsTo
     {
-        return $this->belongsTo(Partida::class);
+        return $this->belongsTo(Liga::class);
     }
 
     public function user(): BelongsTo

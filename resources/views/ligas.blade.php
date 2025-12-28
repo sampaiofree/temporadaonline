@@ -8,6 +8,9 @@
         <script>
             window.__ALL_LIGAS__ = @json($ligas);
             window.__MY_LIGAS__ = @json($myLigas);
+            window.__REQUIRE_PROFILE_COMPLETION__ = @json($requireProfileCompletion);
+            window.__PROFILE_URL__ = @json($profileUrl);
+            window.__PROFILE_HORARIOS_URL__ = @json($profileHorariosUrl);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh

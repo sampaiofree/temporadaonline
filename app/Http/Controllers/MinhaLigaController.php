@@ -6,13 +6,18 @@ use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaEscudo;
+use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
+use App\Models\EscudoClube;
+use App\Models\Pais;
 use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use App\Http\Controllers\Concerns\ResolvesLiga;
+use Illuminate\Support\Str;
 
 class MinhaLigaController extends Controller
 {
@@ -20,20 +25,77 @@ class MinhaLigaController extends Controller
     public function show(Request $request): View
     {
         $liga = $this->resolveUserLiga($request);
-        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+        $liga->load(['periodos' => fn ($query) => $query->orderBy('inicio')]);
+        $userClub = $request->user()->clubesLiga()
+            ->where('liga_id', $liga->id)
+            ->with(['escudo', 'financeiro'])
+            ->first();
+        $escudos = EscudoClube::orderBy('clube_nome')->get(['id', 'clube_nome', 'clube_imagem']);
+        $usedEscudos = LigaClube::query()
+            ->where('liga_id', $liga->id)
+            ->whereNotNull('escudo_clube_id')
+            ->when($userClub, fn ($query) => $query->where('id', '<>', $userClub->id))
+            ->pluck('escudo_clube_id')
+            ->values();
+        $elencoCount = null;
+        $saldo = null;
+
+        if ($userClub) {
+            $elencoCount = LigaClubeElenco::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->count();
+
+            $walletSaldo = LigaClubeFinanceiro::query()
+                ->where('liga_id', $liga->id)
+                ->where('clube_id', $userClub->id)
+                ->value('saldo');
+
+            $saldo = $walletSaldo !== null ? (int) $walletSaldo : (int) ($liga->saldo_inicial ?? 0);
+        }
+
+        $periodos = $liga->periodos
+            ->map(function (LigaPeriodo $periodo) {
+                return [
+                    'codigo' => $periodo->id,
+                    'inicio' => $periodo->inicio?->toDateString(),
+                    'fim' => $periodo->fim?->toDateString(),
+                    'inicio_label' => $periodo->inicio?->format('d/m/Y'),
+                    'fim_label' => $periodo->fim?->format('d/m/Y'),
+                ];
+            })
+            ->values()
+            ->all();
+
+        $periodoAtual = LigaPeriodo::activeRangeForLiga($liga);
 
         return view('minha_liga', [
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
-            'imagem' => $liga->imagem,
-            'tipo' => $liga->tipo,
-            'status' => $liga->status,
-            'jogo' => $liga->jogo?->nome,
-            'geracao' => $liga->geracao?->nome,
-            'plataforma' => $liga->plataforma?->nome,
-        ]]);
+                'imagem' => $liga->imagem,
+                'tipo' => $liga->tipo,
+                'status' => $liga->status,
+                'jogo' => $liga->jogo?->nome,
+                'geracao' => $liga->geracao?->nome,
+                'plataforma' => $liga->plataforma?->nome,
+                'periodos' => $periodos,
+                'periodo_atual' => $periodoAtual,
+            ],
+            'clube' => $userClub ? [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+                'escudo_id' => $userClub->escudo_clube_id,
+                'escudo_url' => $userClub->escudo?->clube_imagem
+                    ? '/storage/'.$userClub->escudo->clube_imagem
+                    : null,
+                'elenco_count' => $elencoCount ?? 0,
+                'saldo' => $saldo,
+            ] : null,
+            'escudos' => $escudos,
+            'usedEscudos' => $usedEscudos,
+        ]);
     }
 
     public function financeiro(Request $request): View
@@ -105,6 +167,91 @@ class MinhaLigaController extends Controller
         ]);
     }
 
+    public function clube(Request $request): View
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()
+            ->where('liga_id', $liga->id)
+            ->with('escudo')
+            ->first();
+
+        $filters = [
+            'search' => $request->query('search', ''),
+            'escudo_pais_id' => $request->query('escudo_pais_id', ''),
+            'escudo_liga_id' => $request->query('escudo_liga_id', ''),
+            'only_available' => $request->boolean('only_available'),
+        ];
+
+        $usedEscudos = LigaClube::query()
+            ->where('liga_id', $liga->id)
+            ->whereNotNull('escudo_clube_id')
+            ->pluck('escudo_clube_id')
+            ->values();
+
+        $selectedEscudoId = $userClub?->escudo_clube_id;
+        $usedEscudosForFilter = $usedEscudos->when(
+            $selectedEscudoId,
+            fn ($escudos) => $escudos->reject(
+                fn ($id) => (int) $id === (int) $selectedEscudoId,
+            ),
+        );
+
+        $escudosQuery = EscudoClube::query()
+            ->select(['id', 'clube_nome', 'clube_imagem', 'pais_id', 'liga_id'])
+            ->orderBy('clube_nome');
+
+        $search = trim((string) $filters['search']);
+        if ($search !== '') {
+            $term = Str::lower($search);
+            $escudosQuery->whereRaw('LOWER(clube_nome) LIKE ?', ['%'.$term.'%']);
+        }
+
+        if ($filters['escudo_pais_id']) {
+            $escudosQuery->where('pais_id', (int) $filters['escudo_pais_id']);
+        }
+
+        if ($filters['escudo_liga_id']) {
+            $escudosQuery->where('liga_id', (int) $filters['escudo_liga_id']);
+        }
+
+        if ($filters['only_available'] && $usedEscudosForFilter->isNotEmpty()) {
+            $escudosQuery->whereNotIn('id', $usedEscudosForFilter);
+        }
+
+        $escudos = $escudosQuery
+            ->paginate(48)
+            ->appends($request->query());
+
+        $paises = Pais::orderBy('nome')->get(['id', 'nome']);
+        $ligasEscudos = LigaEscudo::orderBy('liga_nome')->get(['id', 'liga_nome']);
+
+        return view('minha_liga_clube', [
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'imagem' => $liga->imagem,
+            ],
+            'clube' => $userClub ? [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+                'escudo_id' => $userClub->escudo_clube_id,
+                'escudo' => $userClub->escudo
+                    ? [
+                        'id' => $userClub->escudo->id,
+                        'clube_nome' => $userClub->escudo->clube_nome,
+                        'clube_imagem' => $userClub->escudo->clube_imagem,
+                    ]
+                    : null,
+            ] : null,
+            'escudos' => $escudos,
+            'paises' => $paises,
+            'ligasEscudos' => $ligasEscudos,
+            'usedEscudos' => $usedEscudos,
+            'filters' => $filters,
+        ]);
+    }
+
     public function meuElenco(Request $request): View
     {
         $liga = $this->resolveUserLiga($request);
@@ -170,10 +317,31 @@ class MinhaLigaController extends Controller
     public function storeClube(Request $request): JsonResponse
     {
         $liga = $this->resolveUserLiga($request);
+        $existingClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
 
         $validated = $request->validate([
             'nome' => ['required', 'string', 'max:150'],
+            'escudo_id' => ['nullable', 'integer', 'exists:escudos_clubes,id'],
         ]);
+
+        $escudoId = $validated['escudo_id'] ?? null;
+        if ($escudoId) {
+            $escudoInUse = LigaClube::query()
+                ->where('liga_id', $liga->id)
+                ->where('escudo_clube_id', $escudoId)
+                ->when($existingClub, fn ($query) => $query->where('id', '<>', $existingClub->id))
+                ->exists();
+
+            if ($escudoInUse) {
+                return response()->json([
+                    'message' => 'Este escudo já está em uso por outro clube nesta liga.',
+                ], 422);
+            }
+        }
+
+        $escudo = $escudoId
+            ? EscudoClube::query()->find($escudoId)
+            : null;
 
         $clube = LigaClube::updateOrCreate(
             [
@@ -181,7 +349,8 @@ class MinhaLigaController extends Controller
                 'user_id' => $request->user()->id,
             ],
             [
-                'nome' => $validated['nome'],
+                'nome' => trim($validated['nome']),
+                'escudo_clube_id' => $escudo?->id,
             ],
         );
 

@@ -10,6 +10,7 @@ use App\Http\Requests\Api\SwapPlayersRequest;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
+use App\Models\LigaPeriodo;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 
@@ -21,6 +22,10 @@ class LeagueTransferController extends Controller
 
     public function buy(BuyPlayerRequest $request, Liga $liga, LigaClube $clube): JsonResponse
     {
+        if ($blocked = $this->ensureMarketOpen($liga)) {
+            return $blocked;
+        }
+
         try {
             $entry = $this->transferService->buyPlayer(
                 ligaId: (int) $liga->id,
@@ -42,6 +47,10 @@ class LeagueTransferController extends Controller
 
     public function sell(SellPlayerRequest $request, Liga $liga, LigaClube $clube): JsonResponse
     {
+        if ($blocked = $this->ensureMarketOpen($liga)) {
+            return $blocked;
+        }
+
         try {
             $playerId = (int) $request->validated('elencopadrao_id');
             $entry = LigaClubeElenco::query()
@@ -74,6 +83,10 @@ class LeagueTransferController extends Controller
 
     public function payReleaseClause(PayReleaseClauseRequest $request, Liga $liga, LigaClube $clube): JsonResponse
     {
+        if ($blocked = $this->ensureMarketOpen($liga)) {
+            return $blocked;
+        }
+
         try {
             $entry = $this->transferService->payReleaseClause(
                 ligaId: (int) $liga->id,
@@ -92,6 +105,10 @@ class LeagueTransferController extends Controller
 
     public function swap(SwapPlayersRequest $request, Liga $liga, LigaClube $clube): JsonResponse
     {
+        if ($blocked = $this->ensureMarketOpen($liga)) {
+            return $blocked;
+        }
+
         try {
             $entries = $this->transferService->swapPlayers(
                 ligaId: (int) $liga->id,
@@ -109,5 +126,21 @@ class LeagueTransferController extends Controller
         } catch (\DomainException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
+    }
+
+    private function ensureMarketOpen(Liga $liga): ?JsonResponse
+    {
+        $periodo = LigaPeriodo::activeRangeForLiga($liga);
+        if (! $periodo) {
+            return null;
+        }
+
+        $inicioLabel = $periodo['inicio_label'] ?? null;
+        $fimLabel = $periodo['fim_label'] ?? null;
+        $range = $inicioLabel && $fimLabel ? " ({$inicioLabel} até {$fimLabel})" : '';
+
+        return response()->json([
+            'message' => "Mercado fechado durante o período de partidas{$range}.",
+        ], 423);
     }
 }

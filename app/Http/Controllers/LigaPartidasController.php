@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesLiga;
-use App\Models\Liga;
 use App\Models\Partida;
 use App\Services\PartidaPlacarService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class LigaPartidasController extends Controller
@@ -21,17 +21,26 @@ class LigaPartidasController extends Controller
     {
         $liga = $this->resolveUserLiga($request);
         $clube = $this->resolveUserClub($request);
+        $clube?->loadMissing('escudo');
 
-        $partidasCollection = Partida::query()
-            ->with(['mandante.user', 'visitante.user'])
-            ->where('liga_id', $liga->id)
-            ->orderByRaw('scheduled_at IS NULL, scheduled_at ASC, created_at DESC')
-            ->get();
+        $partidasCollection = collect();
+
+        if ($clube) {
+            $partidasCollection = Partida::query()
+                ->with(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo'])
+                ->where('liga_id', $liga->id)
+                ->where(function ($query) use ($clube): void {
+                    $query->where('mandante_id', $clube->id)
+                        ->orWhere('visitante_id', $clube->id);
+                })
+                ->orderByRaw('scheduled_at IS NULL, scheduled_at ASC, created_at DESC')
+                ->get();
+        }
 
         $partidasCollection->each(fn (Partida $partida) => $this->placarService->maybeAutoConfirm($partida));
 
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($liga) {
+            ->map(function (Partida $partida) use ($liga, $clube) {
                 $tz = $liga->timezone ?? 'UTC';
 
                 return [
@@ -44,8 +53,8 @@ class LigaPartidasController extends Controller
                     'visitante_user_id' => $partida->visitante?->user_id,
                     'mandante_nickname' => $partida->mandante?->user?->nickname ?? $partida->mandante?->user?->name,
                     'visitante_nickname' => $partida->visitante?->user?->nickname ?? $partida->visitante?->user?->name,
-                    'mandante_logo' => $partida->mandante?->escudo_url,
-                    'visitante_logo' => $partida->visitante?->escudo_url,
+                    'mandante_logo' => $this->resolveEscudoUrl($partida->mandante?->escudo?->clube_imagem),
+                    'visitante_logo' => $this->resolveEscudoUrl($partida->visitante?->escudo?->clube_imagem),
                     'estado' => $partida->estado,
                     'scheduled_at' => $partida->scheduled_at ? $partida->scheduled_at->timezone($tz)->toIso8601String() : null,
                     'forced_by_system' => (bool) $partida->forced_by_system,
@@ -58,21 +67,12 @@ class LigaPartidasController extends Controller
                     'wo_motivo' => $partida->wo_motivo,
                     'checkin_mandante_at' => $partida->checkin_mandante_at?->timezone($tz)->toIso8601String(),
                     'checkin_visitante_at' => $partida->checkin_visitante_at?->timezone($tz)->toIso8601String(),
+                    'is_mandante' => $clube ? (int) $partida->mandante_id === (int) $clube->id : false,
+                    'is_visitante' => $clube ? (int) $partida->visitante_id === (int) $clube->id : false,
                 ];
             })
-            ->values();
-
-        $minhasPartidas = [];
-        if ($clube) {
-            $minhasPartidas = $partidas->filter(function ($p) use ($clube) {
-                return (int) $p['mandante_id'] === (int) $clube->id || (int) $p['visitante_id'] === (int) $clube->id;
-            })->map(function ($p) use ($clube) {
-                $p['is_mandante'] = (int) $p['mandante_id'] === (int) $clube->id;
-                $p['is_visitante'] = (int) $p['visitante_id'] === (int) $clube->id;
-
-                return $p;
-            })->values()->all();
-        }
+            ->values()
+            ->all();
 
         return view('liga_partidas', [
             'liga' => [
@@ -85,17 +85,29 @@ class LigaPartidasController extends Controller
                 'id' => $clube->id,
                 'nome' => $clube->nome,
                 'user_id' => $clube->user_id,
+                'escudo_url' => $clube->escudo?->clube_imagem
+                    ? $this->resolveEscudoUrl($clube->escudo->clube_imagem)
+                    : null,
             ] : null,
-            'minhas_partidas' => $minhasPartidas,
-            'todas_partidas' => $partidas->map(function ($p) use ($clube) {
-                if ($clube) {
-                    $p['is_mandante'] = (int) $p['mandante_id'] === (int) $clube->id;
-                    $p['is_visitante'] = (int) $p['visitante_id'] === (int) $clube->id;
-                }
-
-                return $p;
-            })->all(),
+            'partidas' => $partidas,
             'appContext' => $this->makeAppContext($liga, $clube, 'partidas'),
         ]);
+    }
+
+    private function resolveEscudoUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 }

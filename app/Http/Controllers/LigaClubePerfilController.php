@@ -14,6 +14,10 @@ class LigaClubePerfilController extends Controller
 
     public function show(Request $request, LigaClube $clube): View
     {
+        if (! $request->query('liga_id') && ! $request->input('liga_id') && $clube->liga_id) {
+            $request->merge(['liga_id' => $clube->liga_id]);
+        }
+
         $liga = $this->resolveUserLiga($request);
         $userClub = $request->user()?->clubesLiga()->where('liga_id', $liga->id)->first();
         $nav = $userClub && (int) $userClub->id === (int) $clube->id ? 'clube' : 'tabela';

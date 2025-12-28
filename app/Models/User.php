@@ -65,4 +65,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(LigaClube::class, 'user_id');
     }
+
+    public function disponibilidades(): HasMany
+    {
+        return $this->hasMany(UserDisponibilidade::class);
+    }
 }

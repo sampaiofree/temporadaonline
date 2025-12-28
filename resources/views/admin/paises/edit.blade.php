@@ -16,11 +16,15 @@
         @endif
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            @php
+                $returnQueryString = $returnQuery ? '?'.$returnQuery : '';
+            @endphp
             @include('admin.paises._form', [
-                'action' => route('admin.paises.update', $pais),
+                'action' => route('admin.paises.update', $pais).$returnQueryString,
                 'method' => 'PATCH',
                 'pais' => $pais,
                 'submitLabel' => 'Salvar alterações',
+                'queryString' => $returnQuery ?? '',
             ])
         </div>
     </div>

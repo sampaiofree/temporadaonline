@@ -66,4 +66,9 @@ class Liga extends Model
     {
         return $this->hasMany(LigaTransferencia::class);
     }
+
+    public function periodos(): HasMany
+    {
+        return $this->hasMany(LigaPeriodo::class);
+    }
 }

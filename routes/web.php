@@ -9,8 +9,11 @@ use App\Http\Controllers\Admin\JogoController as AdminJogoController;
 use App\Http\Controllers\Admin\LigaController as AdminLigaController;
 use App\Http\Controllers\Admin\PlataformaController as AdminPlataformaController;
 use App\Http\Controllers\Admin\PaisController as AdminPaisController;
+use App\Http\Controllers\Admin\ClubeController as AdminClubeController;
 use App\Http\Controllers\Admin\LigaEscudoController as AdminLigaEscudoController;
+use App\Http\Controllers\Admin\LigaJogadorController as AdminLigaJogadorController;
 use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeController;
+use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
@@ -22,7 +25,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'dashboard');
+Route::redirect('/', '/dashboard');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -32,14 +35,25 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('plataformas', AdminPlataformaController::class)->except(['show']);
     Route::resource('paises', AdminPaisController::class, ['parameters' => ['paises' => 'pais']])
         ->except(['show', 'create']);
+    Route::delete('paises/bulk-destroy', [AdminPaisController::class, 'bulkDestroy'])->name('paises.bulk-destroy');
+    Route::resource('clubes', AdminClubeController::class)
+        ->only(['index', 'edit', 'update', 'destroy']);
+    Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
+        'parameters' => ['ligas-usuarios' => 'liga_jogador'],
+    ])->only(['index', 'destroy']);
     Route::resource('ligas-escudos', AdminLigaEscudoController::class, [
         'parameters' => ['ligas-escudos' => 'liga_escudo'],
     ])->except(['show', 'create']);
+    Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');
     Route::resource('escudos-clubes', AdminEscudoClubeController::class, [
         'parameters' => ['escudos-clubes' => 'escudo_clube'],
     ])->except(['show', 'create']);
     Route::delete('escudos-clubes/bulk-destroy', [AdminEscudoClubeController::class, 'bulkDestroy'])->name('escudos-clubes.bulk-destroy');
     Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+    Route::get('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'index'])->name('users.horarios.index');
+    Route::post('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'store'])->name('users.horarios.store');
+    Route::put('users/{user}/horarios/{disponibilidade}', [AdminUserDisponibilidadeController::class, 'update'])->name('users.horarios.update');
+    Route::delete('users/{user}/horarios/{disponibilidade}', [AdminUserDisponibilidadeController::class, 'destroy'])->name('users.horarios.destroy');
     Route::get('/elenco-padrao', [AdminElencoPadraoController::class, 'index'])->name('elenco-padrao.index');
     Route::post('/elenco-padrao/importar', [AdminElencoPadraoController::class, 'importar'])->name('elenco-padrao.importar');
     Route::get('/elenco-padrao/jogadores', [AdminElencoPadraoController::class, 'jogadores'])->name('elenco-padrao.jogadores');
@@ -62,6 +76,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::delete('/profile', [ProfileController::class, 'destroy']);
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
+    Route::get('/minha_liga/clube', [MinhaLigaController::class, 'clube'])->name('minha_liga.clube');
     Route::get('/minha_liga/meu-elenco', [MinhaLigaController::class, 'meuElenco'])->name('minha_liga.meu_elenco');
     Route::get('/minha_liga/financeiro', [MinhaLigaController::class, 'financeiro'])->name('minha_liga.financeiro');
     Route::get('/liga/mercado', [LigaMercadoController::class, 'index'])->name('liga.mercado');

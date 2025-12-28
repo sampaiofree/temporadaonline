@@ -48,6 +48,7 @@
                             <th class="px-4 py-3 font-semibold">Email</th>
                             <th class="px-4 py-3 font-semibold">Tipo</th>
                             <th class="px-4 py-3 font-semibold">Plataforma</th>
+                            <th class="px-4 py-3 font-semibold">Horário</th>
                             <th class="px-4 py-3 font-semibold">Criado em</th>
                             <th class="px-4 py-3 font-semibold">Ações</th>
                         </tr>
@@ -64,6 +65,25 @@
                                     </span>
                                 </td>
                                 <td class="px-4 py-4 text-slate-600">{{ $user->profile?->plataforma_nome ?? '—' }}</td>
+                                <td class="px-4 py-4 text-slate-600">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <a
+                                            href="{{ route('admin.users.horarios.index', $user) }}"
+                                            class="inline-flex items-center rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                        >
+                                            Gerenciar horários
+                                        </a>
+                                        @if ($user->disponibilidades_count)
+                                            <span class="inline-flex rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                                                {{ $user->disponibilidades_count }}
+                                            </span>
+                                        @else
+                                            <span class="inline-flex rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                                                0
+                                            </span>
+                                        @endif
+                                    </div>
+                                </td>
                                 <td class="px-4 py-4 text-slate-600">{{ $user->created_at?->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 py-4 text-slate-600">
                                     <a
@@ -76,7 +96,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Nenhum usuário encontrado.
                                 </td>
                             </tr>

@@ -105,11 +105,11 @@ export default function Register() {
     };
 
     return (
-        <main className="mco-screen" aria-label="Cadastro de jogador">
+        <main className="mco-screen register-screen" aria-label="Cadastro de jogador">
             <section className="auth-card" aria-labelledby="register-title">
                 <header className="auth-header">
                     <p className="auth-kicker">Operador novo na área</p>
-                    <h1 id="register-title" className="auth-title">
+                    <h1 id="register-title" className="auth-title register-title">
                         Cadastre-se
                     </h1>
                     <p className="auth-description">

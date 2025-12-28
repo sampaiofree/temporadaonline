@@ -25,9 +25,7 @@
                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Dashboard
                         </a>
-                        <a href="{{ route('admin.ligas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Ligas
-                        </a>
+                        
                         <a href="{{ route('admin.geracoes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Gerações
                         </a>
@@ -43,11 +41,21 @@
                         <a href="{{ route('admin.ligas-escudos.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Escudos de ligas
                         </a>
+                       
                         <a href="{{ route('admin.escudos-clubes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Escudos de clubes
                         </a>
                         <a href="{{ route('admin.elenco-padrao.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Elenco padrão
+                        </a>
+                        <a href="{{ route('admin.ligas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Ligas
+                        </a>
+                         <a href="{{ route('admin.clubes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Clubes por liga
+                        </a>
+                        <a href="{{ route('admin.ligas-usuarios.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Usuários por liga
                         </a>
                         <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Usuários

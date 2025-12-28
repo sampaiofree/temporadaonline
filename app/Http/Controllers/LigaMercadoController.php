@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\Elencopadrao;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaPeriodo;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -17,6 +18,8 @@ class LigaMercadoController extends Controller
     {
         $liga = $this->resolveUserLiga($request);
         $userClub = $this->resolveUserClub($request);
+        $periodoAtivo = LigaPeriodo::activeRangeForLiga($liga);
+        $mercadoFechado = $periodoAtivo !== null;
 
         $elencos = LigaClubeElenco::with(['elencopadrao', 'ligaClube'])
             ->where('liga_id', $liga->id)
@@ -88,6 +91,12 @@ class LigaMercadoController extends Controller
             ->values()
             ->all();
 
+        $mercadoPayload = [
+            'players' => $players,
+            'closed' => $mercadoFechado,
+            'period' => $periodoAtivo,
+        ];
+
         return view('liga_mercado', [
             'liga' => [
                 'id' => $liga->id,
@@ -102,6 +111,7 @@ class LigaMercadoController extends Controller
                 'salary_per_round' => $salaryPerRound,
             ] : null,
             'players' => $players,
+            'mercadoPayload' => $mercadoPayload,
             'appContext' => $this->makeAppContext($liga, $userClub, 'mercado'),
         ]);
     }

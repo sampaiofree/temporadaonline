@@ -12,6 +12,32 @@ const STATUS_LABELS = {
     aguardando: 'Liga aguardando · inscrições em breve',
 };
 
+const PLATFORM_BADGES = [
+    { match: ['pc'], label: 'PC', className: 'platform-pc' },
+    { match: ['ps5', 'playstation 5', 'ps'], label: 'PS5', className: 'platform-ps' },
+    { match: ['xbox'], label: 'XBOX', className: 'platform-xbox' },
+];
+
+const getPlatformBadge = (plataforma) => {
+    if (!plataforma) {
+        return { label: '—', className: 'platform-default' };
+    }
+    const normalized = plataforma.toString().toLowerCase();
+    const match = PLATFORM_BADGES.find((item) =>
+        item.match.some((token) => normalized.includes(token)),
+    );
+    if (match) {
+        return { label: match.label, className: match.className };
+    }
+    const short = plataforma.toString().toUpperCase().slice(0, 4);
+    return { label: short, className: 'platform-default' };
+};
+
+const getStatusClass = (status) => {
+    if (!status) return 'liga-status-default';
+    return `liga-status-${status}`;
+};
+
 const getAllLigasFromWindow = () => {
     if (Array.isArray(window.__ALL_LIGAS__)) {
         return window.__ALL_LIGAS__;
@@ -26,7 +52,12 @@ const getMyLigasFromWindow = () => {
     return [];
 };
 
+const shouldRequireProfileCompletion = Boolean(window.__REQUIRE_PROFILE_COMPLETION__ ?? false);
+const PROFILE_URL = window.__PROFILE_URL__ || '/perfil';
+const PROFILE_HORARIOS_URL = window.__PROFILE_HORARIOS_URL__ || `${PROFILE_URL}#horarios`;
+
 export default function Ligas() {
+    const [blocked] = useState(shouldRequireProfileCompletion);
     const [activeLiga, setActiveLiga] = useState(null);
     const [isJoining, setIsJoining] = useState(false);
     const [joinError, setJoinError] = useState('');
@@ -87,6 +118,10 @@ export default function Ligas() {
     const handleLeagueSelect = (liga) => {
         if (liga.registered) {
             window.location.href = `/minha_liga?liga_id=${liga.id}`;
+            return;
+        }
+
+        if (blocked) {
             return;
         }
 
@@ -168,70 +203,144 @@ export default function Ligas() {
                     Filtrar
                 </button>
             </div>
-            <section className="mercado-table-scroll" aria-label="Tabela de ligas">
-                {displayedLigas.length === 0 ? (
+            <section className="mercado-table-scroll ligas-table-wrap" aria-label="Tabela de ligas">
+                {blocked ? (
+                    <div className="ligas-blocked">
+                        <p className="ligas-blocked-eyebrow">Acesso restrito</p>
+                        <h3>Complete seu perfil e adicione um horário disponível</h3>
+                        <p>
+                            Você precisa cadastrar plataforma, jogo, nickname e geração e ter pelo menos um horário de
+                            disponibilidade registrado para desbloquear as ligas.
+                        </p>
+                        <div className="ligas-blocked-actions">
+                            <a className="ligas-modal-button ligas-modal-button--primary" href={PROFILE_URL}>
+                                Completar perfil
+                            </a>
+                            <a className="ligas-modal-button ligas-modal-button--ghost" href={PROFILE_HORARIOS_URL}>
+                                Registrar horário
+                            </a>
+                        </div>
+                    </div>
+                ) : displayedLigas.length === 0 ? (
                     <p className="ligas-empty">{emptyMessage}</p>
                 ) : (
-                    <table className="mercado-table">
-                        <thead>
-                            <tr>
-                                <th>Imagem</th>
-                                <th>Nome</th>
-                                <th>Jogo · Geração</th>
-                                <th>Plataforma</th>
-                                <th className="col-action">Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                    {displayedLigas.map((liga) => (
-                        <tr key={liga.id}>
-                            <td className="mercado-player-cell">
-                                <div className="mercado-avatar-sm">
-                                    {liga.imagem ? (
-                                        <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
-                                    ) : (
-                                        <span>{liga.nome?.slice(0, 2).toUpperCase() || 'LG'}</span>
-                                    )}
-                                </div>
-                            </td>
-                            <td>
-                                <div className="mercado-player-meta">
-                                    <strong>{liga.nome}</strong>
-                                    <span>{STATUS_LABELS[liga.status] ?? 'Status indefinido'}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <div className="mercado-player-meta">
-                                    <strong>{liga.jogo || '—'}</strong>
-                                    <span>{liga.geracao || '—'}</span>
-                                </div>
-                            </td>
-                            <td>
-                                <span>{liga.plataforma || '—'}</span>
-                            </td>
-                            <td className="col-action">
-                                {liga.registered ? (
-                                    <button
-                                        type="button"
-                                        className="table-action-badge primary "
-                                        onClick={() => (window.location.href = `/minha_liga?liga_id=${liga.id}`)}
-                                    >
-                                        Ir para minha liga
-                                    </button>
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="table-action-badge primary "
-                                        onClick={() => openModal(liga)}
-                                    >
-                                        Entrar
-                                    </button>
-                                )}
-                            </td>
-                        </tr>
-                    ))}
-                        </tbody>
-                    </table>
+                    <>
+                        <div className="ligas-mobile-list">
+                            {displayedLigas.map((liga) => {
+                                const platformBadge = getPlatformBadge(liga.plataforma);
+                                const statusLabel = STATUS_LABELS[liga.status] ?? 'Status indefinido';
+                                const statusClass = getStatusClass(liga.status);
+                                const actionLabel = liga.registered ? 'Ir para minha liga' : 'Entrar';
+
+                                return (
+                                    <article key={liga.id} className="liga-mobile-card">
+                                        <div className="liga-mobile-head">
+                                            <div className="liga-mobile-logo">
+                                                {liga.imagem ? (
+                                                    <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
+                                                ) : (
+                                                    <span>{liga.nome?.slice(0, 2).toUpperCase() || 'LG'}</span>
+                                                )}
+                                            </div>
+                                            <div className="liga-mobile-title">
+                                                <div className="liga-mobile-title-row">
+                                                    <strong>{liga.nome}</strong>
+                                                    <span className={`liga-platform-badge ${platformBadge.className}`}>
+                                                        {platformBadge.label}
+                                                    </span>
+                                                </div>
+                                                <div className={`liga-mobile-status ${statusClass}`}>
+                                                    <span className="liga-mobile-status-dot" />
+                                                    {statusLabel}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="liga-mobile-meta">
+                                            <div className="liga-mobile-info">
+                                                <span>Jogo · Geração</span>
+                                                <strong>
+                                                    {[liga.jogo || '—', liga.geracao || '—'].join(' · ')}
+                                                </strong>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="liga-mobile-action"
+                                                onClick={() => {
+                                                    if (liga.registered) {
+                                                        window.location.href = `/minha_liga?liga_id=${liga.id}`;
+                                                    } else {
+                                                        openModal(liga);
+                                                    }
+                                                }}
+                                            >
+                                                {actionLabel}
+                                            </button>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                        <table className="mercado-table ligas-table">
+                            <thead>
+                                <tr>
+                                    <th>Imagem</th>
+                                    <th>Nome</th>
+                                    <th>Jogo · Geração</th>
+                                    <th>Plataforma</th>
+                                    <th className="col-action">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {displayedLigas.map((liga) => (
+                                    <tr key={liga.id}>
+                                        <td className="mercado-player-cell">
+                                            <div className="mercado-avatar-sm">
+                                                {liga.imagem ? (
+                                                    <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
+                                                ) : (
+                                                    <span>{liga.nome?.slice(0, 2).toUpperCase() || 'LG'}</span>
+                                                )}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="mercado-player-meta">
+                                                <strong>{liga.nome}</strong>
+                                                <span>{STATUS_LABELS[liga.status] ?? 'Status indefinido'}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div className="mercado-player-meta">
+                                                <strong>{liga.jogo || '—'}</strong>
+                                                <span>{liga.geracao || '—'}</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span>{liga.plataforma || '—'}</span>
+                                        </td>
+                                        <td className="col-action">
+                                            {liga.registered ? (
+                                                <button
+                                                    type="button"
+                                                    className="table-action-badge primary "
+                                                    onClick={() => (window.location.href = `/minha_liga?liga_id=${liga.id}`)}
+                                                >
+                                                    Ir para minha liga
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="table-action-badge primary "
+                                                    onClick={() => openModal(liga)}
+                                                >
+                                                    Entrar
+                                                </button>
+                                            )}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </>
                 )}
             </section>
             {filtersOpen && (
@@ -306,6 +415,38 @@ export default function Ligas() {
                     </div>
                 </div>
             )}
+            {blocked && (
+                <div className="ligas-modal-overlay" role="presentation">
+                    <div
+                        className="ligas-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Completar perfil e registrar disponibilidade"
+                    >
+                        <div className="ligas-modal-header">
+                            <p className="ligas-modal-status">Acesso bloqueado</p>
+                            <h2>Finalize seu perfil para desbloquear as ligas</h2>
+                        </div>
+                        <div className="ligas-modal-body">
+                            <p>Cadastre plataforma, jogo, nickname e geração e adicione ao menos um horário disponível.</p>
+                        </div>
+                        <div className="ligas-modal-actions">
+                            <a
+                                className="ligas-modal-button ligas-modal-button--ghost"
+                                href={PROFILE_URL}
+                            >
+                                Completar perfil
+                            </a>
+                            <a
+                                className="ligas-modal-button ligas-modal-button--primary"
+                                href={PROFILE_HORARIOS_URL}
+                            >
+                                Registrar horário
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            )}
             {activeLiga && (
                 <div className="ligas-modal-overlay" role="presentation" onClick={closeModal}>
                     <div
@@ -315,16 +456,18 @@ export default function Ligas() {
                         aria-label={`Detalhes da liga ${activeLiga.nome}`}
                         onClick={(event) => event.stopPropagation()}
                     >
-                        <div className="ligas-modal-image">
-                            {activeLiga.imagem ? (
-                                <img src={`/storage/${activeLiga.imagem}`} alt={`Escudo da ${activeLiga.nome}`} />
-                            ) : (
-                                <span>Sem imagem</span>
-                            )}
-                        </div>
-                        <div className="ligas-modal-header">
-                            <p className="ligas-modal-status">{modalStatusLabel}</p>
-                            <h2>{activeLiga.nome}</h2>
+                        <div className="ligas-modal-hero">
+                            <div className="ligas-modal-image">
+                                {activeLiga.imagem ? (
+                                    <img src={`/storage/${activeLiga.imagem}`} alt={`Escudo da ${activeLiga.nome}`} />
+                                ) : (
+                                    <span>Sem imagem</span>
+                                )}
+                            </div>
+                            <div className="ligas-modal-hero-text">
+                                <p className="ligas-modal-status">{modalStatusLabel}</p>
+                                <h2>{activeLiga.nome}</h2>
+                            </div>
                         </div>
                         <div className="ligas-modal-body">
                             <div className="liga-modal-section">
@@ -339,53 +482,70 @@ export default function Ligas() {
                                     {activeLiga.regras || 'As regras ainda serão definidas. Aguarde novidades.'}
                                 </p>
                             </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Tipo de liga</span>
-                                <p className="liga-modal-value">{TYPE_LABELS[activeLiga.tipo]}</p>
+                            <div className="liga-modal-grid">
+                                <div>
+                                    <span>Jogo</span>
+                                    <strong>{activeLiga.jogo || '—'}</strong>
+                                </div>
+                                <div>
+                                    <span>Geração</span>
+                                    <strong>{activeLiga.geracao || '—'}</strong>
+                                </div>
+                                <div>
+                                    <span>Plataforma</span>
+                                    <strong>{activeLiga.plataforma || '—'}</strong>
+                                </div>
+                                <div>
+                                    <span>Vagas</span>
+                                    <strong>{activeLiga.max_times ?? '—'} times</strong>
+                                </div>
                             </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Status atual</span>
-                                <p className="liga-modal-value">{modalStatusLabel}</p>
-                            </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Capacidade máxima</span>
-                                <p className="liga-modal-value">
-                                    {activeLiga.max_times}
-                                    {' '}times podem participar desta liga.
-                                </p>
-                            </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Jogo</span>
-                                <p className="liga-modal-value">{activeLiga.jogo || 'Não informado'}</p>
-                            </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Geração</span>
-                                <p className="liga-modal-value">{activeLiga.geracao || 'Não informada'}</p>
-                            </div>
-                            <div className="liga-modal-section">
-                                <span className="liga-modal-label">Plataforma</span>
-                                <p className="liga-modal-value">{activeLiga.plataforma || 'Não informada'}</p>
+                            <div className="liga-modal-period">
+                                <span>Períodos de partidas</span>
+                                {activeLiga.periodos && activeLiga.periodos.length > 0 ? (
+                                    <div className="liga-modal-period-list">
+                                        {activeLiga.periodos.map((periodo) => (
+                                            <div key={periodo.codigo} className="liga-modal-period-item">
+                                                <span>
+                                                    {periodo.inicio_label || '—'} <strong>→</strong>{' '}
+                                                    {periodo.fim_label || '—'}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <strong className="liga-modal-period-empty">Período não informado</strong>
+                                )}
                             </div>
                         </div>
                         <div className="ligas-modal-actions">
-                            <button type="button" className="ligas-modal-button ligas-modal-button--ghost" onClick={closeModal}>
+                            <button
+                                type="button"
+                                className="ligas-modal-button ligas-modal-button--ghost"
+                                onClick={closeModal}
+                                disabled={isJoining}
+                            >
                                 Fechar
                             </button>
-                            {activeLiga.status !== 'encerrada' && !activeLiga.registered && (
+                            {!activeLiga.registered && activeLiga.status !== 'encerrada' && (
                                 <button
                                     type="button"
                                     className="ligas-modal-button ligas-modal-button--primary"
                                     onClick={handleJoin}
                                     disabled={isJoining}
                                 >
-                                    {isJoining ? 'Entrando...' : 'Entrar na liga'}
+                                    {isJoining ? 'Entrando...' : 'Entrar'}
                                 </button>
                             )}
                         </div>
-                        {activeLiga.registered && (
-                            <p className="ligas-modal-registered">Você já é membro desta liga.</p>
+                        {(activeLiga.registered || joinError) && (
+                            <div className="ligas-modal-meta">
+                                {activeLiga.registered && (
+                                    <p className="ligas-modal-registered">Você já é membro desta liga.</p>
+                                )}
+                                {joinError && <p className="ligas-modal-error">{joinError}</p>}
+                            </div>
                         )}
-                        {joinError && <p className="ligas-modal-error">{joinError}</p>}
                     </div>
                 </div>
             )}

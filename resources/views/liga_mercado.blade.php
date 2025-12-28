@@ -8,7 +8,7 @@
         <script>
             window.__LIGA__ = @json($liga);
             window.__CLUBE__ = @json($clube);
-            window.__MERCADO__ = @json(['players' => $players]);
+            window.__MERCADO__ = @json($mercadoPayload ?? []);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh

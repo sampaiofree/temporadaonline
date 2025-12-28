@@ -113,11 +113,6 @@ export default function Navbar({ active: controlledActive }) {
 
     return (
         <nav className="mco-navbar" aria-label="Menu principal">
-            {isLigaMode && (
-                <div className="nav-context" aria-label="Liga ativa">
-                    {appContext.liga?.nome ?? 'Liga'} • {appContext.clube?.nome ?? 'Sem clube'}
-                </div>
-            )}
             {items.map((item) => {
                 const isActive = activeId === item.id;
 

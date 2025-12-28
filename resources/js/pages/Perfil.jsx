@@ -241,6 +241,9 @@ export default function Perfil() {
         }
     };
 
+    const csrfToken =
+        document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+
     return (
         <main className="mco-screen" aria-label="Perfil do jogador">
             <div className="profile-tabs" role="tablist" aria-label="Seções do perfil">
@@ -265,136 +268,161 @@ export default function Perfil() {
             </div>
 
             {activeTab === 'perfil' && (
-            <section className="profile-panel" aria-label="Dados do jogador">
-                <div className="profile-avatar" aria-hidden="true">
-                    <span>{initials || '??'}</span>
-                </div>
-                <p className="profile-name">{displayName || 'Jogador'}</p>
-                <p className="profile-nickname">#{displayNickname || 'nickname'}</p>
-                {isEditing ? (
-                    <form className="profile-form" onSubmit={handleSubmit} noValidate>
-                        {TEXT_FIELDS.map((field) => (
-                            <label key={field.name} className="profile-form-field" htmlFor={`perfil-${field.name}`}>
-                                <span className="profile-label">{field.label}</span>
-                                <input
+                <section className="profile-panel" aria-label="Dados do jogador">
+                    <div className="profile-panel-header">
+                        <div className="profile-avatar" aria-hidden="true">
+                            <span>{initials || '??'}</span>
+                        </div>
+                        <div className="profile-meta">
+                            <p className="profile-name">{displayName || 'Jogador'}</p>
+                            <p className="profile-nickname">#{displayNickname || 'nickname'}</p>
+                        </div>
+                    </div>
+                    <div className="profile-badges">
+                        <div className="profile-badge">
+                            <span>Setup</span>
+                            <strong>{platformLabel}</strong>
+                        </div>
+                        <div className="profile-badge profile-badge--highlight">
+                            <span>Jogo Atual</span>
+                            <strong>{gameLabel}</strong>
+                        </div>
+                    </div>
+
+                    {isEditing ? (
+                        <form className="profile-form" onSubmit={handleSubmit} noValidate>
+                            {TEXT_FIELDS.map((field) => (
+                                <label key={field.name} className="profile-form-field" htmlFor={`perfil-${field.name}`}>
+                                    <span className="profile-label">{field.label}</span>
+                                    <input
+                                        className="profile-input"
+                                        id={`perfil-${field.name}`}
+                                        name={field.name}
+                                        type={field.type ?? 'text'}
+                                        placeholder={field.placeholder}
+                                        required={field.required}
+                                        value={formData[field.name]}
+                                        onChange={handleChange}
+                                        autoComplete={field.autoComplete}
+                                    />
+                                    {errors[field.name]?.[0] && (
+                                        <span className="profile-error">{errors[field.name][0]}</span>
+                                    )}
+                                </label>
+                            ))}
+                            <label className="profile-form-field" htmlFor="perfil-geracao">
+                                <span className="profile-label">Geração</span>
+                                <select
                                     className="profile-input"
-                                    id={`perfil-${field.name}`}
-                                    name={field.name}
-                                    type={field.type ?? 'text'}
-                                    placeholder={field.placeholder}
-                                    required={field.required}
-                                    value={formData[field.name]}
+                                    id="perfil-geracao"
+                                    name="geracao_id"
+                                    value={formData.geracao_id}
                                     onChange={handleChange}
-                                    autoComplete={field.autoComplete}
-                                />
-                                {errors[field.name]?.[0] && (
-                                    <span className="profile-error">{errors[field.name][0]}</span>
+                                >
+                                    <option value="">Selecione a geração</option>
+                                    {generationOptions.map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                            {option.nome}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.geracao_id?.[0] && (
+                                    <span className="profile-error">{errors.geracao_id[0]}</span>
                                 )}
                             </label>
-                        ))}
-                        <label className="profile-form-field" htmlFor="perfil-geracao">
-                            <span className="profile-label">Geração</span>
-                            <select
-                                className="profile-input"
-                                id="perfil-geracao"
-                                name="geracao_id"
-                                value={formData.geracao_id}
-                                onChange={handleChange}
-                            >
-                                <option value="">Selecione a geração</option>
-                                {generationOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                        {option.nome}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.geracao_id?.[0] && (
-                                <span className="profile-error">{errors.geracao_id[0]}</span>
-                            )}
-                        </label>
-                        <label className="profile-form-field" htmlFor="perfil-plataforma">
-                            <span className="profile-label">Plataforma</span>
-                            <select
-                                className="profile-input"
-                                id="perfil-plataforma"
-                                name="plataforma_id"
-                                value={formData.plataforma_id}
-                                onChange={handleChange}
-                            >
-                                <option value="">Escolha a plataforma</option>
-                                {platformOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                        {option.nome}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.plataforma_id?.[0] && (
-                                <span className="profile-error">{errors.plataforma_id[0]}</span>
-                            )}
-                        </label>
-                        <label className="profile-form-field" htmlFor="perfil-jogo">
-                            <span className="profile-label">Jogo</span>
-                            <select
-                                className="profile-input"
-                                id="perfil-jogo"
-                                name="jogo_id"
-                                value={formData.jogo_id}
-                                onChange={handleChange}
-                            >
-                                <option value="">Escolha um jogo</option>
-                                {gameOptions.map((option) => (
-                                    <option key={option.id} value={option.id}>
-                                        {option.nome}
-                                    </option>
-                                ))}
-                            </select>
-                            {errors.jogo_id?.[0] && (
-                                <span className="profile-error">{errors.jogo_id[0]}</span>
-                            )}
-                        </label>
-                        {statusMessage && (
-                            <p className={`profile-status${statusVariant === 'error' ? ' profile-status--error' : ''}`}>
-                                {statusMessage}
-                            </p>
-                        )}
-                        <div className="profile-form-actions">
-                            <button className="btn-primary" type="submit" disabled={submitting}>
-                                {submitting ? 'Salvando...' : 'Salvar alterações'}
-                            </button>
-                            <button className="btn-outline" type="button" onClick={handleCancel} disabled={submitting}>
-                                Cancelar
-                            </button>
-                        </div>
-                    </form>
-                ) : (
-                    <>
-                        <div className="profile-details">
-                            {profileFields.map((field) => (
-                                <article key={field.label} className="profile-field">
-                                    <span className="profile-label">{field.label}</span>
-                                    <span className="profile-value">{field.value}</span>
-                                </article>
-                            ))}
-                        </div>
-                        {statusMessage && (
-                            <p className={`profile-status${statusVariant === 'error' ? ' profile-status--error' : ''}`}>
-                                {statusMessage}
-                            </p>
-                        )}
-                    </>
-                )}
-                        <div className="profile-footer">
-                            {!isEditing && (
-                                <button
-                                    type="button"
-                                    className="btn-primary profile-edit-button"
-                                    onClick={handleEditStart}
+                            <label className="profile-form-field" htmlFor="perfil-plataforma">
+                                <span className="profile-label">Plataforma</span>
+                                <select
+                                    className="profile-input"
+                                    id="perfil-plataforma"
+                                    name="plataforma_id"
+                                    value={formData.plataforma_id}
+                                    onChange={handleChange}
                                 >
-                                    Editar perfil
-                                </button>
+                                    <option value="">Escolha a plataforma</option>
+                                    {platformOptions.map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                            {option.nome}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.plataforma_id?.[0] && (
+                                    <span className="profile-error">{errors.plataforma_id[0]}</span>
+                                )}
+                            </label>
+                            <label className="profile-form-field" htmlFor="perfil-jogo">
+                                <span className="profile-label">Jogo</span>
+                                <select
+                                    className="profile-input"
+                                    id="perfil-jogo"
+                                    name="jogo_id"
+                                    value={formData.jogo_id}
+                                    onChange={handleChange}
+                                >
+                                    <option value="">Escolha um jogo</option>
+                                    {gameOptions.map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                            {option.nome}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.jogo_id?.[0] && (
+                                    <span className="profile-error">{errors.jogo_id[0]}</span>
+                                )}
+                            </label>
+                            {statusMessage && (
+                                <p className={`profile-status${statusVariant === 'error' ? ' profile-status--error' : ''}`}>
+                                    {statusMessage}
+                                </p>
                             )}
-                        </div>
-            </section>
+                            <div className="profile-form-actions">
+                                <button className="btn-primary" type="submit" disabled={submitting}>
+                                    {submitting ? 'Salvando...' : 'Salvar alterações'}
+                                </button>
+                                <button className="btn-outline" type="button" onClick={handleCancel} disabled={submitting}>
+                                    Cancelar
+                                </button>
+                            </div>
+                        </form>
+                    ) : (
+                        <>
+                            <div className="profile-details profile-details--compact">
+                                {profileFields.map((field) => (
+                                    <article key={field.label} className="profile-field">
+                                        <span className="profile-label">{field.label}</span>
+                                        <span className="profile-value">{field.value}</span>
+                                    </article>
+                                ))}
+                            </div>
+                            {statusMessage && (
+                                <p className={`profile-status${statusVariant === 'error' ? ' profile-status--error' : ''}`}>
+                                    {statusMessage}
+                                </p>
+                            )}
+                        </>
+                    )}
+                    <div className="profile-footer">
+                        {!isEditing && (
+                            <button
+                                type="button"
+                                className="btn-primary profile-edit-button"
+                                onClick={handleEditStart}
+                            >
+                                Editar perfil
+                            </button>
+                        )}
+                        <form
+                            method="POST"
+                            action="/logout"
+                            className="profile-logout-form"
+                        >
+                            <input type="hidden" name="_token" value={csrfToken} />
+                            <button type="submit" className="btn-outline profile-logout-button">
+                                Sair
+                            </button>
+                        </form>
+                    </div>
+                </section>
             )}
 
             {activeTab === 'horarios' && (

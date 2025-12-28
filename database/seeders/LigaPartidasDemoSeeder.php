@@ -4,11 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaPeriodo;
 use App\Models\Partida;
 use App\Models\PartidaAlteracao;
-use App\Models\PartidaConfirmacao;
 use App\Models\PartidaEvento;
-use App\Models\PartidaOpcaoHorario;
 use App\Models\User;
 use App\Models\UserDisponibilidade;
 use App\Services\PartidaSchedulerService;
@@ -28,14 +27,20 @@ class LigaPartidasDemoSeeder extends Seeder
             return;
         }
 
-        // Configura regras mínimas da liga para agendamento
         $liga->update([
-            'dias_permitidos' => [1, 2, 3, 4, 5], // segunda a sexta
-            'horarios_permitidos' => [
-                ['inicio' => '18:00', 'fim' => '23:00'],
-            ],
             'timezone' => $liga->timezone ?: 'America/Sao_Paulo',
         ]);
+
+        if ($liga->periodos()->count() === 0) {
+            $start = Carbon::now($liga->timezone)->startOfDay();
+            $end = $start->copy()->addDays(30);
+
+            LigaPeriodo::create([
+                'liga_id' => $liga->id,
+                'inicio' => $start->toDateString(),
+                'fim' => $end->toDateString(),
+            ]);
+        }
 
         $clubs = LigaClube::query()
             ->where('liga_id', $liga->id)
@@ -50,8 +55,6 @@ class LigaPartidasDemoSeeder extends Seeder
         $partidaIds = Partida::query()->where('liga_id', $liga->id)->pluck('id');
         PartidaEvento::query()->whereIn('partida_id', $partidaIds)->delete();
         PartidaAlteracao::query()->whereIn('partida_id', $partidaIds)->delete();
-        PartidaConfirmacao::query()->whereIn('partida_id', $partidaIds)->delete();
-        PartidaOpcaoHorario::query()->whereIn('partida_id', $partidaIds)->delete();
         Partida::query()->whereIn('id', $partidaIds)->delete();
 
         // Configura users e disponibilidades (alguns sem disponibilidade para testar sem-slot)

@@ -112,10 +112,52 @@ function PlayerAvatar({ src, alt, fallback }) {
    Componente
 ========================= */
 
+const formatDetailLabel = (key) =>
+    key
+        .replace(/_/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+
+const formatDetailValue = (key, value) => {
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    if (typeof value === 'boolean') {
+        return value ? 'Sim' : 'Não';
+    }
+
+    if (key.endsWith('_eur')) {
+        return formatCurrency(value);
+    }
+
+    if (key.endsWith('_cm')) {
+        return `${value} cm`;
+    }
+
+    if (key.endsWith('_kg')) {
+        return `${value} kg`;
+    }
+
+    if (key.endsWith('_date') || key === 'dob') {
+        const date = new Date(value);
+        if (!Number.isNaN(date.getTime())) {
+            return date.toLocaleDateString('pt-BR');
+        }
+    }
+
+    return String(value);
+};
+
 export default function LigaMercado() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const mercado = getMercadoFromWindow();
+    const marketClosed = Boolean(mercado?.closed);
+    const closedPeriod = mercado?.period ?? null;
+    const closedPeriodLabel =
+        closedPeriod?.inicio_label && closedPeriod?.fim_label
+            ? `O mercado está fechado durante o período de partidas (${closedPeriod.inicio_label} até ${closedPeriod.fim_label}).`
+            : 'O mercado está fechado durante o período de partidas.';
 
     const [playersData, setPlayersData] = useState(mercado.players || []);
     const [clubBalance, setClubBalance] = useState(clube?.saldo ?? 0);
@@ -125,6 +167,12 @@ export default function LigaMercado() {
     const [modalMode, setModalMode] = useState(null);
     const [isModalSubmitting, setIsModalSubmitting] = useState(false);
     const [modalError, setModalError] = useState('');
+
+    const [detailPlayer, setDetailPlayer] = useState(null);
+    const [detailExpanded, setDetailExpanded] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState('');
+    const [detailCache, setDetailCache] = useState({});
 
     const [feedback, setFeedback] = useState('');
 
@@ -252,6 +300,21 @@ export default function LigaMercado() {
         setPage(1);
     }, [q, statusFilter, positionFilter, ovrFilter, clubFilter]);
 
+    useEffect(() => {
+        if (!detailPlayer) return;
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setDetailPlayer(null);
+                setDetailExpanded(false);
+                setDetailError('');
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [detailPlayer]);
+
     const toggleSort = (key) => {
         if (key === sortKey) {
             setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -278,6 +341,11 @@ export default function LigaMercado() {
             return;
         }
 
+        if (marketClosed) {
+            setFeedback(closedPeriodLabel);
+            return;
+        }
+
         setModalPlayer(player);
         setModalMode(mode);
         setModalError('');
@@ -293,6 +361,98 @@ export default function LigaMercado() {
         setModalError('');
         setIsModalSubmitting(false);
     };
+
+    const detailData = detailPlayer ? detailCache[detailPlayer.elencopadrao_id] : null;
+    const detailSnapshot = detailData ?? detailPlayer;
+
+    const openDetailModal = (player) => {
+        setDetailPlayer(player);
+        setDetailExpanded(false);
+        setDetailError('');
+        if (player?.elencopadrao_id) {
+            void loadDetailData(player.elencopadrao_id, { expand: false });
+        }
+    };
+
+    const closeDetailModal = () => {
+        setDetailPlayer(null);
+        setDetailExpanded(false);
+        setDetailError('');
+        setDetailLoading(false);
+    };
+
+    const loadDetailData = async (playerId, { expand } = { expand: true }) => {
+        if (!playerId) {
+            return;
+        }
+
+        if (detailCache[playerId]) {
+            if (expand) {
+                setDetailExpanded(true);
+            }
+            return;
+        }
+
+        setDetailLoading(true);
+        setDetailError('');
+
+        try {
+            const { data } = await window.axios.get(`/api/elencopadrao/${playerId}`);
+            const payload = data?.player ?? data ?? null;
+
+            if (payload) {
+                setDetailCache((prev) => ({ ...prev, [playerId]: payload }));
+                if (expand) {
+                    setDetailExpanded(true);
+                }
+            } else {
+                setDetailError('Não foi possível carregar a ficha completa.');
+            }
+        } catch (error) {
+            setDetailError(
+                error.response?.data?.message ?? 'Não foi possível carregar a ficha completa.',
+            );
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const handleToggleDetails = async () => {
+        if (!detailPlayer) return;
+
+        if (detailExpanded) {
+            setDetailExpanded(false);
+            return;
+        }
+
+        await loadDetailData(detailPlayer.elencopadrao_id, { expand: true });
+    };
+
+    const detailAction = detailPlayer
+        ? (() => {
+              if (marketClosed) {
+                  return { label: 'Mercado fechado', disabled: true, action: null };
+              }
+
+              if (!clube) {
+                  return { label: 'Crie seu clube', disabled: true, action: null };
+              }
+
+              if (detailPlayer.club_status === 'livre') {
+                  return { label: 'Contratar jogador', disabled: false, action: MODAL_MODES.BUY };
+              }
+
+              if (detailPlayer.club_status === 'outro') {
+                  return { label: 'Pagar multa', disabled: false, action: MODAL_MODES.MULTA };
+              }
+
+              if (detailPlayer.club_status === 'meu') {
+                  return { label: 'No clube', disabled: true, action: null };
+              }
+
+              return { label: 'Indisponível', disabled: true, action: null };
+          })()
+        : null;
 
     const applyPlayerToMyClub = (playerId) => {
         setPlayersData((prev) =>
@@ -328,6 +488,10 @@ export default function LigaMercado() {
 
     const handleModalConfirm = async () => {
         if (!modalPlayer || !liga || !clube || !modalMode) return;
+        if (marketClosed) {
+            setModalError(closedPeriodLabel);
+            return;
+        }
 
         setIsModalSubmitting(true);
         setModalError('');
@@ -373,6 +537,13 @@ export default function LigaMercado() {
 
         if (player.club_status === 'livre') {
             const isDisabled = !clube;
+            if (marketClosed) {
+                return (
+                    <span className="table-action-badge neutral" aria-label="Mercado fechado">
+                        Fechado
+                    </span>
+                );
+            }
             return (
                 <button
                     type="button"
@@ -390,6 +561,13 @@ export default function LigaMercado() {
         }
 
         if (player.club_status === 'outro') {
+            if (marketClosed) {
+                return (
+                    <span className="table-action-badge neutral" aria-label="Mercado fechado">
+                        Fechado
+                    </span>
+                );
+            }
             return (
                 <button
                     type="button"
@@ -442,6 +620,13 @@ export default function LigaMercado() {
                     {clube ? `Operando como ${clube.nome}` : 'Crie seu clube para negociar no mercado.'}
                 </p>
             </section>
+            {marketClosed && (
+                <Alert
+                    variant="warning"
+                    title="Mercado fechado"
+                    description={closedPeriodLabel}
+                />
+            )}
 
             {/* TOP BAR: Busca + Botão Filtros */}
             <section className="mercado-filters" aria-label="Busca e filtros do mercado">
@@ -567,97 +752,66 @@ export default function LigaMercado() {
 
             
 
-            {/* TABELA (DESKTOP + MOBILE) */}
-            <section className="mercado-table-wrap" aria-label="Tabela do mercado" style={{ marginTop: 20 }}>
-                <div className="mercado-table-scroll">
-                    <table className="mercado-table">
-                        <thead>
-                            <tr>
-                                <th onClick={() => toggleSort('name')} className="sortable">
-                                    Jogador {sortKey === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                                </th>
-                                <th onClick={() => toggleSort('overall')} className="sortable col-compact">
-                                    OVR {sortKey === 'overall' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                                </th>
-                                <th className="col-compact">POS</th>
-                                <th onClick={() => toggleSort('value_eur')} className="sortable col-compact numeric">
-                                    Valor {sortKey === 'value_eur' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                                </th>
-                                <th onClick={() => toggleSort('wage_eur')} className="sortable col-compact numeric">
-                                    Salário {sortKey === 'wage_eur' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
-                                </th>
-                                <th className="col-action">Ação</th>
-                            </tr>
-                        </thead>
+            {/* LISTA MOBILE */}
+            <section className="mercado-table-wrap" aria-label="Resultados do mercado" style={{ marginTop: 20 }}>
+                <div className="mercado-list-header">
+                    <span>Jogador / OVR</span>
+                    <span>Valores / Ação</span>
+                </div>
+                <div className="mercado-player-list">
+                    {pageItems.length === 0 ? (
+                        <p className="mercado-no-results">Nenhum jogador encontrado.</p>
+                    ) : (
+                        pageItems.map((p) => {
+                            const name = getPlayerName(p) || '—';
+                            const positionBadge = normalizePositions(p.player_positions)[0] || '—';
+                            const ovrTone = getOvrTone(p.overall);
+                            const statusLabel =
+                                p.club_status === 'livre'
+                                    ? 'Livre'
+                                    : p.club_status === 'meu'
+                                    ? 'Meu clube'
+                                    : p.club_name || 'Outro clube';
 
-                        <tbody>
-                            {pageItems.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} style={{ padding: 16, opacity: 0.85 }}>
-                                        Nenhum jogador encontrado.
-                                    </td>
-                                </tr>
-                            ) : (
-                                pageItems.map((p) => {
-                                    const name = getPlayerName(p) || '—';
-                                    const pos = normalizePositions(p.player_positions)[0] || '—';
-
-                                    const clubMini =
-                                        p.club_status === 'livre'
-                                            ? 'Livre'
-                                            : p.club_status === 'meu'
-                                            ? 'Meu clube'
-                                            : p.club_name
-                                            ? p.club_name
-                                            : 'Outro clube';
-                                    const ovrTone = getOvrTone(p.overall);
-
-                                    return (
-                                        <tr key={p.elencopadrao_id}>
-                                            {/* Jogador */}
-                                            <td>
-                                                <div className="mercado-player-cell">
-                                                    <div className="mercado-avatar-sm">
-                                                        <PlayerAvatar
-                                                            src={proxyFaceUrl(p.player_face_url)}
-                                                            alt={name}
-                                                            fallback={name.slice(0, 2).toUpperCase()}
-                                                        />
-                                                    </div>
-
-                                                    <div className="mercado-player-meta">
-                                                        <strong>{name}</strong>
-                                                        <span>{clubMini}</span>
-                                                    </div>
-                                                </div>
-                                            </td>
-
-                                            {/* OVR */}
-                                            <td>
-                                                <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
-                                                    {p.overall ?? '—'}
-                                                </span>
-                                            </td>
-
-                                            {/* POS */}
-                                            <td>
-                                                <span className="mercado-pos-badge">{pos}</span>
-                                            </td>
-
-                                            {/* Valor */}
-                                            <td className="numeric">{formatShortMoney(p.value_eur)}</td>
-
-                                            {/* Salário */}
-                                            <td className="numeric">{formatShortMoney(p.wage_eur)}</td>
-
-                                            {/* Ação */}
-                                            <td>{renderAction(p)}</td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
+                            return (
+                                <article key={p.elencopadrao_id} className={`mercado-player-card status-${p.club_status}`}>
+                                    <div className="mercado-player-card-content">
+                                        <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
+                                            {p.overall ?? '—'}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            className="mercado-player-avatar-button"
+                                            onClick={() => openDetailModal(p)}
+                                            aria-label={`Ver ficha completa de ${name}`}
+                                        >
+                                            <span className="mercado-player-avatar">
+                                                <PlayerAvatar
+                                                    src={proxyFaceUrl(p.player_face_url)}
+                                                    alt={name}
+                                                    fallback={name.slice(0, 2).toUpperCase()}
+                                                />
+                                                <span className="mercado-player-position">{positionBadge}</span>
+                                            </span>
+                                        </button>
+                                        <div className="mercado-player-info">
+                                            <strong>{name}</strong>
+                                            <span>{statusLabel}</span>
+                                        </div>
+                                    </div>
+                                    <div className="mercado-player-card-right">
+                                        <div className="mercado-player-values">
+                                            <span className="mercado-player-value">{formatShortMoney(p.value_eur)}</span>
+                                            <span className="mercado-player-salary">
+                                                SAL: {formatShortMoney(p.wage_eur)}
+                                            </span>
+                                        </div>
+                                        <div className="mercado-player-action">{renderAction(p)}</div>
+                                    </div>
+                                </article>
+                            );
+                        })
+                    )}
                 </div>
             </section>
 
@@ -693,12 +847,14 @@ export default function LigaMercado() {
                             </p>
                         </div>
                         {modalError && <p className="modal-error">{modalError}</p>}
-                        <div className="meu-elenco-modal-actions">
+                        <div className="meu-elenco-modal-actions" style={{marginTop: 10}}>
                             <button
                                 type="button"
                                 className="btn-outline"
                                 onClick={closeModal}
                                 disabled={isModalSubmitting}
+
+                                style={{ marginRight: 8 }}
                             >
                                 Cancelar
                             </button>
@@ -719,36 +875,176 @@ export default function LigaMercado() {
                 </div>
             )}
 
-            {/* RESULTADOS + PAGINAÇÃO TOPO */}
-            <section
-                className="mercado-pagination"
-                aria-label="Resumo e paginação do mercado"
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}
-            >
-                <span style={{ opacity: 0.9 }}>
-                    {filtered.length === 0 ? 'Nenhum resultado' : `${filtered.length} jogador(es)`}
-                </span>
+            {detailPlayer && (
+                <div
+                    className="player-detail-modal"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-label="Detalhes do jogador"
+                >
+                    <div className="player-detail-header">
+                        <div className="player-detail-header-inner">
+                            <div className="player-detail-avatar">
+                                <PlayerAvatar
+                                    src={proxyFaceUrl(detailPlayer.player_face_url)}
+                                    alt={getPlayerName(detailPlayer)}
+                                    fallback={getPlayerName(detailPlayer).slice(0, 2).toUpperCase()}
+                                />
+                            </div>
+                            <div className="player-detail-identity">
+                                <p className="player-detail-name">{getPlayerName(detailSnapshot)}</p>
+                                <div className="player-detail-meta">
+                                    <span className="player-detail-status">
+                                        ●{' '}
+                                        {detailPlayer.club_status === 'livre'
+                                            ? 'Livre'
+                                            : detailPlayer.club_status === 'meu'
+                                            ? 'Meu clube'
+                                            : detailPlayer.club_name || 'Outro clube'}
+                                    </span>
+                                    <span className="player-detail-nationality">
+                                        {detailSnapshot?.nationality_name || '—'}
+                                    </span>
+                                </div>
+                            </div>
+                            <div className={`player-detail-ovr ovr-${getOvrTone(detailSnapshot?.overall)}`}>
+                                {detailSnapshot?.overall ?? '—'}
+                            </div>
+                        </div>
+                    </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div className="player-detail-summary">
+                        <div className="player-detail-summary-card highlight">
+                            <span>Posições</span>
+                            <strong>{normalizePositions(detailSnapshot?.player_positions).join(' · ') || '—'}</strong>
+                        </div>
+                        <div className="player-detail-summary-card">
+                            <span>Idade</span>
+                            <strong>
+                                {detailSnapshot?.age ? `${detailSnapshot.age} anos` : '—'}
+                            </strong>
+                        </div>
+                        <div className="player-detail-summary-card">
+                            <span>Valor de mercado</span>
+                            <strong>{formatCurrency(detailSnapshot?.value_eur)}</strong>
+                        </div>
+                        <div className="player-detail-summary-card">
+                            <span>Salário</span>
+                            <strong>{formatCurrency(detailSnapshot?.wage_eur)}</strong>
+                        </div>
+                    </div>
+
+                    <section className="player-detail-performance">
+                        <h4>Atributos de Performance</h4>
+                        <div className="player-detail-performance-grid">
+                            <div className="player-detail-stat">
+                                <span>PAC</span>
+                                <strong>{detailSnapshot?.pace ?? '—'}</strong>
+                            </div>
+                            <div className="player-detail-stat">
+                                <span>DRI</span>
+                                <strong>{detailSnapshot?.dribbling ?? '—'}</strong>
+                            </div>
+                            <div className="player-detail-stat">
+                                <span>SHO</span>
+                                <strong>{detailSnapshot?.shooting ?? '—'}</strong>
+                            </div>
+                            <div className="player-detail-stat danger">
+                                <span>DEF</span>
+                                <strong>{detailSnapshot?.defending ?? '—'}</strong>
+                            </div>
+                        </div>
+                    </section>
+
+                    <div className="player-detail-full">
+                        <button
+                            type="button"
+                            className="player-detail-full-toggle"
+                            onClick={handleToggleDetails}
+                            disabled={detailLoading}
+                        >
+                            {detailExpanded
+                                ? 'Ocultar informações detalhadas'
+                                : detailLoading
+                                ? 'Carregando...'
+                                : 'Informações Detalhadas'}
+                        </button>
+
+                        {detailError && <p className="modal-error">{detailError}</p>}
+
+                        {detailExpanded && detailData && (
+                            <div className="player-detail-full-list">
+                                {Object.entries(detailData).map(([key, value]) => (
+                                    <div className="player-detail-full-row" key={key}>
+                                        <span>{formatDetailLabel(key)}</span>
+                                        <strong>{formatDetailValue(key, value)}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="player-detail-actions">
+                        <button type="button" className="btn-outline" onClick={closeDetailModal}>
+                            Fechar
+                        </button>
+                        <button
+                            type="button"
+                            className="player-detail-primary"
+                            onClick={() => {
+                                if (!detailAction || detailAction.disabled) {
+                                    return;
+                                }
+
+                                closeDetailModal();
+                                if (detailAction.action === MODAL_MODES.BUY) {
+                                    openPurchaseModal(detailPlayer);
+                                } else if (detailAction.action === MODAL_MODES.MULTA) {
+                                    openMultaModal(detailPlayer);
+                                }
+                            }}
+                            disabled={!detailAction || detailAction.disabled}
+                        >
+                            {detailAction?.label ?? 'Indisponível'}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* RESULTADOS + PAGINAÇÃO TOPO */}
+            <section className="mco-pagination" aria-label="Resumo e paginação do mercado">
+                <span className="mco-pagination-count">
+                    <strong>{filtered.length.toLocaleString('pt-BR')}</strong> jogadores encontrados
+                </span>
+                <div className="mco-pagination-controls">
                     <button
                         type="button"
-                        className="btn-outline"
+                        className="btn-outline mco-pagination-button"
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={safePage <= 1}
                     >
-                        Voltar
+                        ◀ Voltar
                     </button>
-                    <span>
-                        Página {safePage} / {totalPages}
-                    </span>
+                    <div className="mco-pagination-label">
+                        <span>Página</span>
+                        <strong>
+                            <span>{safePage}</span> / {totalPages}
+                        </strong>
+                    </div>
                     <button
                         type="button"
-                        className="btn-outline"
+                        className="btn-outline mco-pagination-button"
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={safePage >= totalPages}
                     >
-                        Próxima
+                        Próxima ▶
                     </button>
+                </div>
+                <div className="mco-pagination-progress">
+                    <div
+                        className="mco-pagination-progress-bar"
+                        style={{ width: `${Math.min(100, (safePage / totalPages) * 100)}%` }}
+                    />
                 </div>
             </section>
 

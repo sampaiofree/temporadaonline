@@ -16,12 +16,16 @@
         @endif
 
         <div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            @php
+                $returnQueryString = $returnQuery ? '?'.$returnQuery : '';
+            @endphp
             @include('admin.ligas-escudos._form', [
-                'action' => route('admin.ligas-escudos.update', $ligaEscudo),
+                'action' => route('admin.ligas-escudos.update', $ligaEscudo).$returnQueryString,
                 'method' => 'PATCH',
                 'ligaEscudo' => $ligaEscudo,
                 'paises' => $paises,
                 'submitLabel' => 'Salvar alterações',
+                'queryString' => $returnQuery ?? '',
             ])
         </div>
     </div>

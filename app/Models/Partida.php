@@ -51,16 +51,6 @@ class Partida extends Model
         return $this->belongsTo(LigaClube::class, 'visitante_id');
     }
 
-    public function opcoes(): HasMany
-    {
-        return $this->hasMany(PartidaOpcaoHorario::class);
-    }
-
-    public function confirmacoes(): HasMany
-    {
-        return $this->hasMany(PartidaConfirmacao::class);
-    }
-
     public function alteracoes(): HasMany
     {
         return $this->hasMany(PartidaAlteracao::class);

@@ -12,7 +12,7 @@
 ## 2. PALETA DE CORES (COLOR SCHEME)
 
 ### Accent Colors (Ação e Destaque)
-* [cite_start]**Primary Brand:** `#FFD700` (Ouro Vibrante) – Usado para CTAs, ícones ativos e números de destaque[cite: 9].
+* [cite_start]**Primary Brand:** `#edff05` (Ouro Vibrante) – Usado para CTAs, ícones ativos e números de destaque[cite: 9].
 * [cite_start]**Secondary Brand:** `#FFFFFF` (Branco Puro) – Usado para títulos e textos de leitura[cite: 10].
 * [cite_start]**Alert/Danger:** `#FF3B30` (Vermelho) – Usado para derrotas ou erros[cite: 11].
 
@@ -37,10 +37,10 @@
 
 ### Cards e Blocos
 * [cite_start]**Estilo:** 100% Flat, sem sombras[cite: 19].
-* [cite_start]**Destaque:** Borda inferior grossa (3px) em Ouro (#FFD700)[cite: 19].
+* [cite_start]**Destaque:** Borda inferior grossa (3px) em Ouro (#edff05)[cite: 19].
 
 ### Botões (CTAs)
-* [cite_start]**Primário:** Fundo Ouro (#FFD700) com texto Preto (#121212)[cite: 20].
+* [cite_start]**Primário:** Fundo Ouro (#edff05) com texto Preto (#121212)[cite: 20].
 * [cite_start]**Interação:** Mudança de cor instantânea (sem fade) ao clicar[cite: 21].
 
 ### Navegação (Rodapé)

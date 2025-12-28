@@ -15,7 +15,7 @@ class LigaClube extends Model
         'liga_id',
         'user_id',
         'nome',
-        'escudo_url',
+        'escudo_clube_id',
     ];
 
     public function liga(): BelongsTo
@@ -26,6 +26,11 @@ class LigaClube extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function escudo(): BelongsTo
+    {
+        return $this->belongsTo(EscudoClube::class, 'escudo_clube_id');
     }
 
     public function clubeElencos(): HasMany

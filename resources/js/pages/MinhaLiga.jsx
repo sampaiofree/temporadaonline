@@ -12,6 +12,17 @@ const STATUS_LABELS = {
     aguardando: 'Liga aguardando · inscrições em breve',
 };
 
+const currencyFormatter = new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0,
+});
+
+const formatCurrency = (value) => {
+    if (value === null || value === undefined) return '—';
+    return currencyFormatter.format(value);
+};
+
 const getLeagueInitials = (name) => {
     if (!name) return 'MCO';
     const parts = name.split(/\s+/).filter(Boolean);
@@ -24,11 +35,18 @@ const getLeagueInitials = (name) => {
 const getAppContext = () => window.__APP_CONTEXT__ ?? null;
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
+const getClubeFromWindow = () => window.__CLUBE__ ?? null;
+const getEscudosFromWindow = () => (Array.isArray(window.__ESCUDOS__) ? window.__ESCUDOS__ : []);
+const getUsedEscudosFromWindow = () => (Array.isArray(window.__USED_ESCUDOS__) ? window.__USED_ESCUDOS__ : []);
 
 export default function MinhaLiga() {
     const liga = getLigaFromWindow();
+    const clube = getClubeFromWindow();
     const appContext = getAppContext();
-    const resolveExistingClubName = () => appContext?.clube?.nome ?? '';
+    const [clubSnapshot, setClubSnapshot] = useState(clube);
+    const clubEscudoImage = clubSnapshot?.escudo_id && clubSnapshot?.escudo_url
+        ? clubSnapshot.escudo_url
+        : null;
 
     if (!liga) {
         return (
@@ -42,151 +60,185 @@ export default function MinhaLiga() {
     const mercadoHref = `/liga/mercado?liga_id=${liga.id}`;
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
-    const [isClubModalOpen, setClubModalOpen] = useState(false);
-    const [clubName, setClubName] = useState(resolveExistingClubName());
-    const [clubFeedback, setClubFeedback] = useState('');
-    const [clubErrors, setClubErrors] = useState([]);
-    const [isSavingClub, setIsSavingClub] = useState(false);
+    const meuClubeHref = `/minha_liga/clube?liga_id=${liga.id}`;
+    const periodos = Array.isArray(liga?.periodos) ? liga.periodos : [];
+    const activePeriod = liga?.periodo_atual ?? null;
+    const isActivePeriod = (period) =>
+        Boolean(
+            activePeriod
+            && period.inicio === activePeriod.inicio
+            && period.fim === activePeriod.fim
+        );
 
-    const clearClubForm = () => {
-        setClubName(resolveExistingClubName());
-        setClubErrors([]);
+    const parsePeriodDate = (value) => {
+        if (!value) return null;
+        return new Date(`${value}T00:00:00`);
     };
 
-    const handleClubSubmit = async (event) => {
-        event.preventDefault();
-
-        const errors = [];
-        if (!clubName.trim()) {
-            errors.push('Informe um nome para o clube.');
+    const calculatePeriodProgress = (period) => {
+        const start = parsePeriodDate(period?.inicio);
+        const end = parsePeriodDate(period?.fim);
+        if (!start || !end || start >= end) {
+            return 0;
         }
 
-        if (errors.length > 0) {
-            setClubErrors(errors);
-            return;
-        }
+        const now = new Date();
+        if (now <= start) return 0;
+        if (now >= end) return 100;
 
-        setIsSavingClub(true);
-        setClubErrors([]);
-
-        try {
-            const payload = new FormData();
-            payload.append('nome', clubName.trim());
-            payload.append('liga_id', liga.id);
-
-            const { data } = await window.axios.post('/minha_liga/clubes', payload);
-
-            if (data?.redirect) {
-                window.location.href = data.redirect;
-                return;
-            }
-
-            setClubFeedback(data?.message ?? 'Clube salvo com sucesso.');
-            setClubModalOpen(false);
-            clearClubForm();
-        } catch (error) {
-            const message =
-                error.response?.data?.message ??
-                'Não foi possível salvar o clube. Tente novamente.';
-            setClubErrors([message]);
-        } finally {
-            setIsSavingClub(false);
-        }
+        const elapsed = now.getTime() - start.getTime();
+        const duration = end.getTime() - start.getTime();
+        return Math.round((elapsed / duration) * 100);
     };
+
+    const sectionStatusLabel = activePeriod ? 'Período atual' : 'Aguardando Início';
 
     return (
-        <main className="mco-screen" aria-label="Minha liga">
-            <section className="league-header">
-                <div className="league-logo">
-                    {liga.imagem ? (
-                        <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
+        <main className="mco-screen minha-liga-screen" aria-label="Minha liga">
+            <section className="league-header expanded league-header-custom">
+                <div className="league-header-top custom">
+                    <div className="league-logo compact custom">
+                        {liga.imagem ? (
+                            <img src={`/storage/${liga.imagem}`} alt={`Escudo da ${liga.nome}`} />
+                        ) : (
+                            <span className="league-logo-initials">{getLeagueInitials(liga.nome)}</span>
+                        )}
+                    </div>
+
+                    <div className="league-title-group">
+                        <p className="league-title highlight custom">{liga.nome}</p>
+                        <div className="league-active-status">
+                            <span className="league-status-dot" />
+                            <span className="league-active-label">
+                                Liga ativa · <span>Partidas agora</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <div className="league-meta compact league-meta-custom">
+                    <div>
+                        <span>Plataforma</span>
+                        <strong>{liga.plataforma || '—'}</strong>
+                    </div>
+                    <div>
+                        <span>Geração</span>
+                        <strong>{liga.geracao || '—'}</strong>
+                    </div>
+                    <div className="league-meta-highlight">
+                        <span>Jogo</span>
+                        <strong>{liga.jogo || '—'}</strong>
+                    </div>
+                </div>
+            </section>
+            {clubSnapshot && (
+                <section className="club-summary gold-card club-summary-custom">
+                    <article className="club-summary-card-inner">
+                        <div className="club-summary-banner">
+                            <div className="club-summary-badge">
+                                {clubEscudoImage ? (
+                                    <img src={clubEscudoImage} alt={`Escudo do ${clubSnapshot.nome}`} />
+                                ) : (
+                                    <span>{getLeagueInitials(clubSnapshot.nome)}</span>
+                                )}
+                            </div>
+                            <div className="club-summary-info">
+                                <p className="club-summary-title">{clubSnapshot.nome}</p>
+                                <div className="club-summary-status">
+                                    <span className="club-summary-dot" />
+                                    <span>Manager ativo · nível 1</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="club-summary-stats club-summary-stats-custom">
+                            <div>
+                                <span>Elenco</span>
+                                <strong>{clubSnapshot.elenco_count ?? 0} jogadores</strong>
+                            </div>
+                            <div>
+                                <span>Saldo</span>
+                                <strong>{formatCurrency(clubSnapshot.saldo)}</strong>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+            )}
+            <section className="league-actions grid league-actions-custom">
+                <a className="control-card" href={mercadoHref}>
+                    <span className="control-card-title">Mercado</span>
+                    <span className="control-card-ghost">MKT</span>
+                    <span className="control-card-arrow">→</span>
+                </a>
+                <a className="control-card" href={financeiroHref}>
+                    <span className="control-card-title">Financeiro</span>
+                    <span className="control-card-ghost">FIN</span>
+                    <span className="control-card-arrow">→</span>
+                </a>
+                <a className="control-card" href={meuElencoHref}>
+                    <span className="control-card-title">Meu elenco</span>
+                    <span className="control-card-ghost">ELENCO</span>
+                    <span className="control-card-arrow">→</span>
+                </a>
+                <a className="control-card primary-control" href={meuClubeHref}>
+                    <span className="control-card-subtitle">Centro de comando</span>
+                    <span className="control-card-title primary">Meu clube</span>
+                </a>
+            </section>
+            <section className="league-periods">
+                <div className="league-periods-header">
+                    <h3 className="league-periods-title">🕒 Cronograma de rodadas</h3>
+                    <span className="league-periods-status">{sectionStatusLabel}</span>
+                </div>
+
+                <div className="league-periods-list">
+                    {periodos.length > 0 ? (
+                        periodos.map((periodo, index) => {
+                            const progress = calculatePeriodProgress(periodo);
+                            return (
+                                <article
+                                    key={periodo.codigo ?? index}
+                                    className={`league-period-card${isActivePeriod(periodo) ? ' is-active' : ''}`}
+                                >
+                                    <div className="league-period-card-side">
+                                        <span className="league-period-card-rodada">
+                                            Rodada {index + 1}
+                                        </span>
+                                        <span className="league-period-card-status">
+                                            {isActivePeriod(periodo) ? 'Em andamento' : 'Planejada'}
+                                        </span>
+                                    </div>
+                                    <div className="league-period-card-body">
+                                        <div className="league-period-card-row">
+                                            <div>
+                                                <span>Início</span>
+                                                <strong>{periodo.inicio_label ?? periodo.inicio ?? '—'}</strong>
+                                            </div>
+                                            <div className="league-period-card-arrow">➔</div>
+                                            <div>
+                                                <span>Término</span>
+                                                <strong>{periodo.fim_label ?? periodo.fim ?? '—'}</strong>
+                                            </div>
+                                        </div>
+                                        <div className="league-period-card-progress">
+                                            <div style={{ width: `${progress}%` }} />
+                                        </div>
+                                    </div>
+                                </article>
+                            );
+                        })
                     ) : (
-                        <span className="league-logo-initials">{getLeagueInitials(liga.nome)}</span>
+                        <p className="league-period-empty">
+                            Ainda não existem períodos cadastrados para esta liga.
+                        </p>
                     )}
                 </div>
-                <p className="league-title">{liga.nome}</p>
-                <div className="league-meta">
-                    <div>
-                        <span>Nível da liga</span>
-                        <strong>{TYPE_LABELS[liga.tipo] ? liga.tipo.toUpperCase() : 'INDIVIDUAL'}</strong>
-                    </div>
-                    <div>
-                        <span>Plataforma & Geração</span>
-                        <strong>
-                            {[liga.plataforma, liga.geracao].filter(Boolean).join(' · ') || 'Não informados'}
-                        </strong>
-                    </div>
-                    <div>
-                        <span>Jogo</span>
-                        <strong>{liga.jogo || 'Não informado'}</strong>
-                    </div>
+
+                <div className="league-periods-note">
+                    <p>
+                        As partidas realizadas fora deste intervalo <strong>não serão
+                        contabilizadas</strong> no sistema da liga.
+                    </p>
                 </div>
             </section>
-            <section className="league-actions">
-                <a className="btn-primary text-center" href={mercadoHref}>
-                    Mercado
-                </a>
-                <a className="btn-primary text-center" href={financeiroHref}>
-                    Financeiro
-                </a>
-                <a className="btn-primary text-center" href={meuElencoHref}>
-                    Meu elenco
-                </a>
-                <button
-                    type="button"
-                className="btn-primary"
-                onClick={() => {
-                    setClubModalOpen(true);
-                    setClubFeedback('');
-                    setClubName(resolveExistingClubName());
-                }}
-            >
-                    Meu clube
-                </button>
-                <p className="league-actions-copy">
-                    Acesse o mercado para buscar, filtrar e contratar jogadores disponíveis nesta liga.
-                </p>
-            </section>
-            {clubFeedback && <p className="league-actions-copy success">{clubFeedback}</p>}
-            {isClubModalOpen && (
-                <div className="club-modal-overlay" role="presentation" onClick={() => setClubModalOpen(false)}>
-                    <div
-                        className="club-modal"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Cadastrar clube"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <h3>Criar clube</h3>
-                        <p>Informe apenas um nome para o seu clube.</p>
-                        <form onSubmit={handleClubSubmit} className="club-form">
-                            <label htmlFor="club-name">Nome do clube</label>
-                            <input
-                                id="club-name"
-                                type="text"
-                                value={clubName}
-                                onChange={(event) => setClubName(event.target.value)}
-                                placeholder="Ex.: Furia FC"
-                            />
-                            {clubErrors.length > 0 && (
-                                <ul className="club-errors">
-                                    {clubErrors.map((error) => (
-                                        <li key={error}>{error}</li>
-                                    ))}
-                                </ul>
-                            )}
-                            <div className="club-actions">
-                                <button className="btn-outline" type="button" onClick={() => setClubModalOpen(false)}>
-                                    Cancelar
-                                </button>
-                                <button className="btn-primary" type="submit" disabled={isSavingClub}>
-                                    {isSavingClub ? 'Salvando...' : 'Salvar clube'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
             <Navbar active="ligas" />
         </main>
     );

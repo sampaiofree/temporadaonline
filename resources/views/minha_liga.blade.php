@@ -7,6 +7,9 @@
         <title>MCO | Minha Liga</title>
         <script>
             window.__LIGA__ = @json($liga);
+            window.__CLUBE__ = @json($clube);
+            window.__ESCUDOS__ = @json($escudos);
+            window.__USED_ESCUDOS__ = @json($usedEscudos);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
         @viteReactRefresh

@@ -4,21 +4,34 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Pais;
+use Carbon\Exceptions\InvalidFormatException;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PaisController extends Controller
 {
-    public function index(): View
+    public function index(Request $request): View
     {
-        $paises = Pais::orderBy('nome')->paginate();
+        $filters = [
+            'search' => (string) $request->query('search', ''),
+            'ativo' => (string) $request->query('ativo', ''),
+            'created_from' => (string) $request->query('created_from', ''),
+            'created_until' => (string) $request->query('created_until', ''),
+        ];
+
+        $paises = $this->applyFilters(Pais::orderBy('nome'), $request)
+            ->paginate()
+            ->withQueryString();
 
         return view('admin.paises.index', [
             'paises' => $paises,
+            'filters' => $filters,
         ]);
     }
 
@@ -61,10 +74,11 @@ class PaisController extends Controller
         return redirect()->route('admin.paises.index');
     }
 
-    public function edit(Pais $pais): View
+    public function edit(Pais $pais, Request $request): View
     {
         return view('admin.paises.edit', [
             'pais' => $pais,
+            'returnQuery' => $request->getQueryString(),
         ]);
     }
 
@@ -94,14 +108,79 @@ class PaisController extends Controller
 
         $pais->update($data);
 
-        return redirect()->route('admin.paises.index')->with('success', 'País atualizado com sucesso.');
+        return redirect()->route('admin.paises.index', $request->query())->with('success', 'País atualizado com sucesso.');
     }
 
-    public function destroy(Pais $pais): RedirectResponse
+    public function destroy(Request $request, Pais $pais): RedirectResponse
     {
+        if ($pais->imagem) {
+            Storage::disk('public')->delete($pais->imagem);
+        }
+
         $pais->delete();
 
-        return redirect()->route('admin.paises.index')->with('success', 'País removido com sucesso.');
+        return redirect()->route('admin.paises.index', $request->query())->with('success', 'País removido com sucesso.');
+    }
+
+    public function bulkDestroy(Request $request): RedirectResponse
+    {
+        $deleted = 0;
+        $this->applyFilters(Pais::query()->orderBy('id'), $request)
+            ->chunkById(100, function ($paises) use (&$deleted) {
+                foreach ($paises as $pais) {
+                    if ($pais->imagem) {
+                        Storage::disk('public')->delete($pais->imagem);
+                    }
+
+                    $pais->delete();
+                    $deleted++;
+                }
+            });
+
+        $message = $deleted
+            ? "{$deleted} país(es) removido(s)."
+            : 'Nenhum país encontrado para exclusão.';
+
+        return redirect()->route('admin.paises.index', $request->query())->with('success', $message);
+    }
+
+    private function applyFilters(Builder $query, Request $request): Builder
+    {
+        $search = trim((string) $request->query('search', ''));
+
+        if ($search !== '') {
+            $like = "%{$search}%";
+            $query->where(function (Builder $query) use ($like) {
+                $query->where('nome', 'like', $like)
+                    ->orWhere('slug', 'like', $like);
+            });
+        }
+
+        if ($ativo = $request->query('ativo')) {
+            if ($ativo === '1' || $ativo === '0') {
+                $query->where('ativo', (bool) (int) $ativo);
+            }
+        }
+
+        if ($from = $request->query('created_from')) {
+            try {
+                $fromDate = Carbon::parse($from);
+                $query->whereDate('created_at', '>=', $fromDate->startOfDay());
+            } catch (InvalidFormatException) {
+                //
+            }
+        }
+
+        if ($until = $request->query('created_until')) {
+            try {
+                $untilDate = Carbon::parse($until);
+                $query->whereDate('created_at', '<=', $untilDate->endOfDay());
+            } catch (InvalidFormatException) {
+                //
+            }
+        }
+
+        return $query;
     }
 
     private function generateSlug(string $nome, ?int $ignoreId = null): string

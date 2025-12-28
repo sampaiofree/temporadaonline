@@ -7,6 +7,7 @@
     'method' => 'POST',
     'pais' => null,
     'submitLabel' => 'Salvar',
+    'queryString' => '',
 ])
 
 @php
@@ -76,7 +77,12 @@
     </div>
 
     <div class="flex items-center justify-between gap-3 pt-6">
-        <a href="{{ route('admin.paises.index') }}" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Voltar para a lista</a>
+        <a
+            href="{{ route('admin.paises.index') }}{{ $queryString ? '?'.$queryString : '' }}"
+            class="text-sm font-semibold text-slate-600 hover:text-slate-900"
+        >
+            Voltar para a lista
+        </a>
         <button
             type="submit"
             class="inline-flex items-center rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"

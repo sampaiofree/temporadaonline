@@ -18,6 +18,7 @@ class UserController extends Controller
         $search = trim((string) $request->query('q', ''));
 
         $users = User::with('profile.plataformaRegistro')
+            ->withCount('disponibilidades')
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -99,8 +100,8 @@ class UserController extends Controller
         $profile = $user->profile ?? new Profile(['user_id' => $user->id]);
 
         $profile->fill([
-            'nickname' => $request->input('nickname') ?? $profile->nickname,
-            'whatsapp' => $request->input('whatsapp') ?? $profile->whatsapp,
+            'nickname' => $this->normalizeNullable($request, 'nickname', $profile->nickname),
+            'whatsapp' => $this->normalizeNullable($request, 'whatsapp', $profile->whatsapp),
             'plataforma_id' => $request->input('plataforma_id') ?: null,
         ]);
 
@@ -111,5 +112,16 @@ class UserController extends Controller
         }
 
         $profile->save();
+    }
+
+    private function normalizeNullable(Request $request, string $field, mixed $current): ?string
+    {
+        if (! $request->has($field)) {
+            return $current;
+        }
+
+        $value = trim((string) $request->input($field, ''));
+
+        return $value === '' ? null : $value;
     }
 }
