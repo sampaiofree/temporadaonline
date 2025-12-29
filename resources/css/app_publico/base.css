@@ -5090,6 +5090,196 @@ img.club-editor-card-image {
     margin-top: var(--gap-sm);
 }
 
+.finalizar-form {
+    margin-top: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.finalizar-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);
+}
+
+.finalizar-eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.finalizar-title {
+    font-family: var(--font-heading);
+    font-size: 20px;
+    margin: 6px 0;
+    text-transform: uppercase;
+}
+
+.finalizar-subtitle {
+    font-size: 13px;
+    color: #d9d9d9;
+    max-width: 520px;
+}
+
+.finalizar-score {
+    border: 1px solid rgba(237, 255, 5, 0.3);
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(237, 255, 5, 0.08);
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #edff05;
+    text-align: center;
+}
+
+.finalizar-score strong {
+    display: block;
+    font-size: 18px;
+    margin-top: 4px;
+    letter-spacing: 0.1em;
+}
+
+.finalizar-upload-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--gap-md);
+}
+
+.finalizar-upload-card {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    padding: 12px 14px;
+    border-radius: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    font-size: 11px;
+    color: #d9d9d9;
+}
+
+.finalizar-upload-card input[type='file'] {
+    text-transform: none;
+    letter-spacing: 0.05em;
+    font-size: 12px;
+}
+
+.finalizar-progress {
+    height: 6px;
+    border-radius: 999px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.finalizar-progress-bar {
+    height: 100%;
+    width: 35%;
+    background: #edff05;
+    animation: finalizar-progress 1.2s ease-in-out infinite;
+}
+
+@keyframes finalizar-progress {
+    0% {
+        transform: translateX(-60%);
+    }
+    50% {
+        transform: translateX(140%);
+    }
+    100% {
+        transform: translateX(260%);
+    }
+}
+
+.finalizar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-sm);
+    align-items: center;
+}
+
+.finalizar-results {
+    margin-top: var(--gap-lg);
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: var(--gap-lg);
+}
+
+.finalizar-team {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 14px;
+    padding: var(--gap-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.finalizar-team h3 {
+    font-family: var(--font-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 15px;
+}
+
+.finalizar-warning {
+    font-size: 11px;
+    color: #ffda7f;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.finalizar-success {
+    font-size: 12px;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.finalizar-table {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.finalizar-row {
+    display: grid;
+    grid-template-columns: 1fr 70px 60px 70px;
+    gap: 10px;
+    align-items: center;
+}
+
+.finalizar-row.header {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.finalizar-row strong {
+    font-size: 13px;
+    color: #f3f3f3;
+}
+
+.finalizar-row input {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: #fff;
+    padding: 8px 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+@media (max-width: 720px) {
+    .finalizar-row {
+        grid-template-columns: 1fr 60px 60px 60px;
+    }
+}
+
 @media (max-width: 768px) {
     .league-menu {
         grid-template-columns: repeat(2, minmax(0, 1fr));

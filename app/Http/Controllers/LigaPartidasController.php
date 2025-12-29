@@ -94,6 +94,74 @@ class LigaPartidasController extends Controller
         ]);
     }
 
+    public function finalizar(Request $request, Partida $partida): View
+    {
+        $liga = $this->resolveUserLiga($request);
+        $clube = $this->resolveUserClub($request);
+        $clube?->loadMissing('escudo');
+
+        if (! $clube) {
+            abort(403, 'Clube não encontrado.');
+        }
+
+        if ((int) $partida->liga_id !== (int) $liga->id) {
+            abort(404, 'Partida não encontrada.');
+        }
+
+        if ((int) $partida->visitante_id !== (int) $clube->id) {
+            abort(403, 'Somente o visitante pode finalizar esta partida.');
+        }
+
+        if ($partida->estado !== 'confirmada') {
+            abort(403, 'Partida não está confirmada.');
+        }
+
+        $partida->loadMissing(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo']);
+
+        $tz = $liga->timezone ?? 'UTC';
+
+        $payload = [
+            'id' => $partida->id,
+            'mandante' => $partida->mandante?->nome,
+            'visitante' => $partida->visitante?->nome,
+            'mandante_id' => $partida->mandante_id,
+            'visitante_id' => $partida->visitante_id,
+            'mandante_user_id' => $partida->mandante?->user_id,
+            'visitante_user_id' => $partida->visitante?->user_id,
+            'mandante_nickname' => $partida->mandante?->user?->nickname ?? $partida->mandante?->user?->name,
+            'visitante_nickname' => $partida->visitante?->user?->nickname ?? $partida->visitante?->user?->name,
+            'mandante_logo' => $this->resolveEscudoUrl($partida->mandante?->escudo?->clube_imagem),
+            'visitante_logo' => $this->resolveEscudoUrl($partida->visitante?->escudo?->clube_imagem),
+            'estado' => $partida->estado,
+            'scheduled_at' => $partida->scheduled_at ? $partida->scheduled_at->timezone($tz)->toIso8601String() : null,
+            'placar_mandante' => $partida->placar_mandante,
+            'placar_visitante' => $partida->placar_visitante,
+            'placar_registrado_por' => $partida->placar_registrado_por,
+            'placar_registrado_em' => $partida->placar_registrado_em?->toIso8601String(),
+            'checkin_mandante_at' => $partida->checkin_mandante_at?->timezone($tz)->toIso8601String(),
+            'checkin_visitante_at' => $partida->checkin_visitante_at?->timezone($tz)->toIso8601String(),
+        ];
+
+        return view('liga_partida_finalizar', [
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'jogo' => $liga->jogo?->nome,
+                'timezone' => $liga->timezone,
+            ],
+            'clube' => $clube ? [
+                'id' => $clube->id,
+                'nome' => $clube->nome,
+                'user_id' => $clube->user_id,
+                'escudo_url' => $clube->escudo?->clube_imagem
+                    ? $this->resolveEscudoUrl($clube->escudo->clube_imagem)
+                    : null,
+            ] : null,
+            'partida' => $payload,
+            'appContext' => $this->makeAppContext($liga, $clube, 'partidas'),
+        ]);
+    }
+
     private function resolveEscudoUrl(?string $path): ?string
     {
         if (! $path) {

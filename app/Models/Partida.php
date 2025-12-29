@@ -61,6 +61,11 @@ class Partida extends Model
         return $this->hasMany(PartidaEvento::class);
     }
 
+    public function desempenhos(): HasMany
+    {
+        return $this->hasMany(PartidaDesempenho::class);
+    }
+
     public function reclamacoes(): HasMany
     {
         return $this->hasMany(ReclamacaoPartida::class);

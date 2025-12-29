@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\ElencopadraoController;
 use App\Http\Controllers\Api\LeagueTransferController;
 use App\Http\Controllers\Api\PayrollController;
+use App\Http\Controllers\Api\PartidaDesempenhoController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
 use App\Http\Controllers\Api\PartidaScheduleController;
 use App\Http\Controllers\Api\PartidaActionsController;
@@ -33,4 +34,6 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/partidas/{partida}/reclamacoes', [PartidaActionsController::class, 'reclamar']);
     Route::post('/partidas/{partida}/denunciar', [PartidaActionsController::class, 'denunciar']);
     Route::post('/partidas/{partida}/desistir', [PartidaActionsController::class, 'desistir']);
+    Route::post('/partidas/{partida}/desempenho/preview', [PartidaDesempenhoController::class, 'preview']);
+    Route::post('/partidas/{partida}/desempenho/confirm', [PartidaDesempenhoController::class, 'confirm']);
 });

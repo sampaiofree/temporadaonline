@@ -872,7 +872,11 @@ export default function LigaPartidas() {
                                 isVisitante(partida) &&
                                 partida.estado === 'confirmacao_necessaria' &&
                                 !partida.scheduled_at;
+                            const canFinalizar =
+                                isVisitante(partida) &&
+                                ['confirmada', 'em_andamento'].includes(partida.estado);
                             const canWo = canDesistir(partida);
+                            const finalizarUrl = `/liga/partidas/${partida.id}/finalizar?liga_id=${liga.id}`;
 
                             return (
                                 <article key={partida.id} className="partida-card">
@@ -936,6 +940,15 @@ export default function LigaPartidas() {
                                                 Agendar horário
                                             </button>
                                         )}
+                                        {canFinalizar && (
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                onClick={() => window.location.assign(finalizarUrl)}
+                                            >
+                                                Finalizar partida
+                                            </button>
+                                        )}
                                         {canWo && (
                                             <button
                                                 type="button"
@@ -945,7 +958,7 @@ export default function LigaPartidas() {
                                                 Desistir (W.O.)
                                             </button>
                                         )}
-                                        {!canSchedule && !canWo && (
+                                        {!canSchedule && !canFinalizar && !canWo && (
                                             <span className="partida-card-empty">Sem ações disponíveis.</span>
                                         )}
                                     </div>
