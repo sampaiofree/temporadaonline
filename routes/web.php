@@ -41,14 +41,14 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
         'parameters' => ['ligas-usuarios' => 'liga_jogador'],
     ])->only(['index', 'destroy']);
+    Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');
     Route::resource('ligas-escudos', AdminLigaEscudoController::class, [
         'parameters' => ['ligas-escudos' => 'liga_escudo'],
     ])->except(['show', 'create']);
-    Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');
+    Route::delete('escudos-clubes/bulk-destroy', [AdminEscudoClubeController::class, 'bulkDestroy'])->name('escudos-clubes.bulk-destroy');
     Route::resource('escudos-clubes', AdminEscudoClubeController::class, [
         'parameters' => ['escudos-clubes' => 'escudo_clube'],
     ])->except(['show', 'create']);
-    Route::delete('escudos-clubes/bulk-destroy', [AdminEscudoClubeController::class, 'bulkDestroy'])->name('escudos-clubes.bulk-destroy');
     Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
     Route::get('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'index'])->name('users.horarios.index');
     Route::post('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'store'])->name('users.horarios.store');
