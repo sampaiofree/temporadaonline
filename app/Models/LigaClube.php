@@ -16,6 +16,12 @@ class LigaClube extends Model
         'user_id',
         'nome',
         'escudo_clube_id',
+        'esquema_tatico_imagem',
+        'esquema_tatico_layout',
+    ];
+
+    protected $casts = [
+        'esquema_tatico_layout' => 'array',
     ];
 
     public function liga(): BelongsTo

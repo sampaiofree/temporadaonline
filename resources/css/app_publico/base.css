@@ -155,7 +155,8 @@ a:focus-visible {
 .liga-partidas-screen,
 .liga-classificacao-screen,
 .liga-clube-perfil-screen,
-.meu-elenco-screen {
+.meu-elenco-screen,
+.esquema-screen {
     position: relative;
     min-height: 100vh;
     flex: 1;
@@ -175,7 +176,8 @@ a:focus-visible {
 .liga-partidas-screen > *,
 .liga-classificacao-screen > *,
 .liga-clube-perfil-screen > *,
-.meu-elenco-screen > * {
+.meu-elenco-screen > *,
+.esquema-screen > * {
     position: relative;
     z-index: 1;
 }
@@ -986,6 +988,33 @@ a:focus-visible {
     color: #edff05;
 }
 
+.league-info {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: #141414;
+    border: 1px solid #2b2b2b;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.league-info-title {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #bfbfbf;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.league-info-text {
+    font-size: 12px;
+    line-height: 1.5;
+    color: #efefef;
+    white-space: pre-line;
+}
+
 .league-header.expanded .league-logo {
     border-width: 2px;
 }
@@ -1201,6 +1230,250 @@ a:focus-visible {
     text-transform: uppercase;
 }
 
+.liga-financeiro-screen {
+    gap: var(--gap-lg);
+}
+
+.financeiro-empty {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+    align-items: center;
+}
+
+.financeiro-overview {
+    width: min(520px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);
+}
+
+.financeiro-balance-card {
+    padding: 1px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+}
+
+.financeiro-balance-card.is-negative {
+    background: linear-gradient(135deg, rgba(255, 77, 77, 0.9), rgba(255, 170, 170, 0.6));
+}
+
+.financeiro-balance-inner {
+    background: #0f0f0f;
+    border-radius: 15px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+.financeiro-card-label {
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.financeiro-card-value {
+    font-size: 32px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #fff;
+}
+
+.financeiro-card-meta {
+    font-size: 12px;
+    color: #d0d0d0;
+}
+
+.financeiro-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--gap-md);
+}
+
+.financeiro-stat-card {
+    background: #151515;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.financeiro-stat-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #9a9a9a;
+}
+
+.financeiro-stat-value {
+    font-size: 18px;
+    font-family: var(--font-heading);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #edff05;
+}
+
+.financeiro-stat-meta {
+    font-size: 11px;
+    color: #bfbfbf;
+}
+
+.financeiro-stat-card.is-negative .financeiro-stat-value {
+    color: #ff6b6b;
+}
+
+.financeiro-stat-card.is-warning .financeiro-stat-value {
+    color: #ffda7f;
+}
+
+.financeiro-stat-card.is-danger .financeiro-stat-value {
+    color: #ff4d4d;
+}
+
+.financeiro-stat-card.is-safe .financeiro-stat-value {
+    color: #2ecc71;
+}
+
+.financeiro-stat-alert {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #ffda7f;
+}
+
+.financeiro-movimentos {
+    padding: 0;
+    overflow: hidden;
+}
+
+.financeiro-movimentos-header {
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.financeiro-movimentos-header h2 {
+    font-size: 16px;
+}
+
+.financeiro-movimentos-count {
+    background: rgba(237, 255, 5, 0.1);
+    color: #edff05;
+    border: 1px solid rgba(237, 255, 5, 0.4);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.financeiro-movimento-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0 20px 12px;
+}
+
+.financeiro-movimento {
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.financeiro-movimento:last-child {
+    border-bottom: none;
+}
+
+.financeiro-movimento-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #d9d9d9;
+}
+
+.financeiro-movimento.is-in .financeiro-movimento-icon {
+    background: rgba(46, 204, 113, 0.12);
+    color: #2ecc71;
+}
+
+.financeiro-movimento.is-out .financeiro-movimento-icon {
+    background: rgba(255, 77, 77, 0.12);
+    color: #ff6b6b;
+}
+
+.financeiro-movimento-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.financeiro-movimento-title {
+    font-size: 13px;
+    color: #f5f5f5;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.financeiro-movimento-subtitle {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #8c8c8c;
+}
+
+.financeiro-movimento-amount {
+    font-family: var(--font-heading);
+    font-size: 14px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #edff05;
+}
+
+.financeiro-movimento-amount.is-in {
+    color: #2ecc71;
+}
+
+.financeiro-movimento-amount.is-out {
+    color: #ff6b6b;
+}
+
+@media (max-width: 560px) {
+    .financeiro-stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .financeiro-movimento {
+        grid-template-columns: 32px 1fr;
+    }
+
+    .financeiro-movimento-amount {
+        grid-column: 2;
+        justify-self: flex-start;
+    }
+}
+
 .auth-card {
     width: min(520px, 100%);
     margin: 0 auto;
@@ -1323,7 +1596,8 @@ a:focus-visible {
 /* Liga / Ligas – header compartilhado */
 .ligas-hero,
 .liga-dashboard-hero,
-.meu-elenco-hero {
+.meu-elenco-hero,
+.esquema-hero {
     width: min(520px, 100%);
     margin: 0 auto;
     background: linear-gradient(135deg, #0c0c0c, #1e1e1e);
@@ -1357,6 +1631,30 @@ a:focus-visible {
     text-transform: uppercase;
     letter-spacing: 0.25em;
     overflow-wrap: anywhere;
+}
+
+.meu-elenco-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-md);
+}
+
+.meu-elenco-actions .btn-primary {
+    width: 100%;
+    text-align: center;
+}
+
+.meu-elenco-esquema-preview {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #101010;
+}
+
+.meu-elenco-esquema-preview img {
+    width: 100%;
+    height: auto;
+    display: block;
 }
 
 .ligas-subtitle,
@@ -1506,6 +1804,13 @@ a:focus-visible {
     box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.4);
 }
 
+.mercado-drawer.mercado-drawer-scout {
+    border-radius: 20px 20px 0 0;
+    clip-path: none;
+    border-bottom: none;
+    background: linear-gradient(180deg, #0b0b0b 0%, #050505 100%);
+}
+
 .mercado-drawer-header {
     display: flex;
     align-items: center;
@@ -1534,10 +1839,108 @@ a:focus-visible {
     gap: var(--gap-md);
 }
 
+.mercado-drawer-body.mercado-drawer-body-scout {
+    background: rgba(13, 13, 13, 0.95);
+    border-radius: 18px 18px 0 0;
+    padding: 18px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .mercado-drawer-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: var(--gap-md);
+}
+
+.mercado-drawer-grid.mercado-drawer-grid-scout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mercado-drawer-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.mercado-drawer-field-full {
+    grid-column: 1 / -1;
+}
+
+.mercado-drawer-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    font-weight: 800;
+    color: #7f7f7f;
+}
+
+.mercado-drawer-select,
+.mercado-drawer-input {
+    background: #1a1a1a;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13px;
+    outline: none;
+    appearance: none;
+    min-width: 0;
+}
+
+.mercado-drawer-select:focus,
+.mercado-drawer-input:focus {
+    border-color: rgba(237, 255, 5, 0.6);
+    box-shadow: 0 0 0 2px rgba(237, 255, 5, 0.15);
+}
+
+.mercado-drawer-select.mercado-drawer-select-highlight {
+    border-color: rgba(237, 255, 5, 0.4);
+    color: var(--gold);
+    font-weight: 700;
+}
+
+.mercado-drawer-range {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.mercado-drawer-range .mercado-drawer-input {
+    flex: 1;
+}
+
+.mercado-drawer-range-separator {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: #666;
+}
+
+.filter-pill-row.filter-pill-row-scout {
+    flex-wrap: wrap;
+    padding-bottom: 0;
+    overflow-x: visible;
+}
+
+.filter-pill-row.filter-pill-row-compact {
+    gap: 6px;
+}
+
+.filter-pill-row-scout .filter-pill {
+    border-radius: 999px;
+    clip-path: none;
+    padding: 8px 14px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    background: #1a1a1a;
+    border: 1px solid #2f2f2f;
+}
+
+.filter-pill-row-scout .filter-pill.active {
+    background: var(--gold);
+    color: #111;
+    border-color: var(--gold);
 }
 
 .mercado-drawer-actions {
@@ -1545,6 +1948,31 @@ a:focus-visible {
     justify-content: space-between;
     gap: var(--gap-md);
     flex-wrap: wrap;
+}
+
+.mercado-drawer-actions.mercado-drawer-actions-scout {
+    border-top: 1px solid #1f1f1f;
+    padding-top: 16px;
+}
+
+.mercado-scout-clear {
+    flex: 1;
+    min-width: 140px;
+    background: transparent;
+    border: 1px solid #444;
+    color: #999;
+}
+
+.mercado-scout-apply {
+    flex: 2;
+    min-width: 180px;
+    box-shadow: 0 8px 18px rgba(237, 255, 5, 0.2);
+}
+
+.mercado-scout-count {
+    font-size: 10px;
+    margin-left: 6px;
+    opacity: 0.6;
 }
 
 /* Alertas reutilizáveis */
@@ -1621,9 +2049,10 @@ a:focus-visible {
 
 .alert-floating {
     position: fixed;
-    top: 50%;
+    top: auto;
+    bottom: calc(70px + 16px + env(safe-area-inset-bottom));
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     z-index: 2000;
     margin: 0;
     width: min(560px, 90vw);
@@ -1693,6 +2122,7 @@ a:focus-visible {
     display: flex;
     align-items: center;
     gap: 10px;
+    min-width: 0;
 }
 
 .mercado-avatar-sm {
@@ -1722,6 +2152,8 @@ a:focus-visible {
     display: flex;
     flex-direction: column;
     line-height: 1.2;
+    min-width: 0;
+    max-width: clamp(140px, 28vw, 240px);
 }
 
 .mercado-player-meta strong {
@@ -1729,11 +2161,17 @@ a:focus-visible {
     font-family: var(--font-heading);
     letter-spacing: 0.05em;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mercado-player-meta span {
     font-size: 12px;
     color: #bfbfbf;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mercado-ovr-badge {
@@ -1808,6 +2246,7 @@ a:focus-visible {
     align-items: center;
     gap: 12px;
     flex: 1;
+    min-width: 0;
 }
 
 .mercado-player-avatar-button {
@@ -1867,12 +2306,17 @@ a:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
 }
 
 .mercado-player-info strong {
     font-size: 14px;
     text-transform: uppercase;
     letter-spacing: 0.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: clamp(140px, 34vw, 240px);
 }
 
 .mercado-player-info span {
@@ -1880,6 +2324,9 @@ a:focus-visible {
     color: #00ff88;
     letter-spacing: 0.2em;
     text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .mercado-player-values {
@@ -2739,6 +3186,10 @@ a:focus-visible {
         display: flex;
         flex-direction: column;
     }
+
+    .meu-elenco-modal-overlay {
+        align-items: flex-start;
+    }
 }
 
 @keyframes liga-status-pulse {
@@ -2770,6 +3221,9 @@ a:focus-visible {
     justify-content: center;
     align-items: center;
     padding: 20px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
 }
 
 .ligas-modal {
@@ -2782,6 +3236,12 @@ a:focus-visible {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+}
+
+.meu-elenco-modal {
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .ligas-modal.ligas-modal--blocked {
@@ -4883,6 +5343,29 @@ img.club-editor-card-image {
     font-size: 13px;
 }
 
+.partida-card-score {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.partida-card-score small {
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #888;
+    letter-spacing: 1px;
+    font-weight: 700;
+}
+
+.partida-card-score strong {
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 1px;
+}
+
 .partida-estado.warning {
     display: block;
     color: #f39c12;
@@ -5143,6 +5626,36 @@ img.club-editor-card-image {
     letter-spacing: 0.1em;
 }
 
+.finalizar-score-edit {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    text-transform: none;
+    letter-spacing: 0;
+    color: #fff;
+}
+
+.finalizar-score-edit label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 9px;
+    text-transform: uppercase;
+    color: #d9d9d9;
+    letter-spacing: 0.2em;
+}
+
+.finalizar-score-edit input {
+    background: #0f0f0f;
+    border: 1px solid rgba(237, 255, 5, 0.4);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: #fff;
+    font-weight: 700;
+    text-align: center;
+}
+
 .finalizar-upload-row {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -5292,5 +5805,320 @@ img.club-editor-card-image {
     .auth-card {
         margin-top: 24px;
         padding: var(--gap-lg);
+    }
+}
+
+/* Esquema tático */
+.esquema-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-md);
+}
+
+.esquema-actions .btn-primary,
+.esquema-actions .btn-outline {
+    flex: 1;
+    text-align: center;
+}
+
+.esquema-preview,
+.esquema-field-wrap,
+.esquema-roster {
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
+}
+
+.esquema-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--gap-sm);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    color: #bfbfbf;
+}
+
+.esquema-preview-card {
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0f0f0f;
+    box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
+}
+
+.esquema-preview-card img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.esquema-field-wrap header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-transform: uppercase;
+}
+
+.esquema-field-wrap header h2 {
+    font-size: 18px;
+    letter-spacing: 0.2em;
+}
+
+.esquema-field-wrap header p {
+    font-size: 12px;
+    color: #bfbfbf;
+    text-transform: none;
+    letter-spacing: 0.08em;
+}
+
+.esquema-field {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 3 / 4;
+    border-radius: 18px;
+    overflow: hidden;
+    background: #0f2f18 url('/storage/app/public/app/campo2.jpg') center top / 100% auto no-repeat;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+    user-select: none;
+}
+
+.esquema-field::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 20%, rgba(255, 255, 255, 0.12), transparent 60%);
+    pointer-events: none;
+}
+
+.esquema-field.is-capturing::after,
+.esquema-field.is-capturing .esquema-field-empty {
+    opacity: 0;
+}
+
+.esquema-field-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    text-align: center;
+    padding: 20px;
+}
+
+.esquema-player {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: block;
+    cursor: grab;
+    touch-action: none;
+    z-index: 4;
+    background: transparent;
+    border: none;
+    padding: 0;
+    width: 54px;
+    height: 54px;
+}
+
+.esquema-player:active {
+    cursor: grabbing;
+    transform: translate(-50%, -50%) scale(1.03);
+}
+
+.esquema-player-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    background: rgba(8, 8, 8, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+    max-width: 150px;
+    pointer-events: none;
+    text-transform: uppercase;
+    position: absolute;
+    z-index: 8;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.esquema-player-name {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.esquema-player-meta {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    color: var(--gold);
+    white-space: nowrap;
+}
+
+.esquema-player-chip {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #0c0c0c;
+    border: 2px solid rgba(0, 0, 0, 0.5);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35);
+    position: relative;
+    z-index: 5;
+}
+
+.esquema-player-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+    border-radius: 50%;
+}
+
+.esquema-player-fallback {
+    font-size: 14px;
+    color: #f2f2f2;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    pointer-events: none;
+}
+
+
+.esquema-field-footnote {
+    font-size: 11px;
+    color: #bfbfbf;
+    margin-top: var(--gap-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.esquema-feedback {
+    margin-top: var(--gap-sm);
+    font-size: 12px;
+}
+
+.esquema-feedback.error {
+    color: #ff6b6b;
+}
+
+.esquema-feedback.success {
+    color: #00ff88;
+}
+
+.esquema-roster {
+    margin-bottom: 120px;
+}
+
+.esquema-roster-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 11px;
+    color: #bfbfbf;
+    margin-bottom: var(--gap-sm);
+}
+
+.esquema-roster-header h2 {
+    font-size: 18px;
+    color: #fff;
+    letter-spacing: 0.2em;
+}
+
+.esquema-roster-header p {
+    text-transform: none;
+    letter-spacing: 0.06em;
+}
+
+.esquema-roster-count {
+    font-weight: 700;
+    color: var(--gold);
+}
+
+.esquema-roster-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);
+}
+
+.esquema-roster-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #151515;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px;
+    border-radius: 12px;
+    gap: 12px;
+}
+
+.esquema-roster-card .btn-primary,
+.esquema-roster-card .btn-outline {
+    flex: 0 0 auto;
+    min-width: 110px;
+}
+
+.esquema-roster-card.placed {
+    border-color: rgba(237, 255, 5, 0.4);
+    background: rgba(237, 255, 5, 0.08);
+}
+
+.esquema-roster-info {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.esquema-roster-info strong {
+    display: block;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.esquema-roster-info span {
+    font-size: 11px;
+    color: #bfbfbf;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.esquema-roster-ovr {
+    min-width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.08);
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+}
+
+@media (max-width: 480px) {
+    .esquema-player {
+        width: 48px;
+        height: 48px;
+    }
+
+    .esquema-player-label {
+        max-width: 120px;
+        padding: 5px 8px;
+    }
+
+    .esquema-field {
+        aspect-ratio: 3 / 4.2;
     }
 }

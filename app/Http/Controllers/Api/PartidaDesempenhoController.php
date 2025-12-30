@@ -56,8 +56,8 @@ class PartidaDesempenhoController extends Controller
         $mandanteEntries = $this->mapEntries($analysis['mandante']['entries'], $mandanteRoster['map']);
         $visitanteEntries = $this->mapEntries($analysis['visitante']['entries'], $visitanteRoster['map']);
 
-        $placarMandante = $this->sumGoals($mandanteEntries);
-        $placarVisitante = $this->sumGoals($visitanteEntries);
+        $placarMandante = (int) ($analysis['mandante']['placar_total'] ?? $this->sumGoals($mandanteEntries));
+        $placarVisitante = (int) ($analysis['visitante']['placar_total'] ?? $this->sumGoals($visitanteEntries));
 
         return response()->json([
             'mandante' => [
@@ -82,16 +82,18 @@ class PartidaDesempenhoController extends Controller
         $this->assertAllowedState($partida);
 
         $data = $request->validate([
-            'mandante' => ['required', 'array', 'min:1'],
+            'mandante' => ['present', 'array'],
             'mandante.*.elencopadrao_id' => ['required', 'integer'],
             'mandante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
             'mandante.*.gols' => ['required', 'integer', 'min:0'],
             'mandante.*.assistencias' => ['required', 'integer', 'min:0'],
-            'visitante' => ['required', 'array', 'min:1'],
+            'visitante' => ['present', 'array'],
             'visitante.*.elencopadrao_id' => ['required', 'integer'],
             'visitante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
             'visitante.*.gols' => ['required', 'integer', 'min:0'],
             'visitante.*.assistencias' => ['required', 'integer', 'min:0'],
+            'placar_mandante' => ['required', 'integer', 'min:0'],
+            'placar_visitante' => ['required', 'integer', 'min:0'],
         ]);
 
         $partida->loadMissing(['mandante', 'visitante']);
@@ -102,8 +104,8 @@ class PartidaDesempenhoController extends Controller
         $this->assertRosterMembership($data['visitante'], $visitanteRosterIds);
         $this->assertUniquePlayers($data['mandante'], $data['visitante']);
 
-        $placarMandante = $this->sumGoals($data['mandante']);
-        $placarVisitante = $this->sumGoals($data['visitante']);
+        $placarMandante = (int) $data['placar_mandante'];
+        $placarVisitante = (int) $data['placar_visitante'];
 
         DB::transaction(function () use ($partida, $user, $data, $placarMandante, $placarVisitante): void {
             $partida->fill([

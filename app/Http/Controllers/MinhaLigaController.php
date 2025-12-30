@@ -15,6 +15,7 @@ use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Http\Controllers\Concerns\ResolvesLiga;
 use Illuminate\Support\Str;
@@ -75,6 +76,8 @@ class MinhaLigaController extends Controller
                 'id' => $liga->id,
                 'nome' => $liga->nome,
                 'imagem' => $liga->imagem,
+                'descricao' => $liga->descricao,
+                'regras' => $liga->regras,
                 'tipo' => $liga->tipo,
                 'status' => $liga->status,
                 'jogo' => $liga->jogo?->nome,
@@ -132,6 +135,7 @@ class MinhaLigaController extends Controller
                     $query->where('clube_origem_id', $userClub->id)
                         ->orWhere('clube_destino_id', $userClub->id);
                 })
+                ->with(['elencopadrao:id,short_name,long_name'])
                 ->latest()
                 ->limit(5)
                 ->get([
@@ -142,8 +146,26 @@ class MinhaLigaController extends Controller
                     'created_at',
                     'clube_origem_id',
                     'clube_destino_id',
+                    'elencopadrao_id',
                 ])
-                ->toArray();
+                ->map(function (LigaTransferencia $movimento) {
+                    $player = $movimento->elencopadrao;
+                    $jogadorNome = $player?->short_name ?: $player?->long_name;
+
+                    return [
+                        'id' => $movimento->id,
+                        'tipo' => $movimento->tipo,
+                        'valor' => $movimento->valor,
+                        'observacao' => $movimento->observacao,
+                        'created_at' => $movimento->created_at,
+                        'clube_origem_id' => $movimento->clube_origem_id,
+                        'clube_destino_id' => $movimento->clube_destino_id,
+                        'elencopadrao_id' => $movimento->elencopadrao_id,
+                        'jogador_nome' => $jogadorNome,
+                    ];
+                })
+                ->values()
+                ->all();
         }
 
         return view('minha_liga_financeiro', [
@@ -303,6 +325,7 @@ class MinhaLigaController extends Controller
             'clube' => $userClub ? [
                 'id' => $userClub->id,
                 'nome' => $userClub->nome,
+                'esquema_tatico_imagem_url' => $this->resolveStorageUrl($userClub->esquema_tatico_imagem),
             ] : null,
             'elenco' => [
                 'players' => $entries,
@@ -312,6 +335,170 @@ class MinhaLigaController extends Controller
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
         ]);
+    }
+
+    public function esquemaTatico(Request $request): View
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        $entries = [];
+
+        if ($userClub) {
+            $elenco = LigaClubeElenco::with('elencopadrao')
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->where('ativo', true)
+                ->get();
+
+            $entries = $elenco->map(function (LigaClubeElenco $entry) {
+                $player = $entry->elencopadrao;
+
+                return [
+                    'id' => $entry->id,
+                    'short_name' => $player?->short_name,
+                    'long_name' => $player?->long_name,
+                    'player_positions' => $player?->player_positions,
+                    'overall' => $player?->overall,
+                    'player_face_url' => $player?->player_face_url,
+                ];
+            })->values()->all();
+        }
+
+        return view('minha_liga_esquema_tatico', [
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'imagem' => $liga->imagem,
+                'jogo' => $liga->jogo?->nome,
+            ],
+            'clube' => $userClub ? [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+            ] : null,
+            'esquema' => [
+                'players' => $entries,
+                'layout' => $userClub?->esquema_tatico_layout,
+                'image_url' => $this->resolveStorageUrl($userClub?->esquema_tatico_imagem),
+            ],
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
+        ]);
+    }
+
+    public function salvarEsquemaTatico(Request $request): JsonResponse
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        if (! $userClub) {
+            return response()->json([
+                'message' => 'Clube não encontrado.',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'layout' => ['required', 'string'],
+            'imagem' => ['required', 'image', 'max:4096'],
+        ]);
+
+        $layout = json_decode($validated['layout'], true);
+        if (! is_array($layout)) {
+            return response()->json([
+                'message' => 'Layout inválido.',
+            ], 422);
+        }
+
+        $rawPlayers = $layout['players'] ?? [];
+        if (! is_array($rawPlayers)) {
+            return response()->json([
+                'message' => 'Layout inválido.',
+            ], 422);
+        }
+
+        $validIds = LigaClubeElenco::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $userClub->id)
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $validIdsMap = array_flip($validIds);
+        $normalizedPlayers = [];
+
+        foreach ($rawPlayers as $player) {
+            if (! is_array($player)) {
+                continue;
+            }
+
+            $id = (int) ($player['id'] ?? 0);
+            if (! $id || ! isset($validIdsMap[$id])) {
+                continue;
+            }
+
+            $x = $player['x'] ?? null;
+            $y = $player['y'] ?? null;
+            if (! is_numeric($x) || ! is_numeric($y)) {
+                continue;
+            }
+
+            $x = max(0, min(1, (float) $x));
+            $y = max(0, min(1, (float) $y));
+
+            $normalizedPlayers[] = [
+                'id' => $id,
+                'x' => round($x, 4),
+                'y' => round($y, 4),
+            ];
+        }
+
+        if (empty($normalizedPlayers)) {
+            return response()->json([
+                'message' => 'Nenhum jogador válido foi encontrado no esquema.',
+            ], 422);
+        }
+
+        $file = $request->file('imagem');
+        $directory = 'esquemas/'.$liga->id.'/'.$userClub->id;
+        $filename = 'esquema-'.now()->format('YmdHis').'-'.Str::random(6).'.png';
+        $path = $file->storeAs($directory, $filename, 'public');
+        if (! $path) {
+            return response()->json([
+                'message' => 'Não foi possível salvar a imagem do esquema.',
+            ], 500);
+        }
+
+        if ($userClub->esquema_tatico_imagem) {
+            Storage::disk('public')->delete($userClub->esquema_tatico_imagem);
+        }
+
+        $userClub->update([
+            'esquema_tatico_layout' => [
+                'players' => $normalizedPlayers,
+            ],
+            'esquema_tatico_imagem' => $path,
+        ]);
+
+        return response()->json([
+            'message' => 'Esquema tático salvo com sucesso.',
+            'image_url' => $this->resolveStorageUrl($path),
+        ]);
+    }
+
+    private function resolveStorageUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return Storage::disk('public')->url($path);
     }
 
     public function storeClube(Request $request): JsonResponse

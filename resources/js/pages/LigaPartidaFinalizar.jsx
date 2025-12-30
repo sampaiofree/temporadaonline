@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
@@ -15,6 +15,9 @@ export default function LigaPartidaFinalizar() {
     const [visitanteEntries, setVisitanteEntries] = useState([]);
     const [unknownMandante, setUnknownMandante] = useState([]);
     const [unknownVisitante, setUnknownVisitante] = useState([]);
+    const [placarExtras, setPlacarExtras] = useState({ mandante: 0, visitante: 0 });
+    const [manualPlacar, setManualPlacar] = useState({ mandante: '', visitante: '' });
+    const [manualDirty, setManualDirty] = useState(false);
     const [estado, setEstado] = useState(partida?.estado ?? '');
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -90,6 +93,9 @@ export default function LigaPartidaFinalizar() {
         return partida.visitante_logo || null;
     };
 
+    const labelWithClub = (labelText, clubName) =>
+        clubName ? `${labelText} (${clubName})` : labelText;
+
     const label = estadoLabels[estado] ?? estado;
     const badgeClass = estadoClass[estado] ?? 'muted';
     const horario = formatDate(partida.scheduled_at);
@@ -97,19 +103,29 @@ export default function LigaPartidaFinalizar() {
     const isActiveEntry = (entry) =>
         entry?.nota !== null && entry?.nota !== undefined && entry?.nota !== '' && !Number.isNaN(Number(entry.nota));
 
+    const sumGoals = (entries) =>
+        entries.reduce((total, entry) => total + (isActiveEntry(entry) ? Number(entry.gols || 0) : 0), 0);
+
     const placar = useMemo(() => {
-        const sumGoals = (entries) =>
-            entries.reduce((total, entry) => total + (isActiveEntry(entry) ? Number(entry.gols || 0) : 0), 0);
-
+        const extraMandante = Number(placarExtras.mandante || 0);
+        const extraVisitante = Number(placarExtras.visitante || 0);
         return {
-            mandante: sumGoals(mandanteEntries),
-            visitante: sumGoals(visitanteEntries),
+            mandante: sumGoals(mandanteEntries) + extraMandante,
+            visitante: sumGoals(visitanteEntries) + extraVisitante,
         };
-    }, [mandanteEntries, visitanteEntries]);
+    }, [mandanteEntries, visitanteEntries, placarExtras]);
 
-    const hasEntries = mandanteEntries.length > 0 || visitanteEntries.length > 0;
-    const placarLabel = hasEntries ? `${placar.mandante} x ${placar.visitante}` : '—';
+    const resolvedPlacar = manualDirty ? manualPlacar : placar;
+    const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
     const canAnalyze = ['confirmada', 'em_andamento'].includes(estado);
+
+    useEffect(() => {
+        if (!hasPreview || manualDirty) return;
+        setManualPlacar({
+            mandante: placar.mandante,
+            visitante: placar.visitante,
+        });
+    }, [placar.mandante, placar.visitante, hasPreview, manualDirty]);
 
     const handleAnalyze = async () => {
         if (!mandanteImage || !visitanteImage) {
@@ -131,10 +147,30 @@ export default function LigaPartidaFinalizar() {
                 formData,
             );
 
-            setMandanteEntries(data?.mandante?.entries ?? []);
-            setVisitanteEntries(data?.visitante?.entries ?? []);
+            const nextMandanteEntries = data?.mandante?.entries ?? [];
+            const nextVisitanteEntries = data?.visitante?.entries ?? [];
+            const previewMandante = Number(data?.placar?.mandante ?? 0);
+            const previewVisitante = Number(data?.placar?.visitante ?? 0);
+            const knownMandante = sumGoals(nextMandanteEntries);
+            const knownVisitante = sumGoals(nextVisitanteEntries);
+
+            setMandanteEntries(nextMandanteEntries);
+            setVisitanteEntries(nextVisitanteEntries);
             setUnknownMandante(data?.mandante?.unknown_players ?? []);
             setUnknownVisitante(data?.visitante?.unknown_players ?? []);
+            setPlacarExtras({
+                mandante: Number.isFinite(previewMandante)
+                    ? Math.max(previewMandante - knownMandante, 0)
+                    : 0,
+                visitante: Number.isFinite(previewVisitante)
+                    ? Math.max(previewVisitante - knownVisitante, 0)
+                    : 0,
+            });
+            setManualDirty(false);
+            setManualPlacar({
+                mandante: previewMandante,
+                visitante: previewVisitante,
+            });
             setHasPreview(true);
         } catch (err) {
             const message =
@@ -148,9 +184,11 @@ export default function LigaPartidaFinalizar() {
     const handleConfirm = async () => {
         const filteredMandante = mandanteEntries.filter(isActiveEntry);
         const filteredVisitante = visitanteEntries.filter(isActiveEntry);
+        const placarMandante = Number(resolvedPlacar.mandante ?? 0);
+        const placarVisitante = Number(resolvedPlacar.visitante ?? 0);
 
-        if (filteredMandante.length === 0 || filteredVisitante.length === 0) {
-            setError('Informe pelo menos um jogador de cada time.');
+        if (!Number.isFinite(placarMandante) || !Number.isFinite(placarVisitante)) {
+            setError('Placar inválido. Faça uma nova análise.');
             return;
         }
 
@@ -168,6 +206,8 @@ export default function LigaPartidaFinalizar() {
         const payload = {
             mandante: filteredMandante.map(normalize),
             visitante: filteredVisitante.map(normalize),
+            placar_mandante: placarMandante,
+            placar_visitante: placarVisitante,
         };
 
         try {
@@ -176,11 +216,12 @@ export default function LigaPartidaFinalizar() {
                 payload,
             );
 
-            setSuccess('Desempenho confirmado com sucesso.');
-            setHasPreview(false);
-            if (data?.estado) {
-                setEstado(data.estado);
+            const params = new URLSearchParams();
+            if (liga?.id) {
+                params.set('liga_id', liga.id);
             }
+            params.set('success', 'placar-registrado');
+            window.location.assign(`/liga/partidas?${params.toString()}`);
         } catch (err) {
             const message =
                 err.response?.data?.message ?? 'Não foi possível confirmar os dados.';
@@ -195,6 +236,14 @@ export default function LigaPartidaFinalizar() {
         updater((prev) =>
             prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
         );
+    };
+
+    const handleManualPlacarChange = (side, value) => {
+        setManualDirty(true);
+        setManualPlacar((prev) => ({
+            mandante: side === 'mandante' ? value : prev.mandante,
+            visitante: side === 'visitante' ? value : prev.visitante,
+        }));
     };
 
     return (
@@ -257,11 +306,11 @@ export default function LigaPartidaFinalizar() {
 
                         <div className="partida-meta">
                             <div className="partida-meta-item">
-                                <small>Mandante</small>
+                                <small>{labelWithClub('Mandante', partida.mandante)}</small>
                                 <p>{partida.mandante ?? '—'}</p>
                             </div>
                             <div className="partida-meta-item">
-                                <small>Visitante</small>
+                                <small>{labelWithClub('Visitante', partida.visitante)}</small>
                                 <p>{partida.visitante ?? '—'}</p>
                             </div>
                             <div className="partida-meta-item">
@@ -271,7 +320,9 @@ export default function LigaPartidaFinalizar() {
                             <div className="partida-meta-item">
                                 <small>Seu papel</small>
                                 <p>
-                                    <span className="partida-role-pill visitante">Visitante</span>
+                                    <span className="partida-role-pill visitante">
+                                        {labelWithClub('Visitante', partida.visitante)}
+                                    </span>
                                 </p>
                             </div>
                         </div>
@@ -291,12 +342,36 @@ export default function LigaPartidaFinalizar() {
                     <div className="finalizar-score">
                         <small>Placar</small>
                         <strong>{placarLabel}</strong>
+                        {hasPreview && (
+                            <div className="finalizar-score-edit">
+                                <label>
+                                    <span>{labelWithClub('Mandante', partida.mandante)}</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={manualPlacar.mandante}
+                                        onChange={(e) => handleManualPlacarChange('mandante', e.target.value)}
+                                        disabled={loading || saving}
+                                    />
+                                </label>
+                                <label>
+                                    <span>{labelWithClub('Visitante', partida.visitante)}</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        value={manualPlacar.visitante}
+                                        onChange={(e) => handleManualPlacarChange('visitante', e.target.value)}
+                                        disabled={loading || saving}
+                                    />
+                                </label>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 <div className="finalizar-upload-row">
                     <label className="finalizar-upload-card">
-                        <span>Imagem do mandante</span>
+                        <span>{labelWithClub('Imagem do mandante', partida.mandante)}</span>
                         <input
                             type="file"
                             accept="image/*"
@@ -307,12 +382,15 @@ export default function LigaPartidaFinalizar() {
                                 setVisitanteEntries([]);
                                 setUnknownMandante([]);
                                 setUnknownVisitante([]);
+                                setPlacarExtras({ mandante: 0, visitante: 0 });
+                                setManualDirty(false);
+                                setManualPlacar({ mandante: '', visitante: '' });
                             }}
                             disabled={loading || saving}
                         />
                     </label>
                     <label className="finalizar-upload-card">
-                        <span>Imagem do visitante</span>
+                        <span>{labelWithClub('Imagem do visitante', partida.visitante)}</span>
                         <input
                             type="file"
                             accept="image/*"
@@ -323,6 +401,9 @@ export default function LigaPartidaFinalizar() {
                                 setVisitanteEntries([]);
                                 setUnknownMandante([]);
                                 setUnknownVisitante([]);
+                                setPlacarExtras({ mandante: 0, visitante: 0 });
+                                setManualDirty(false);
+                                setManualPlacar({ mandante: '', visitante: '' });
                             }}
                             disabled={loading || saving}
                         />
@@ -361,7 +442,7 @@ export default function LigaPartidaFinalizar() {
             {hasPreview && (
                 <section className="finalizar-results">
                     <div className="finalizar-team">
-                        <h3>Mandante</h3>
+                        <h3>{labelWithClub('Mandante', partida.mandante)}</h3>
                         {unknownMandante.length > 0 && (
                             <p className="finalizar-warning">
                                 Jogadores não identificados: {unknownMandante.join(', ')}.
@@ -409,7 +490,7 @@ export default function LigaPartidaFinalizar() {
                     </div>
 
                     <div className="finalizar-team">
-                        <h3>Visitante</h3>
+                        <h3>{labelWithClub('Visitante', partida.visitante)}</h3>
                         {unknownVisitante.length > 0 && (
                             <p className="finalizar-warning">
                                 Jogadores não identificados: {unknownVisitante.join(', ')}.

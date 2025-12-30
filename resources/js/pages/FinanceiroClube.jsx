@@ -21,14 +21,6 @@ const getFinanceiroFromWindow = () =>
         movimentos: [],
     };
 
-const TYPE_ICONS = {
-    venda: '⬆',
-    compra: '⬇',
-    multa: '⚠',
-    troca: '🔁',
-    jogador_livre: '➕',
-};
-
 const TYPE_LABELS = {
     jogador_livre: 'Jogador livre',
     venda: 'Venda',
@@ -65,83 +57,132 @@ export default function FinanceiroClube() {
     }
 
     const minhaLigaHref = `/minha_liga?liga_id=${liga.id}`;
+    const headerSubtitle = clube?.nome ? `${liga.nome} · ${clube.nome}` : `${liga.nome} · Clube não criado`;
+
+    const folegoTone = rodadas === null
+        ? 'is-neutral'
+        : rodadas < 0
+            ? 'is-danger'
+            : rodadas <= 3
+                ? 'is-warning'
+                : 'is-safe';
+
+    const formatShortDate = (value) => {
+        if (!value) return null;
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return null;
+        return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    };
+
+    const resolveMovementDirection = (movimento) => {
+        const clubId = clube?.id ? Number(clube.id) : null;
+        if (clubId) {
+            if (movimento.clube_origem_id && Number(movimento.clube_origem_id) === clubId) {
+                return 'out';
+            }
+            if (movimento.clube_destino_id && Number(movimento.clube_destino_id) === clubId) {
+                return 'in';
+            }
+        }
+        return movimento.valor < 0 ? 'out' : 'in';
+    };
 
     return (
-        <main className="mco-screen" aria-label="Financeiro do clube">
-            <section className="league-header">
-                <p className="league-title">Financeiro</p>
-                <div className="league-meta">
-                    <div>
-                        <span>Liga</span>
-                        <strong>{liga.nome}</strong>
-                    </div>
-                    <div>
-                        <span>Clube</span>
-                        <strong>{clube?.nome ?? 'Ainda não criado'}</strong>
-                    </div>
-                </div>
+        <main className="mco-screen liga-financeiro-screen" aria-label="Financeiro do clube">
+            <section className="liga-dashboard-hero">
+                <p className="ligas-eyebrow">FINANCEIRO</p>
+                <h1 className="ligas-title">Gestão financeira</h1>
+                <p className="ligas-subtitle">{headerSubtitle}</p>
             </section>
 
             {!clube ? (
-                <section className="league-actions">
-                    <p className="ligas-empty">
-                        Você ainda não criou um clube nesta liga.
-                    </p>
+                <section className="financeiro-empty">
+                    <p className="ligas-empty">Você ainda não criou um clube nesta liga.</p>
                     <a className="btn-primary" href={minhaLigaHref}>
                         Criar meu clube
                     </a>
                 </section>
             ) : (
                 <>
-                    {/* Seção de Cards - Usando suas classes originais */}
-                    <section className="league-menu">
-                        <article className="card card-gold">
-                            <p className="card-title">Saldo atual</p>
-                            <p className="wallet-balance">{formatCurrency(saldo)}</p>
-                            <p className="card-meta">Dinheiro disponível para mercado.</p>
-                        </article>
-
-                        <article className="card card-gold">
-                            <p className="card-title">Salário / rodada</p>
-                            <p className="wallet-balance">{formatCurrency(salario)}</p>
-                            <p className="card-meta">Custo fixo do elenco.</p>
-                        </article>
-
-                        <article className="card card-gold">
-                            <p className="card-title">Fôlego</p>
-                            <p className="wallet-balance">{folegoText}</p>
-                            {rodadas !== null && rodadas <= 3 && (
-                                <p className="card-meta" style={{ color: '#ffcc00' }}>
-                                    ⚠ Atenção ao caixa!
+                    <section className="financeiro-overview">
+                        <article className={`financeiro-balance-card${saldo < 0 ? ' is-negative' : ''}`}>
+                            <div className="financeiro-balance-inner">
+                                <p className="financeiro-card-label">Saldo atual disponível</p>
+                                <p className="financeiro-card-value">{formatCurrency(saldo)}</p>
+                                <p className="financeiro-card-meta">
+                                    Poder de compra total para contratações.
                                 </p>
-                            )}
+                            </div>
                         </article>
+
+                        <div className="financeiro-stats-grid">
+                            <article className="financeiro-stat-card is-negative">
+                                <p className="financeiro-stat-label">Salário / rodada</p>
+                                <p className="financeiro-stat-value">
+                                    {salario > 0 ? '-' : ''}
+                                    {formatCurrency(salario)}
+                                </p>
+                                <p className="financeiro-stat-meta">Custo fixo do elenco.</p>
+                            </article>
+
+                            <article className={`financeiro-stat-card ${folegoTone}`}>
+                                <p className="financeiro-stat-label">Fôlego de caixa</p>
+                                <p className="financeiro-stat-value">{folegoText}</p>
+                                {rodadas !== null && rodadas <= 3 && (
+                                    <p className="financeiro-stat-alert">Atenção ao caixa.</p>
+                                )}
+                            </article>
+                        </div>
                     </section>
 
-                    {/* Seção de Histórico - Usando suas classes originais */}
-                    <section className="wallet-card">
-                        <h2>Últimos movimentos</h2>
+                    <section className="wallet-card financeiro-movimentos">
+                        <div className="financeiro-movimentos-header">
+                            <h2>Últimos movimentos</h2>
+                            <span className="financeiro-movimentos-count">
+                                {movimentos.length}
+                            </span>
+                        </div>
                         {movimentos.length === 0 ? (
                             <p className="card-meta">Nenhum movimento registrado ainda.</p>
                         ) : (
-                            <div className="profile-details">
-                                {movimentos.map((movimento) => (
-                                    <article key={movimento.id} className="profile-field">
-                                        <span className="profile-label">
-                                            {TYPE_ICONS[movimento.tipo] ?? '•'}{' '}
-                                            {movimento.observacao || TYPE_LABELS[movimento.tipo] || movimento.tipo}
-                                        </span>
-                                        <span 
-                                            className="profile-value" 
-                                            style={{ color: movimento.valor < 0 ? '#ff4d4d' : '#2ecc71' }}
+                            <div className="financeiro-movimento-list">
+                                {movimentos.map((movimento) => {
+                                    const direction = resolveMovementDirection(movimento);
+                                    const amountValue = direction === 'out'
+                                        ? -Math.abs(movimento.valor ?? 0)
+                                        : Math.abs(movimento.valor ?? 0);
+                                    const title =
+                                        movimento.jogador_nome
+                                        || movimento.observacao
+                                        || TYPE_LABELS[movimento.tipo]
+                                        || movimento.tipo;
+                                    const dateLabel = formatShortDate(movimento.created_at);
+                                    const subtitleParts = [
+                                        TYPE_LABELS[movimento.tipo] || movimento.tipo,
+                                        dateLabel,
+                                    ].filter(Boolean);
+                                    const subtitle = subtitleParts.join(' · ');
+
+                                    return (
+                                        <article
+                                            key={movimento.id}
+                                            className={`financeiro-movimento is-${direction}`}
                                         >
-                                            {formatCurrency(movimento.valor)}
-                                        </span>
-                                    </article>
-                                ))}
+                                            <div className="financeiro-movimento-icon">
+                                                {direction === 'out' ? '↓' : '↑'}
+                                            </div>
+                                            <div className="financeiro-movimento-body">
+                                                <span className="financeiro-movimento-title">{title}</span>
+                                                <span className="financeiro-movimento-subtitle">{subtitle}</span>
+                                            </div>
+                                            <span className={`financeiro-movimento-amount is-${direction}`}>
+                                                {formatCurrency(amountValue)}
+                                            </span>
+                                        </article>
+                                    );
+                                })}
                             </div>
                         )}
-                        
                     </section>
                 </>
             )}

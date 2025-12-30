@@ -17,8 +17,8 @@ class PartidaDesempenhoAiService
         array $mandanteRoster,
         array $visitanteRoster,
     ): array {
-        $mandante = $this->analyzeTeam($mandanteImage, $mandanteRoster);
-        $visitante = $this->analyzeTeam($visitanteImage, $visitanteRoster);
+        $mandante = $this->analyzeTeam($mandanteImage, $mandanteRoster, 'mandante');
+        $visitante = $this->analyzeTeam($visitanteImage, $visitanteRoster, 'visitante');
 
         return [
             'mandante' => $mandante,
@@ -26,7 +26,7 @@ class PartidaDesempenhoAiService
         ];
     }
 
-    private function analyzeTeam(UploadedFile $image, array $roster): array
+    private function analyzeTeam(UploadedFile $image, array $roster, ?string $side = null): array
     {
         $apiKey = config('services.openai.key');
         if (! $apiKey) {
@@ -69,10 +69,15 @@ class PartidaDesempenhoAiService
         }
 
         $data = $this->extractJson($response->json());
+        Log::info('OpenAI desempenho bruto', [
+            'side' => $side,
+            'response' => $data,
+        ]);
 
         return [
             'entries' => $this->sanitizeEntries($data['entries'] ?? [], $roster),
             'unknown_players' => $this->sanitizeUnknown($data['unknown_players'] ?? []),
+            'placar_total' => max(0, (int) ($data['placar_total'] ?? 0)),
         ];
     }
 
@@ -93,6 +98,9 @@ Regras:
 - Ignore linhas com NF/nota "ND" ou vazia.
 - Notas podem ter vírgula (ex: 6,6). Converta para ponto (6.6).
 - G e AST são inteiros. Se estiver em branco, use 0.
+- placar_total deve ser a soma de G de TODOS os jogadores exibidos (incluindo desconhecidos e linhas com NF ND/vazia).
+- Leia a coluna G (gols) com atenção; não confunda 1 com 0.
+- placar_total precisa bater com a soma final dos G identificados na imagem.
 
 Lista de jogadores (use o id para o match):
 {$playersJson}
@@ -127,8 +135,9 @@ PROMPT;
                         'type' => 'array',
                         'items' => ['type' => 'string'],
                     ],
+                    'placar_total' => ['type' => 'integer'],
                 ],
-                'required' => ['entries', 'unknown_players'],
+                'required' => ['entries', 'unknown_players', 'placar_total'],
                 'additionalProperties' => false,
             ],
             'strict' => true,

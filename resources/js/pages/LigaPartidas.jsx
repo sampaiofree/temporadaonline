@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
+import Alert from '../components/app_publico/Alert';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
@@ -29,6 +30,18 @@ export default function LigaPartidas() {
     const [placarForm, setPlacarForm] = useState({ mandante: '', visitante: '' });
     const [denunciaForm, setDenunciaForm] = useState({ motivo: '', descricao: '' });
     const [reclamacaoForm, setReclamacaoForm] = useState({ motivo: '', descricao: '', imagem: '' });
+    const [successMessage, setSuccessMessage] = useState('');
+
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('success') === 'placar-registrado') {
+            setSuccessMessage('Placar registrado com sucesso.');
+            params.delete('success');
+            const query = params.toString();
+            const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            window.history.replaceState({}, '', nextUrl);
+        }
+    }, []);
 
     if (!liga) {
         return (
@@ -118,6 +131,9 @@ export default function LigaPartidas() {
         return null;
     };
 
+    const labelWithClub = (labelText, clubName) =>
+        clubName ? `${labelText} (${clubName})` : labelText;
+
     const canDesistir = (partida) => {
         if (!isParticipant(partida)) return false;
         if (partida.estado !== 'confirmada') return false;
@@ -132,8 +148,8 @@ export default function LigaPartidas() {
 
     const roleFilters = [
         { id: 'all', label: 'Todas' },
-        { id: 'mandante', label: 'Mandante' },
-        { id: 'visitante', label: 'Visitante' },
+        { id: 'mandante', label: labelWithClub('Mandante', clube?.nome) },
+        { id: 'visitante', label: labelWithClub('Visitante', clube?.nome) },
     ];
 
     const statusFilters = [
@@ -790,6 +806,15 @@ export default function LigaPartidas() {
 
     return (
         <main className="liga-partidas-screen">
+            {successMessage && (
+                <Alert
+                    variant="success"
+                    title="Partida finalizada"
+                    description={successMessage}
+                    floating
+                    onClose={() => setSuccessMessage('')}
+                />
+            )}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">PARTIDAS</p>
                 <h1 className="ligas-title">Agenda da liga</h1>
@@ -877,6 +902,23 @@ export default function LigaPartidas() {
                                 ['confirmada', 'em_andamento'].includes(partida.estado);
                             const canWo = canDesistir(partida);
                             const finalizarUrl = `/liga/partidas/${partida.id}/finalizar?liga_id=${liga.id}`;
+                            const isFinalizada = [
+                                'finalizada',
+                                'placar_confirmado',
+                                'placar_registrado',
+                                'em_reclamacao',
+                                'wo',
+                                'cancelada',
+                            ].includes(partida.estado);
+                            const hasPlacar =
+                                partida.placar_mandante !== null &&
+                                partida.placar_mandante !== undefined &&
+                                partida.placar_visitante !== null &&
+                                partida.placar_visitante !== undefined;
+                            const showPlacar = isFinalizada && hasPlacar;
+                            const placarFinal = showPlacar
+                                ? `${partida.placar_mandante} x ${partida.placar_visitante}`
+                                : null;
 
                             return (
                                 <article key={partida.id} className="partida-card">
@@ -920,6 +962,12 @@ export default function LigaPartidas() {
                                     <div className="partida-card-meta">
                                         <span className={`partida-estado ${badgeClass}`}>{label}</span>
                                         <span className="partida-card-time">{horario}</span>
+                                        {showPlacar && (
+                                            <div className="partida-card-score">
+                                                <small>Placar final</small>
+                                                <strong>{placarFinal}</strong>
+                                            </div>
+                                        )}
                                     </div>
                                     {chips.length > 0 && (
                                         <div className="partida-card-chips">

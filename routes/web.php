@@ -78,6 +78,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
     Route::get('/minha_liga/clube', [MinhaLigaController::class, 'clube'])->name('minha_liga.clube');
     Route::get('/minha_liga/meu-elenco', [MinhaLigaController::class, 'meuElenco'])->name('minha_liga.meu_elenco');
+    Route::get('/minha_liga/esquema-tatico', [MinhaLigaController::class, 'esquemaTatico'])
+        ->name('minha_liga.esquema_tatico');
+    Route::post('/minha_liga/esquema-tatico', [MinhaLigaController::class, 'salvarEsquemaTatico'])
+        ->name('minha_liga.esquema_tatico.salvar');
     Route::get('/minha_liga/financeiro', [MinhaLigaController::class, 'financeiro'])->name('minha_liga.financeiro');
     Route::get('/liga/mercado', [LigaMercadoController::class, 'index'])->name('liga.mercado');
     Route::get('/liga/partidas', [LigaPartidasController::class, 'index'])->name('liga.partidas');

@@ -1,6 +1,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 import Alert from '../components/app_publico/Alert';
+import PlayerDetailModal from '../components/app_publico/PlayerDetailModal';
 
 /* =========================
    Helpers
@@ -30,6 +31,19 @@ const formatShortMoney = (value) => {
     return String(Math.round(n));
 };
 
+const countFormatter = new Intl.NumberFormat('pt-BR');
+
+const formatCount = (value) => countFormatter.format(value ?? 0);
+
+const parseMillionsInput = (value) => {
+    if (value === null || value === undefined) return null;
+    const cleaned = value.toString().replace(',', '.').replace(/[^\d.]/g, '');
+    if (!cleaned) return null;
+    const num = Number(cleaned);
+    if (!Number.isFinite(num)) return null;
+    return num * 1_000_000;
+};
+
 const proxyFaceUrl = (url) => {
     if (!url) return null;
     const trimmed = url.replace(/^https?:\/\//, '');
@@ -56,7 +70,7 @@ const STATUS_FILTERS = [
     { value: 'all', label: 'Todos' },
     { value: 'livre', label: 'Livre' },
     { value: 'meu', label: 'Meu clube' },
-    { value: 'outro', label: 'Outros clubes' },
+    { value: 'outro', label: 'Rivais' },
 ];
 
 const MODAL_MODES = {
@@ -65,12 +79,10 @@ const MODAL_MODES = {
 };
 
 const OVR_FILTERS = [
-    { value: 'all', label: 'OVR: Todos' },
-    { value: '50-69', label: '50–69' },
-    { value: '70-79', label: '70–79' },
-    { value: '80-84', label: '80–84' },
-    { value: '85-89', label: '85–89' },
-    { value: '90+', label: '90+' },
+    { value: 'all', label: 'Todos' },
+    { value: '90+', label: 'Elite 90+' },
+    { value: '85-89', label: 'Ouro 85–89' },
+    { value: '80-84', label: 'Prata 80–84' },
 ];
 
 const getPlayerName = (p) => (p?.short_name || p?.long_name || '').toString().trim();
@@ -112,42 +124,6 @@ function PlayerAvatar({ src, alt, fallback }) {
    Componente
 ========================= */
 
-const formatDetailLabel = (key) =>
-    key
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-
-const formatDetailValue = (key, value) => {
-    if (value === null || value === undefined || value === '') {
-        return '—';
-    }
-
-    if (typeof value === 'boolean') {
-        return value ? 'Sim' : 'Não';
-    }
-
-    if (key.endsWith('_eur')) {
-        return formatCurrency(value);
-    }
-
-    if (key.endsWith('_cm')) {
-        return `${value} cm`;
-    }
-
-    if (key.endsWith('_kg')) {
-        return `${value} kg`;
-    }
-
-    if (key.endsWith('_date') || key === 'dob') {
-        const date = new Date(value);
-        if (!Number.isNaN(date.getTime())) {
-            return date.toLocaleDateString('pt-BR');
-        }
-    }
-
-    return String(value);
-};
-
 export default function LigaMercado() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
@@ -185,6 +161,8 @@ export default function LigaMercado() {
     const [positionFilter, setPositionFilter] = useState('all');
     const [ovrFilter, setOvrFilter] = useState('all');
     const [clubFilter, setClubFilter] = useState('all');
+    const [minValue, setMinValue] = useState('');
+    const [maxValue, setMaxValue] = useState('');
 
     // Sort + paging
     const [sortKey, setSortKey] = useState('overall'); // overall | value_eur | wage_eur | name
@@ -239,6 +217,8 @@ export default function LigaMercado() {
 
     const filtered = useMemo(() => {
         const query = q.trim().toLowerCase();
+        const minValueEur = parseMillionsInput(minValue);
+        const maxValueEur = parseMillionsInput(maxValue);
 
         const base = playersData.filter((p) => {
             // Search
@@ -266,6 +246,14 @@ export default function LigaMercado() {
                 if (clubName !== clubFilter) return false;
             }
 
+            const valueEur = Number(p?.value_eur ?? 0);
+            if (Number.isFinite(minValueEur) && minValueEur !== null && valueEur < minValueEur) {
+                return false;
+            }
+            if (Number.isFinite(maxValueEur) && maxValueEur !== null && valueEur > maxValueEur) {
+                return false;
+            }
+
             return true;
         });
 
@@ -289,7 +277,7 @@ export default function LigaMercado() {
         });
 
         return base;
-    }, [playersData, q, statusFilter, positionFilter, ovrFilter, clubFilter, sortKey, sortDir]);
+    }, [playersData, q, statusFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue, sortKey, sortDir]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     const safePage = Math.min(Math.max(1, page), totalPages);
@@ -298,7 +286,7 @@ export default function LigaMercado() {
     useEffect(() => {
         // se filtros mudarem, volta pra página 1
         setPage(1);
-    }, [q, statusFilter, positionFilter, ovrFilter, clubFilter]);
+    }, [q, statusFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue]);
 
     useEffect(() => {
         if (!detailPlayer) return;
@@ -329,6 +317,8 @@ export default function LigaMercado() {
         setPositionFilter('all');
         setOvrFilter('all');
         setClubFilter('all');
+        setMinValue('');
+        setMaxValue('');
     };
 
     /* =========================
@@ -452,6 +442,33 @@ export default function LigaMercado() {
 
               return { label: 'Indisponível', disabled: true, action: null };
           })()
+        : null;
+
+    const detailStatusLabel = detailPlayer
+        ? detailPlayer.club_status === 'livre'
+            ? 'Livre'
+            : detailPlayer.club_status === 'meu'
+            ? 'Meu clube'
+            : detailPlayer.club_name || 'Rivais'
+        : '';
+
+    const detailPrimaryAction = detailAction
+        ? {
+              label: detailAction.label,
+              disabled: detailAction.disabled,
+              onClick: () => {
+                  if (detailAction.disabled) {
+                      return;
+                  }
+
+                  closeDetailModal();
+                  if (detailAction.action === MODAL_MODES.BUY) {
+                      openPurchaseModal(detailPlayer);
+                  } else if (detailAction.action === MODAL_MODES.MULTA) {
+                      openMultaModal(detailPlayer);
+                  }
+              },
+          }
         : null;
 
     const applyPlayerToMyClub = (playerId) => {
@@ -664,20 +681,20 @@ export default function LigaMercado() {
                         if (e.target === e.currentTarget) setFiltersOpen(false);
                     }}
                 >
-                    <div className="mercado-drawer">
+                    <div className="mercado-drawer mercado-drawer-scout">
                         <div className="mercado-drawer-header">
                             <div>
-                                <p className="mercado-drawer-eyebrow">Ajuste os filtros</p>
-                                <strong>Mercado de jogadores</strong>
+                                <p className="mercado-drawer-eyebrow">Central de scouting</p>
+                                <strong>Painel de transferências</strong>
                             </div>
                             <button type="button" className="btn-outline" onClick={() => setFiltersOpen(false)}>
                                 Fechar
                             </button>
                         </div>
 
-                        <div className="mercado-drawer-body">
+                        <div className="mercado-drawer-body mercado-drawer-body-scout">
                             {/* STATUS (pills) */}
-                            <div className="filter-pill-row">
+                            <div className="filter-pill-row filter-pill-row-scout">
                                 {STATUS_FILTERS.map((f) => (
                                     <button
                                         key={f.value}
@@ -690,59 +707,118 @@ export default function LigaMercado() {
                                 ))}
                             </div>
 
-                            {/* SELECTS */}
-                            <div className="mercado-drawer-grid">
-                                <select value={positionFilter} onChange={(e) => setPositionFilter(e.target.value)}>
-                                    {positionOptions.map((p) => (
-                                        <option key={p} value={p}>
-                                            {p === 'all' ? 'Posição (todas)' : p}
-                                        </option>
-                                    ))}
-                                </select>
+                            <div className="mercado-drawer-grid mercado-drawer-grid-scout">
+                                <div className="mercado-drawer-field">
+                                    <label className="mercado-drawer-label" htmlFor="filtro-posicao">
+                                        Posição
+                                    </label>
+                                    <select
+                                        id="filtro-posicao"
+                                        className="mercado-drawer-select"
+                                        value={positionFilter}
+                                        onChange={(e) => setPositionFilter(e.target.value)}
+                                    >
+                                        {positionOptions.map((p) => (
+                                            <option key={p} value={p}>
+                                                {p === 'all' ? 'Todas' : p}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                <select value={ovrFilter} onChange={(e) => setOvrFilter(e.target.value)}>
-                                    {OVR_FILTERS.map((o) => (
-                                        <option key={o.value} value={o.value}>
-                                            {o.label}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mercado-drawer-field">
+                                    <span className="mercado-drawer-label">Qualidade (OVR)</span>
+                                    <div className="filter-pill-row filter-pill-row-scout filter-pill-row-compact">
+                                        {OVR_FILTERS.map((o) => (
+                                            <button
+                                                key={o.value}
+                                                type="button"
+                                                className={`filter-pill${ovrFilter === o.value ? ' active' : ''}`}
+                                                onClick={() => setOvrFilter(o.value)}
+                                            >
+                                                {o.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
 
-                                <select value={clubFilter} onChange={(e) => setClubFilter(e.target.value)}>
-                                    {clubOptions.map((c) => (
-                                        <option key={c} value={c}>
-                                            {c === 'all' ? 'Clube (todos)' : c}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="mercado-drawer-field mercado-drawer-field-full">
+                                    <span className="mercado-drawer-label">Valor de mercado (M)</span>
+                                    <div className="mercado-drawer-range">
+                                        <input
+                                            className="mercado-drawer-input"
+                                            type="text"
+                                            inputMode="decimal"
+                                            placeholder="Mín (M)"
+                                            value={minValue}
+                                            onChange={(e) => setMinValue(e.target.value)}
+                                            aria-label="Valor mínimo em milhões"
+                                        />
+                                        <span className="mercado-drawer-range-separator">até</span>
+                                        <input
+                                            className="mercado-drawer-input"
+                                            type="text"
+                                            inputMode="decimal"
+                                            placeholder="Máx (M)"
+                                            value={maxValue}
+                                            onChange={(e) => setMaxValue(e.target.value)}
+                                            aria-label="Valor máximo em milhões"
+                                        />
+                                    </div>
+                                </div>
 
-                                <select
-                                    value={`${sortKey}:${sortDir}`}
-                                    onChange={(e) => {
-                                        const [k, d] = e.target.value.split(':');
-                                        setSortKey(k);
-                                        setSortDir(d);
-                                    }}
-                                >
-                                    <option value="overall:desc">Ordenar: OVR (maior)</option>
-                                    <option value="overall:asc">Ordenar: OVR (menor)</option>
-                                    <option value="value_eur:desc">Ordenar: Valor (maior)</option>
-                                    <option value="value_eur:asc">Ordenar: Valor (menor)</option>
-                                    <option value="wage_eur:desc">Ordenar: Salário (maior)</option>
-                                    <option value="wage_eur:asc">Ordenar: Salário (menor)</option>
-                                    <option value="name:asc">Ordenar: Nome (A–Z)</option>
-                                    <option value="name:desc">Ordenar: Nome (Z–A)</option>
-                                </select>
+                                <div className="mercado-drawer-field mercado-drawer-field-full">
+                                    <label className="mercado-drawer-label" htmlFor="filtro-clube">
+                                        Vínculo com clube
+                                    </label>
+                                    <select
+                                        id="filtro-clube"
+                                        className="mercado-drawer-select"
+                                        value={clubFilter}
+                                        onChange={(e) => setClubFilter(e.target.value)}
+                                    >
+                                        {clubOptions.map((c) => (
+                                            <option key={c} value={c}>
+                                                {c === 'all' ? 'Qualquer clube' : c}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                <div className="mercado-drawer-field mercado-drawer-field-full">
+                                    <label className="mercado-drawer-label" htmlFor="filtro-ordenacao">
+                                        Ordenar resultados
+                                    </label>
+                                    <select
+                                        id="filtro-ordenacao"
+                                        className="mercado-drawer-select mercado-drawer-select-highlight"
+                                        value={`${sortKey}:${sortDir}`}
+                                        onChange={(e) => {
+                                            const [k, d] = e.target.value.split(':');
+                                            setSortKey(k);
+                                            setSortDir(d);
+                                        }}
+                                    >
+                                        <option value="overall:desc">OVR (maior)</option>
+                                        <option value="overall:asc">OVR (menor)</option>
+                                        <option value="value_eur:desc">Valor (maior)</option>
+                                        <option value="value_eur:asc">Valor (menor)</option>
+                                        <option value="wage_eur:desc">Salário (maior)</option>
+                                        <option value="wage_eur:asc">Salário (menor)</option>
+                                        <option value="name:asc">Nome (A–Z)</option>
+                                        <option value="name:desc">Nome (Z–A)</option>
+                                    </select>
+                                </div>
                             </div>
 
                             {/* Ações do modal */}
-                            <div className="mercado-drawer-actions">
-                                <button type="button" className="btn-outline" onClick={clearFilters}>
+                            <div className="mercado-drawer-actions mercado-drawer-actions-scout">
+                                <button type="button" className="btn-outline mercado-scout-clear" onClick={clearFilters}>
                                     Limpar filtros
                                 </button>
 
-                                <button type="button" className="btn-primary" onClick={() => setFiltersOpen(false)}>
-                                    Ver resultados ({filtered.length})
+                                <button type="button" className="btn-primary mercado-scout-apply" onClick={() => setFiltersOpen(false)}>
+                                    Aplicar Scouting <span className="mercado-scout-count">({formatCount(filtered.length)})</span>
                                 </button>
                             </div>
                         </div>
@@ -876,139 +952,18 @@ export default function LigaMercado() {
             )}
 
             {detailPlayer && (
-                <div
-                    className="player-detail-modal"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-label="Detalhes do jogador"
-                >
-                    <div className="player-detail-header">
-                        <div className="player-detail-header-inner">
-                            <div className="player-detail-avatar">
-                                <PlayerAvatar
-                                    src={proxyFaceUrl(detailPlayer.player_face_url)}
-                                    alt={getPlayerName(detailPlayer)}
-                                    fallback={getPlayerName(detailPlayer).slice(0, 2).toUpperCase()}
-                                />
-                            </div>
-                            <div className="player-detail-identity">
-                                <p className="player-detail-name">{getPlayerName(detailSnapshot)}</p>
-                                <div className="player-detail-meta">
-                                    <span className="player-detail-status">
-                                        ●{' '}
-                                        {detailPlayer.club_status === 'livre'
-                                            ? 'Livre'
-                                            : detailPlayer.club_status === 'meu'
-                                            ? 'Meu clube'
-                                            : detailPlayer.club_name || 'Outro clube'}
-                                    </span>
-                                    <span className="player-detail-nationality">
-                                        {detailSnapshot?.nationality_name || '—'}
-                                    </span>
-                                </div>
-                            </div>
-                            <div className={`player-detail-ovr ovr-${getOvrTone(detailSnapshot?.overall)}`}>
-                                {detailSnapshot?.overall ?? '—'}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="player-detail-summary">
-                        <div className="player-detail-summary-card highlight">
-                            <span>Posições</span>
-                            <strong>{normalizePositions(detailSnapshot?.player_positions).join(' · ') || '—'}</strong>
-                        </div>
-                        <div className="player-detail-summary-card">
-                            <span>Idade</span>
-                            <strong>
-                                {detailSnapshot?.age ? `${detailSnapshot.age} anos` : '—'}
-                            </strong>
-                        </div>
-                        <div className="player-detail-summary-card">
-                            <span>Valor de mercado</span>
-                            <strong>{formatCurrency(detailSnapshot?.value_eur)}</strong>
-                        </div>
-                        <div className="player-detail-summary-card">
-                            <span>Salário</span>
-                            <strong>{formatCurrency(detailSnapshot?.wage_eur)}</strong>
-                        </div>
-                    </div>
-
-                    <section className="player-detail-performance">
-                        <h4>Atributos de Performance</h4>
-                        <div className="player-detail-performance-grid">
-                            <div className="player-detail-stat">
-                                <span>PAC</span>
-                                <strong>{detailSnapshot?.pace ?? '—'}</strong>
-                            </div>
-                            <div className="player-detail-stat">
-                                <span>DRI</span>
-                                <strong>{detailSnapshot?.dribbling ?? '—'}</strong>
-                            </div>
-                            <div className="player-detail-stat">
-                                <span>SHO</span>
-                                <strong>{detailSnapshot?.shooting ?? '—'}</strong>
-                            </div>
-                            <div className="player-detail-stat danger">
-                                <span>DEF</span>
-                                <strong>{detailSnapshot?.defending ?? '—'}</strong>
-                            </div>
-                        </div>
-                    </section>
-
-                    <div className="player-detail-full">
-                        <button
-                            type="button"
-                            className="player-detail-full-toggle"
-                            onClick={handleToggleDetails}
-                            disabled={detailLoading}
-                        >
-                            {detailExpanded
-                                ? 'Ocultar informações detalhadas'
-                                : detailLoading
-                                ? 'Carregando...'
-                                : 'Informações Detalhadas'}
-                        </button>
-
-                        {detailError && <p className="modal-error">{detailError}</p>}
-
-                        {detailExpanded && detailData && (
-                            <div className="player-detail-full-list">
-                                {Object.entries(detailData).map(([key, value]) => (
-                                    <div className="player-detail-full-row" key={key}>
-                                        <span>{formatDetailLabel(key)}</span>
-                                        <strong>{formatDetailValue(key, value)}</strong>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="player-detail-actions">
-                        <button type="button" className="btn-outline" onClick={closeDetailModal}>
-                            Fechar
-                        </button>
-                        <button
-                            type="button"
-                            className="player-detail-primary"
-                            onClick={() => {
-                                if (!detailAction || detailAction.disabled) {
-                                    return;
-                                }
-
-                                closeDetailModal();
-                                if (detailAction.action === MODAL_MODES.BUY) {
-                                    openPurchaseModal(detailPlayer);
-                                } else if (detailAction.action === MODAL_MODES.MULTA) {
-                                    openMultaModal(detailPlayer);
-                                }
-                            }}
-                            disabled={!detailAction || detailAction.disabled}
-                        >
-                            {detailAction?.label ?? 'Indisponível'}
-                        </button>
-                    </div>
-                </div>
+                <PlayerDetailModal
+                    player={detailPlayer}
+                    snapshot={detailSnapshot}
+                    fullData={detailData}
+                    expanded={detailExpanded}
+                    loading={detailLoading}
+                    error={detailError}
+                    statusLabel={detailStatusLabel}
+                    onClose={closeDetailModal}
+                    onToggleDetails={handleToggleDetails}
+                    primaryAction={detailPrimaryAction}
+                />
             )}
 
             {/* RESULTADOS + PAGINAÇÃO TOPO */}

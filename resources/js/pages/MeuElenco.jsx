@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
+import PlayerDetailModal from '../components/app_publico/PlayerDetailModal';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -115,6 +116,13 @@ export default function MeuElenco() {
     const [valueModalError, setValueModalError] = useState('');
     const [isValueSaving, setIsValueSaving] = useState(false);
 
+    // Modal de detalhes do jogador
+    const [detailPlayer, setDetailPlayer] = useState(null);
+    const [detailExpanded, setDetailExpanded] = useState(false);
+    const [detailLoading, setDetailLoading] = useState(false);
+    const [detailError, setDetailError] = useState('');
+    const [detailCache, setDetailCache] = useState({});
+
     // Fechar drawer com ESC
     useEffect(() => {
         if (!filtersOpen) return;
@@ -124,6 +132,20 @@ export default function MeuElenco() {
         window.addEventListener('keydown', onKeyDown);
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [filtersOpen]);
+
+    useEffect(() => {
+        if (!detailPlayer) return;
+        const onKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                setDetailPlayer(null);
+                setDetailExpanded(false);
+                setDetailError('');
+                setDetailLoading(false);
+            }
+        };
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [detailPlayer]);
 
     const positionOptions = useMemo(() => {
         const values = new Set();
@@ -301,6 +323,88 @@ export default function MeuElenco() {
         }
     };
 
+    const detailPlayerId = detailPlayer?.elencopadrao?.id;
+    const detailData = detailPlayerId ? detailCache[detailPlayerId] : null;
+    const detailSnapshot = detailPlayer
+        ? {
+              ...(detailPlayer.elencopadrao ?? {}),
+              ...(detailData ?? {}),
+              value_eur:
+                  detailPlayer.value_eur ??
+                  detailData?.value_eur ??
+                  detailPlayer.elencopadrao?.value_eur,
+              wage_eur:
+                  detailPlayer.wage_eur ??
+                  detailData?.wage_eur ??
+                  detailPlayer.elencopadrao?.wage_eur,
+          }
+        : null;
+
+    const openDetailModal = (entry) => {
+        setDetailPlayer(entry);
+        setDetailExpanded(false);
+        setDetailError('');
+        if (entry?.elencopadrao?.id) {
+            void loadDetailData(entry.elencopadrao.id, { expand: false });
+        }
+    };
+
+    const closeDetailModal = () => {
+        setDetailPlayer(null);
+        setDetailExpanded(false);
+        setDetailError('');
+        setDetailLoading(false);
+    };
+
+    const loadDetailData = async (playerId, { expand } = { expand: true }) => {
+        if (!playerId) return;
+
+        if (detailCache[playerId]) {
+            if (expand) {
+                setDetailExpanded(true);
+            }
+            return;
+        }
+
+        setDetailLoading(true);
+        setDetailError('');
+
+        try {
+            const { data } = await window.axios.get(`/api/elencopadrao/${playerId}`);
+            const payload = data?.player ?? data ?? null;
+
+            if (payload) {
+                setDetailCache((prev) => ({ ...prev, [playerId]: payload }));
+                if (expand) {
+                    setDetailExpanded(true);
+                }
+            } else {
+                setDetailError('Não foi possível carregar a ficha completa.');
+            }
+        } catch (error) {
+            setDetailError(
+                error.response?.data?.message ?? 'Não foi possível carregar a ficha completa.',
+            );
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const handleToggleDetails = async () => {
+        if (!detailPlayer) return;
+
+        if (detailExpanded) {
+            setDetailExpanded(false);
+            return;
+        }
+
+        await loadDetailData(detailPlayer.elencopadrao?.id, { expand: true });
+    };
+
+    const detailStatusLabel = detailPlayer
+        ? `Meu clube · ${detailPlayer?.ativo ? 'Ativo' : 'Inativo'}`
+        : '';
+
     if (!liga) {
         return (
             <main className="meu-elenco-screen" aria-label="Meu elenco">
@@ -311,6 +415,8 @@ export default function MeuElenco() {
     }
 
     const title = `${clube?.nome ? `ELENCO • ${clube.nome}` : 'MEU ELENCO'}`;
+    const esquemaHref = liga?.id ? `/minha_liga/esquema-tatico?liga_id=${liga.id}` : '#';
+    const esquemaPreviewUrl = clube?.esquema_tatico_imagem_url ?? null;
 
     return (
         <main className="meu-elenco-screen">
@@ -329,6 +435,21 @@ export default function MeuElenco() {
                         <strong>{formatCurrency(salaryPerRound)}</strong>
                     </div>
                 </div>
+                <div className="meu-elenco-actions">
+                    <a className="btn-primary" href={esquemaHref}>
+                        Esquema tático
+                    </a>
+                </div>
+                {esquemaPreviewUrl && (
+                    <div className="meu-elenco-esquema-preview">
+                        <img
+                            src={esquemaPreviewUrl}
+                            alt="Esquema tático salvo"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </div>
+                )}
             </section>
 
             {/* Barra: busca + filtros */}
@@ -463,14 +584,21 @@ export default function MeuElenco() {
                                         <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
                                             {ovr}
                                         </span>
-                                        <span className="mercado-player-avatar">
-                                            <PlayerAvatar
-                                                src={imageUrl}
-                                                alt={name}
-                                                fallback={getInitials(name)}
-                                            />
-                                            <span className="mercado-player-position">{pos}</span>
-                                        </span>
+                                        <button
+                                            type="button"
+                                            className="mercado-player-avatar-button"
+                                            onClick={() => openDetailModal(entry)}
+                                            aria-label={`Ver ficha completa de ${name}`}
+                                        >
+                                            <span className="mercado-player-avatar">
+                                                <PlayerAvatar
+                                                    src={imageUrl}
+                                                    alt={name}
+                                                    fallback={getInitials(name)}
+                                                />
+                                                <span className="mercado-player-position">{pos}</span>
+                                            </span>
+                                        </button>
                                         <div className="mercado-player-info">
                                             <strong>{name}</strong>
                                             <span style={{ color: entry?.ativo ? '#00ff88' : '#ff6b6b' }}>
@@ -553,7 +681,7 @@ export default function MeuElenco() {
                 </div>
             )}
 
-{valueModalPlayer && (
+            {valueModalPlayer && (
                 <div
                     className="meu-elenco-modal-overlay"
                     role="dialog"
@@ -603,7 +731,7 @@ export default function MeuElenco() {
                                     letterSpacing: '1px',
                                 }}
                             >
-                                Ajuste de Valor Mercadológico
+                                Ajuste de Valor de Mercado
                             </h3>
                             <div
                                 style={{
@@ -694,7 +822,7 @@ export default function MeuElenco() {
                                             display: 'block',
                                         }}
                                     >
-                                        Novo valor
+                                        Valor da Multa
                                     </span>
                                     <p
                                         style={{
@@ -794,6 +922,20 @@ export default function MeuElenco() {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {detailPlayer && (
+                <PlayerDetailModal
+                    player={detailSnapshot}
+                    snapshot={detailSnapshot}
+                    fullData={detailData ? { ...detailData, ...detailSnapshot } : null}
+                    expanded={detailExpanded}
+                    loading={detailLoading}
+                    error={detailError}
+                    statusLabel={detailStatusLabel}
+                    onClose={closeDetailModal}
+                    onToggleDetails={handleToggleDetails}
+                />
             )}
 
             <Navbar active="ligas" />

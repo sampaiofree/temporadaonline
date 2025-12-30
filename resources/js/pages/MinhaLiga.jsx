@@ -61,6 +61,8 @@ export default function MinhaLiga() {
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
     const meuClubeHref = `/minha_liga/clube?liga_id=${liga.id}`;
+    const descricao = (liga?.descricao || '').toString().trim();
+    const regras = (liga?.regras || '').toString().trim();
     const periodos = Array.isArray(liga?.periodos) ? liga.periodos : [];
     const activePeriod = liga?.periodo_atual ?? null;
     const isActivePeriod = (period) =>
@@ -129,6 +131,22 @@ export default function MinhaLiga() {
                         <strong>{liga.jogo || '—'}</strong>
                     </div>
                 </div>
+                {(descricao || regras) && (
+                    <div className="league-info">
+                        {descricao && (
+                            <div className="league-info-block">
+                                <span className="league-info-title">Descrição</span>
+                                <p className="league-info-text">{descricao}</p>
+                            </div>
+                        )}
+                        {regras && (
+                            <div className="league-info-block">
+                                <span className="league-info-title">Regras</span>
+                                <p className="league-info-text">{regras}</p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </section>
             {clubSnapshot && (
                 <section className="club-summary gold-card club-summary-custom">
@@ -165,22 +183,15 @@ export default function MinhaLiga() {
             <section className="league-actions grid league-actions-custom">
                 <a className="control-card" href={mercadoHref}>
                     <span className="control-card-title">Mercado</span>
-                    <span className="control-card-ghost">MKT</span>
-                    <span className="control-card-arrow">→</span>
                 </a>
                 <a className="control-card" href={financeiroHref}>
                     <span className="control-card-title">Financeiro</span>
-                    <span className="control-card-ghost">FIN</span>
-                    <span className="control-card-arrow">→</span>
                 </a>
                 <a className="control-card" href={meuElencoHref}>
                     <span className="control-card-title">Meu elenco</span>
-                    <span className="control-card-ghost">ELENCO</span>
-                    <span className="control-card-arrow">→</span>
                 </a>
-                <a className="control-card primary-control" href={meuClubeHref}>
-                    <span className="control-card-subtitle">Centro de comando</span>
-                    <span className="control-card-title primary">Meu clube</span>
+                <a className="control-card" href={meuClubeHref}>
+                    <span className="control-card-title">Meu clube</span>
                 </a>
             </section>
             <section className="league-periods">
