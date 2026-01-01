@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
+use App\Models\Confederacao;
 use App\Models\Plataforma;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -18,8 +19,12 @@ class LigaSeeder extends Seeder
         $jogo = Jogo::firstWhere('slug', 'fc26');
         $geracao = Geracao::firstWhere('slug', 'nova');
         $plataforma = Plataforma::firstWhere('slug', 'playstation-5');
+        $confederacao = Confederacao::firstOrCreate(
+            ['nome' => 'Confederacao Demo'],
+            ['descricao' => '', 'imagem' => null],
+        );
 
-        if (!$jogo || !$geracao || !$plataforma) {
+        if (! $jogo || ! $geracao || ! $plataforma) {
             return;
         }
 
@@ -33,6 +38,7 @@ class LigaSeeder extends Seeder
             'tipo' => 'publica',
             'status' => 'ativa',
             'max_times' => 20,
+            'confederacao_id' => $confederacao->id,
             'jogo_id' => $jogo->id,
             'geracao_id' => $geracao->id,
             'plataforma_id' => $plataforma->id,

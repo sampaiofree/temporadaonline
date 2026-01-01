@@ -27,6 +27,7 @@
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                         <tr>
                             <th class="px-4 py-3 font-semibold">Nome</th>
+                            <th class="px-4 py-3 font-semibold">Confederacao</th>
                             <th class="px-4 py-3 font-semibold">Jogo</th>
                             <th class="px-4 py-3 font-semibold">Geração</th>
                             <th class="px-4 py-3 font-semibold">Plataforma</th>
@@ -51,6 +52,7 @@
                                     <div class="text-sm font-semibold text-slate-900">{{ $liga->nome }}</div>
                                     <div class="text-xs text-slate-500">{{ $liga->created_at?->format('d/m/Y H:i') }}</div>
                                 </td>
+                                <td class="px-4 py-4 align-top text-slate-600">{{ $liga->confederacao?->nome ?? '-' }}</td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $liga->jogo?->nome ?? '-' }}</td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $liga->geracao?->nome ?? '-' }}</td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $liga->plataforma?->nome ?? '-' }}</td>
@@ -87,7 +89,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="10" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Ainda não existem ligas cadastradas.
                                 </td>
                             </tr>

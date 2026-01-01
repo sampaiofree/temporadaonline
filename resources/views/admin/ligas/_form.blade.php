@@ -2,6 +2,7 @@
     'action',
     'method' => 'POST',
     'liga' => null,
+    'confederacoes',
     'jogos',
     'geracoes',
     'plataformas',
@@ -12,6 +13,7 @@
 
 @php
     $currentStatus = old('status', $liga->status ?? array_key_first($statusOptions));
+    $currentConfederacaoId = old('confederacao_id', $liga->confederacao_id ?? '');
     $currentJogoId = old('jogo_id', $liga->jogo_id ?? '');
     $currentGeracaoId = old('geracao_id', $liga->geracao_id ?? '');
     $currentPlataformaId = old('plataforma_id', $liga->plataforma_id ?? '');
@@ -105,6 +107,25 @@
         @enderror
     </div>
 
+    <div>
+        <label for="confederacao_id" class="block text-sm font-semibold text-slate-700">Confederacao</label>
+        <select
+            id="confederacao_id"
+            name="confederacao_id"
+            class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+        >
+            <option value="">Selecione</option>
+            @foreach($confederacoes as $confederacao)
+                <option value="{{ $confederacao->id }}" @selected($currentConfederacaoId == $confederacao->id)>
+                    {{ $confederacao->nome }}
+                </option>
+            @endforeach
+        </select>
+        @error('confederacao_id')
+            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+        @enderror
+    </div>
+
     <div class="grid gap-6 md:grid-cols-3">
         <div>
             <label for="jogo_id" class="block text-sm font-semibold text-slate-700">Jogo</label>
@@ -163,7 +184,7 @@
 
     @if($lockSelections)
         <p class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            A liga já possui clubes cadastrados, então Jogo, Geração e Plataforma não podem ser alterados.
+            A liga ja possui clubes cadastrados, entao Jogo, Geracao e Plataforma nao podem ser alterados.
         </p>
     @endif
 

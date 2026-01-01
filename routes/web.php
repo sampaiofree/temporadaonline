@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\ElencoPadraoController as AdminElencoPadraoContro
 use App\Http\Controllers\Admin\GeracaoController as AdminGeracaoController;
 use App\Http\Controllers\Admin\JogoController as AdminJogoController;
 use App\Http\Controllers\Admin\LigaController as AdminLigaController;
+use App\Http\Controllers\Admin\ConfederacaoController as AdminConfederacaoController;
 use App\Http\Controllers\Admin\PlataformaController as AdminPlataformaController;
 use App\Http\Controllers\Admin\PaisController as AdminPaisController;
 use App\Http\Controllers\Admin\ClubeController as AdminClubeController;
@@ -33,6 +34,7 @@ Route::redirect('/', '/dashboard');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::resource('confederacoes', AdminConfederacaoController::class)->except(['show']);
     Route::resource('ligas', AdminLigaController::class)->except(['show']);
     Route::resource('geracoes', AdminGeracaoController::class)->except(['show']);
     Route::resource('jogos', AdminJogoController::class)->except(['show']);

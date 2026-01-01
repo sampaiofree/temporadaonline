@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Confederacao;
 use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
@@ -23,7 +24,7 @@ class LigaController extends Controller
 
     public function index(): View
     {
-        $ligas = Liga::with(['jogo', 'geracao', 'plataforma'])
+        $ligas = Liga::with(['jogo', 'geracao', 'plataforma', 'confederacao'])
             ->withCount(['clubes', 'users'])
             ->orderByDesc('created_at')
             ->get();
@@ -36,6 +37,7 @@ class LigaController extends Controller
     public function create(): View
     {
         return view('admin.ligas.create', [
+            'confederacoes' => Confederacao::orderBy('nome')->get(),
             'jogos' => Jogo::orderBy('nome')->get(),
             'geracoes' => Geracao::orderBy('nome')->get(),
             'plataformas' => Plataforma::orderBy('nome')->get(),
@@ -47,6 +49,7 @@ class LigaController extends Controller
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
+            'confederacao_id' => 'required|exists:confederacoes,id',
             'jogo_id' => 'required|exists:jogos,id',
             'geracao_id' => 'required|exists:geracoes,id',
             'plataforma_id' => 'required|exists:plataformas,id',
@@ -86,6 +89,7 @@ class LigaController extends Controller
     {
         return view('admin.ligas.edit', [
             'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'periodos']),
+            'confederacoes' => Confederacao::orderBy('nome')->get(),
             'jogos' => Jogo::orderBy('nome')->get(),
             'geracoes' => Geracao::orderBy('nome')->get(),
             'plataformas' => Plataforma::orderBy('nome')->get(),
@@ -110,6 +114,7 @@ class LigaController extends Controller
             'periodos' => 'array',
             'periodos.*.inicio' => 'nullable|date',
             'periodos.*.fim' => 'nullable|date',
+            'confederacao_id' => 'required|exists:confederacoes,id',
         ];
 
         if (! $hasClubes) {

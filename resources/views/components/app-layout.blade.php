@@ -52,7 +52,10 @@
                             Escudos de clubes
                         </a>
                         <a href="{{ route('admin.elenco-padrao.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Elenco padrão
+                            Elenco padrao
+                        </a>
+                        <a href="{{ route('admin.confederacoes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Confederacoes
                         </a>
                         <a href="{{ route('admin.ligas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Ligas

@@ -25,6 +25,7 @@ class Liga extends Model
         'cobranca_salario',
         'venda_min_percent',
         'bloquear_compra_saldo_negativo',
+        'confederacao_id',
         'jogo_id',
         'geracao_id',
         'plataforma_id',
@@ -53,6 +54,11 @@ class Liga extends Model
     public function plataforma(): BelongsTo
     {
         return $this->belongsTo(Plataforma::class);
+    }
+
+    public function confederacao(): BelongsTo
+    {
+        return $this->belongsTo(Confederacao::class);
     }
 
     public function users(): BelongsToMany
