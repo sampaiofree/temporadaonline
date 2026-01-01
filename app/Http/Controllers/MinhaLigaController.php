@@ -131,7 +131,6 @@ class MinhaLigaController extends Controller
                 : null;
 
             $movimentos = LigaTransferencia::query()
-                ->where('liga_id', $liga->id)
                 ->where(function ($query) use ($userClub): void {
                     $query->where('clube_origem_id', $userClub->id)
                         ->orWhere('clube_destino_id', $userClub->id);

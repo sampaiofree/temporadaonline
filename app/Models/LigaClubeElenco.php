@@ -11,6 +11,7 @@ class LigaClubeElenco extends Model
     protected $table = 'liga_clube_elencos';
 
     protected $fillable = [
+        'confederacao_id',
         'liga_id',
         'liga_clube_id',
         'elencopadrao_id',
@@ -28,6 +29,11 @@ class LigaClubeElenco extends Model
     public function liga(): BelongsTo
     {
         return $this->belongsTo(Liga::class);
+    }
+
+    public function confederacao(): BelongsTo
+    {
+        return $this->belongsTo(Confederacao::class);
     }
 
     public function ligaClube(): BelongsTo

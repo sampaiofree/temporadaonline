@@ -34,7 +34,9 @@ Route::redirect('/', '/dashboard');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
-    Route::resource('confederacoes', AdminConfederacaoController::class)->except(['show']);
+    Route::resource('confederacoes', AdminConfederacaoController::class, [
+        'parameters' => ['confederacoes' => 'confederacao'],
+    ])->except(['show']);
     Route::resource('ligas', AdminLigaController::class)->except(['show']);
     Route::resource('geracoes', AdminGeracaoController::class)->except(['show']);
     Route::resource('jogos', AdminJogoController::class)->except(['show']);
@@ -96,6 +98,7 @@ Route::middleware('auth')->group(function () {
         ->name('minha_liga.esquema_tatico.salvar');
     Route::get('/minha_liga/financeiro', [MinhaLigaController::class, 'financeiro'])->name('minha_liga.financeiro');
     Route::get('/liga/mercado', [LigaMercadoController::class, 'index'])->name('liga.mercado');
+    Route::get('/liga/mercado/propostas', [LigaMercadoController::class, 'propostas'])->name('liga.mercado.propostas');
     Route::get('/liga/partidas', [LigaPartidasController::class, 'index'])->name('liga.partidas');
     Route::get('/liga/partidas/{partida}/finalizar', [LigaPartidasController::class, 'finalizar'])
         ->name('liga.partidas.finalizar');

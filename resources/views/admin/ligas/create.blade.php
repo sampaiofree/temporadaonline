@@ -3,7 +3,7 @@
         <div class="flex items-center justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-slate-800">Criar nova liga</h2>
-                <p class="text-sm text-slate-500">Defina o nome, confederacao, jogo, geracao, plataforma, teto de clubes e status.</p>
+                <p class="text-sm text-slate-500">Defina o nome, confederacao e dados herdados (jogo, geracao, plataforma), teto de clubes e status.</p>
             </div>
             <a
                 href="{{ route('admin.ligas.index') }}"
@@ -20,9 +20,6 @@
                 'action' => route('admin.ligas.store'),
                 'method' => 'POST',
                 'confederacoes' => $confederacoes,
-                'jogos' => $jogos,
-                'geracoes' => $geracoes,
-                'plataformas' => $plataformas,
                 'statusOptions' => $statusOptions,
                 'submitLabel' => 'Criar liga',
             ])

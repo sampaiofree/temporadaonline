@@ -53,10 +53,16 @@ class LeagueTransferController extends Controller
 
         try {
             $playerId = (int) $request->validated('elencopadrao_id');
-            $entry = LigaClubeElenco::query()
-                ->where('liga_id', $liga->id)
-                ->where('elencopadrao_id', $playerId)
-                ->first();
+            $entryQuery = LigaClubeElenco::query()
+                ->where('elencopadrao_id', $playerId);
+
+            if ($liga->confederacao_id) {
+                $entryQuery->where('confederacao_id', $liga->confederacao_id);
+            } else {
+                $entryQuery->where('liga_id', $liga->id);
+            }
+
+            $entry = $entryQuery->first();
 
             if (! $entry) {
                 return response()->json([

@@ -23,6 +23,36 @@ const formatCurrency = (value) => {
     return currencyFormatter.format(value);
 };
 
+const currencySymbol = currencyFormatter.formatToParts(0).find((part) => part.type === 'currency')?.value ?? '';
+const ABBREVIATION_LEVELS = [
+    { value: 1_000_000_000_000, suffix: 'T' },
+    { value: 1_000_000_000, suffix: 'B' },
+    { value: 1_000_000, suffix: 'M' },
+    { value: 1_000, suffix: 'K' },
+];
+
+const formatAbbreviatedCurrency = (value) => {
+    if (value === null || value === undefined) {
+        return '—';
+    }
+
+    const normalized = Number(value);
+    if (!Number.isFinite(normalized) || normalized < 0) {
+        return formatCurrency(normalized);
+    }
+
+    for (const level of ABBREVIATION_LEVELS) {
+        if (normalized >= level.value) {
+            const scaled = normalized / level.value;
+            const rounded = scaled >= 10 ? Math.round(scaled) : Math.round(scaled * 10) / 10;
+            const display = Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+            return `${currencySymbol}${display}${level.suffix}`;
+        }
+    }
+
+    return formatCurrency(normalized);
+};
+
 const getLeagueInitials = (name) => {
     if (!name) return 'MCO';
     const parts = name.split(/\s+/).filter(Boolean);
@@ -201,7 +231,7 @@ export default function MinhaLiga() {
                             </div>
                             <div>
                                 <span>Saldo</span>
-                                <strong>{formatCurrency(clubSnapshot.saldo)}</strong>
+                                <strong>{formatAbbreviatedCurrency(clubSnapshot.saldo)}</strong>
                             </div>
                         </div>
                     </article>

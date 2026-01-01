@@ -10,6 +10,7 @@ class PlayerFavorite extends Model
     protected $fillable = [
         'user_id',
         'liga_id',
+        'confederacao_id',
         'elencopadrao_id',
     ];
 
@@ -21,6 +22,11 @@ class PlayerFavorite extends Model
     public function liga(): BelongsTo
     {
         return $this->belongsTo(Liga::class);
+    }
+
+    public function confederacao(): BelongsTo
+    {
+        return $this->belongsTo(Confederacao::class);
     }
 
     public function player(): BelongsTo

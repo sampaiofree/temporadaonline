@@ -19,14 +19,21 @@ class LigaSeeder extends Seeder
         $jogo = Jogo::firstWhere('slug', 'fc26');
         $geracao = Geracao::firstWhere('slug', 'nova');
         $plataforma = Plataforma::firstWhere('slug', 'playstation-5');
-        $confederacao = Confederacao::firstOrCreate(
-            ['nome' => 'Confederacao Demo'],
-            ['descricao' => '', 'imagem' => null],
-        );
 
         if (! $jogo || ! $geracao || ! $plataforma) {
             return;
         }
+
+        $confederacao = Confederacao::firstOrCreate(
+            ['nome' => 'Confederacao Demo'],
+            ['descricao' => '', 'imagem' => null],
+        );
+        $confederacao->fill([
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
+        ]);
+        $confederacao->save();
 
         Liga::updateOrCreate([
             'nome' => 'Liga Demo MCO',

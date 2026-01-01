@@ -31,6 +31,12 @@ const formatShortMoney = (value) => {
     return String(Math.round(n));
 };
 
+const resolveMultaMultiplicador = (player, liga) => {
+    const raw = player?.multa_multiplicador ?? liga?.multa_multiplicador ?? 2;
+    const value = Number(raw);
+    return Number.isFinite(value) && value > 0 ? value : 2;
+};
+
 const countFormatter = new Intl.NumberFormat('pt-BR');
 
 const formatCount = (value) => countFormatter.format(value ?? 0);
@@ -189,6 +195,7 @@ export default function LigaMercado() {
         closedPeriod?.inicio_label && closedPeriod?.fim_label
             ? `O mercado está fechado durante o período de partidas (${closedPeriod.inicio_label} até ${closedPeriod.fim_label}).`
             : 'O mercado está fechado durante o período de partidas.';
+    const propostasRecebidasCount = Number(mercado?.propostas_recebidas_count ?? 0);
 
     const [playersData, setPlayersData] = useState(mercado.players || []);
     const [radarIds, setRadarIds] = useState(
@@ -202,6 +209,12 @@ export default function LigaMercado() {
     const [modalMode, setModalMode] = useState(null);
     const [isModalSubmitting, setIsModalSubmitting] = useState(false);
     const [modalError, setModalError] = useState('');
+
+    const [proposalPlayer, setProposalPlayer] = useState(null);
+    const [proposalMoney, setProposalMoney] = useState('');
+    const [proposalOfferIds, setProposalOfferIds] = useState(() => new Set());
+    const [proposalSubmitting, setProposalSubmitting] = useState(false);
+    const [proposalError, setProposalError] = useState('');
 
     const [detailPlayer, setDetailPlayer] = useState(null);
     const [detailExpanded, setDetailExpanded] = useState(false);
@@ -367,6 +380,11 @@ export default function LigaMercado() {
         sortDir,
     ]);
 
+    const myRosterPlayers = useMemo(
+        () => playersData.filter((player) => player.club_status === 'meu'),
+        [playersData],
+    );
+
     const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     const safePage = Math.min(Math.max(1, page), totalPages);
     const pageItems = filtered.slice((safePage - 1) * perPage, safePage * perPage);
@@ -434,12 +452,37 @@ export default function LigaMercado() {
 
     const openPurchaseModal = (player) => openMarketModal(player, MODAL_MODES.BUY);
     const openMultaModal = (player) => openMarketModal(player, MODAL_MODES.MULTA);
+    const openProposalModal = (player) => {
+        if (!clube || !liga) {
+            setFeedback('Você precisa criar um clube antes de operar no mercado.');
+            return;
+        }
+
+        if (marketClosed) {
+            setFeedback(closedPeriodLabel);
+            return;
+        }
+
+        setProposalPlayer(player);
+        setProposalMoney('');
+        setProposalOfferIds(new Set());
+        setProposalError('');
+        setProposalSubmitting(false);
+    };
 
     const closeModal = () => {
         setModalPlayer(null);
         setModalMode(null);
         setModalError('');
         setIsModalSubmitting(false);
+    };
+
+    const closeProposalModal = () => {
+        setProposalPlayer(null);
+        setProposalMoney('');
+        setProposalOfferIds(new Set());
+        setProposalError('');
+        setProposalSubmitting(false);
     };
 
     const detailData = detailPlayer ? detailCache[detailPlayer.elencopadrao_id] : null;
@@ -539,7 +582,13 @@ export default function LigaMercado() {
             ? 'Livre'
             : detailPlayer.club_status === 'meu'
             ? 'Meu clube'
-            : detailPlayer.club_name || 'Rivais'
+            : detailPlayer.club_name
+            ? detailPlayer.liga_nome
+                ? `${detailPlayer.club_name} (${detailPlayer.liga_nome})`
+                : detailPlayer.club_name
+            : detailPlayer.liga_nome
+                ? `Clube rival (${detailPlayer.liga_nome})`
+                : 'Rivais'
         : '';
 
     const detailPrimaryAction = detailAction
@@ -577,6 +626,9 @@ export default function LigaMercado() {
                           ...entry,
                           club_status: 'meu',
                           club_name: clube?.nome ?? 'Meu clube',
+                          liga_nome: liga?.nome ?? entry.liga_nome ?? null,
+                          multa_multiplicador:
+                              liga?.multa_multiplicador ?? entry.multa_multiplicador ?? null,
                           club_id: clube?.id ?? null,
                           is_free_agent: false,
                       }
@@ -587,18 +639,18 @@ export default function LigaMercado() {
 
     const getModalPaymentAmount = () => {
         if (!modalPlayer || !modalMode) return 0;
-    const baseValue = Number(
-        (modalMode === MODAL_MODES.MULTA ? modalPlayer.entry_value_eur : null) ??
-            modalPlayer.value_eur ??
-            0,
-    );
+        const baseValue = Number(
+            (modalMode === MODAL_MODES.MULTA ? modalPlayer.entry_value_eur : null) ??
+                modalPlayer.value_eur ??
+                0,
+        );
 
-    if (modalMode === MODAL_MODES.BUY) {
-        return baseValue;
-    }
+        if (modalMode === MODAL_MODES.BUY) {
+            return baseValue;
+        }
 
-    const multiplier = Number(liga?.multa_multiplicador ?? 2) || 2;
-    return Math.round(baseValue * multiplier);
+        const multiplier = resolveMultaMultiplicador(modalPlayer, liga);
+        return Math.round(baseValue * multiplier);
     };
 
     const handleModalConfirm = async () => {
@@ -641,6 +693,57 @@ export default function LigaMercado() {
             );
         } finally {
             setIsModalSubmitting(false);
+        }
+    };
+
+    const toggleOfferPlayer = (playerId) => {
+        setProposalOfferIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(playerId)) {
+                next.delete(playerId);
+            } else {
+                next.add(playerId);
+            }
+            return next;
+        });
+    };
+
+    const handleProposalSubmit = async () => {
+        if (!proposalPlayer || !liga || !clube) return;
+        if (marketClosed) {
+            setProposalError(closedPeriodLabel);
+            return;
+        }
+
+        const moneyValue = Math.max(0, Math.floor(Number(proposalMoney || 0)));
+        const offerIds = Array.from(proposalOfferIds);
+
+        if (moneyValue <= 0 && offerIds.length === 0) {
+            setProposalError('Informe valor ou jogadores para enviar a proposta.');
+            return;
+        }
+
+        setProposalSubmitting(true);
+        setProposalError('');
+
+        try {
+            const { data } = await window.axios.post(
+                `/api/ligas/${liga.id}/clubes/${clube.id}/propostas`,
+                {
+                    elencopadrao_id: proposalPlayer.elencopadrao_id,
+                    valor: moneyValue,
+                    oferta_elencopadrao_ids: offerIds,
+                },
+            );
+
+            setFeedback(data?.message ?? 'Proposta enviada com sucesso.');
+            closeProposalModal();
+        } catch (error) {
+            setProposalError(
+                error.response?.data?.message ?? 'Nao foi possivel enviar a proposta.',
+            );
+        } finally {
+            setProposalSubmitting(false);
         }
     };
 
@@ -695,6 +798,8 @@ export default function LigaMercado() {
             modalPlayer && modalPlayer.elencopadrao_id === player.elencopadrao_id;
         const isBuyActive = modalMode === MODAL_MODES.BUY && isPlayerModalActive;
         const isMultaActive = modalMode === MODAL_MODES.MULTA && isPlayerModalActive;
+        const isProposalActive =
+            proposalPlayer && proposalPlayer.elencopadrao_id === player.elencopadrao_id;
 
         if (player.club_status === 'livre') {
             const isDisabled = !clube;
@@ -730,14 +835,24 @@ export default function LigaMercado() {
                 );
             }
             return (
-                <button
-                    type="button"
-                    className={`table-action-badge outline${isMultaActive && isModalSubmitting ? ' disabled' : ''}`}
-                    onClick={() => openMultaModal(player)}
-                    disabled={isMultaActive && isModalSubmitting}
-                >
-                    {isMultaActive && isModalSubmitting ? 'Operando...' : 'Roubar (multa)'}
-                </button>
+                <>
+                    <button
+                        type="button"
+                        className={`table-action-badge outline${isMultaActive && isModalSubmitting ? ' disabled' : ''}`}
+                        onClick={() => openMultaModal(player)}
+                        disabled={isMultaActive && isModalSubmitting}
+                    >
+                        {isMultaActive && isModalSubmitting ? 'Operando...' : 'Roubar (multa)'}
+                    </button>
+                    <button
+                        type="button"
+                        className={`table-action-badge${isProposalActive && proposalSubmitting ? ' disabled' : ''}`}
+                        onClick={() => openProposalModal(player)}
+                        disabled={isProposalActive && proposalSubmitting}
+                    >
+                        {isProposalActive && proposalSubmitting ? 'Operando...' : 'Fazer proposta'}
+                    </button>
+                </>
             );
         }
 
@@ -812,6 +927,20 @@ export default function LigaMercado() {
                 <button type="button" className="btn-outline mercado-filters-button" onClick={() => setFiltersOpen(true)}>
                     Filtros
                 </button>
+
+                {liga && (
+                    <a
+                        href={`/liga/mercado/propostas?liga_id=${liga.id}`}
+                        className="btn-outline mercado-propostas-button"
+                    >
+                        Propostas recebidas
+                        {propostasRecebidasCount > 0 && (
+                            <span className="mercado-propostas-badge">
+                                {propostasRecebidasCount}
+                            </span>
+                        )}
+                    </a>
+                )}
             </section>
 
             {/* MODAL CENTRAL DE FILTROS */}
@@ -1046,7 +1175,13 @@ export default function LigaMercado() {
                                     ? 'Livre'
                                     : p.club_status === 'meu'
                                     ? 'Meu clube'
-                                    : p.club_name || 'Outro clube';
+                                    : p.club_name
+                                    ? p.liga_nome
+                                        ? `${p.club_name} (${p.liga_nome})`
+                                        : p.club_name
+                                    : p.liga_nome
+                                        ? `Clube rival (${p.liga_nome})`
+                                        : 'Outro clube';
                             const isRadar = radarIds.has(p.elencopadrao_id);
                             const isRadarBusy = radarBusyIds.has(p.elencopadrao_id);
 
@@ -1163,6 +1298,73 @@ export default function LigaMercado() {
                                     : modalMode === MODAL_MODES.MULTA
                                     ? 'Confirmar multa'
                                     : 'Confirmar compra'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {proposalPlayer && (
+                <div className="meu-elenco-modal-overlay" role="dialog" aria-modal="true">
+                    <div className="meu-elenco-modal">
+                        <h3>{`Enviar proposta por ${getPlayerName(proposalPlayer) || 'jogador'}`}</h3>
+                        <p className="meu-elenco-modal-description">
+                            Ofereca dinheiro, jogadores ou uma combinacao para negociar este atleta.
+                        </p>
+                        <div className="modal-field">
+                            <span>Valor em dinheiro</span>
+                            <input
+                                type="number"
+                                min="0"
+                                className="mercado-drawer-input"
+                                placeholder="0"
+                                value={proposalMoney}
+                                onChange={(e) => setProposalMoney(e.target.value)}
+                            />
+                        </div>
+                        <div className="modal-field">
+                            <span>Jogadores oferecidos</span>
+                            {myRosterPlayers.length === 0 ? (
+                                <p className="modal-helper">Seu clube ainda nao possui jogadores ativos.</p>
+                            ) : (
+                                <div className="proposta-player-list">
+                                    {myRosterPlayers.map((player) => {
+                                        const name = getPlayerName(player) || 'Jogador';
+                                        const checked = proposalOfferIds.has(player.elencopadrao_id);
+                                        return (
+                                            <label key={player.elencopadrao_id} className="proposta-player-item">
+                                                <input
+                                                    type="checkbox"
+                                                    className="proposta-player-checkbox"
+                                                    checked={checked}
+                                                    onChange={() => toggleOfferPlayer(player.elencopadrao_id)}
+                                                />
+                                                <span>{name}</span>
+                                                <span className="proposta-player-ovr">{player.overall ?? '-'}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                        {proposalError && <p className="modal-error">{proposalError}</p>}
+                        <div className="meu-elenco-modal-actions" style={{ marginTop: 10 }}>
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={closeProposalModal}
+                                disabled={proposalSubmitting}
+                                style={{ marginRight: 8 }}
+                            >
+                                Cancelar
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-primary"
+                                onClick={handleProposalSubmit}
+                                disabled={proposalSubmitting}
+                            >
+                                {proposalSubmitting ? 'Enviando...' : 'Enviar proposta'}
                             </button>
                         </div>
                     </div>

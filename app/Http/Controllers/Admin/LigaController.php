@@ -4,10 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Confederacao;
-use App\Models\Geracao;
-use App\Models\Jogo;
 use App\Models\Liga;
-use App\Models\Plataforma;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -37,10 +34,7 @@ class LigaController extends Controller
     public function create(): View
     {
         return view('admin.ligas.create', [
-            'confederacoes' => Confederacao::orderBy('nome')->get(),
-            'jogos' => Jogo::orderBy('nome')->get(),
-            'geracoes' => Geracao::orderBy('nome')->get(),
-            'plataformas' => Plataforma::orderBy('nome')->get(),
+            'confederacoes' => Confederacao::with(['jogo', 'geracao', 'plataforma'])->orderBy('nome')->get(),
             'statusOptions' => self::STATUS_OPTIONS,
         ]);
     }
@@ -50,9 +44,6 @@ class LigaController extends Controller
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'confederacao_id' => 'required|exists:confederacoes,id',
-            'jogo_id' => 'required|exists:jogos,id',
-            'geracao_id' => 'required|exists:geracoes,id',
-            'plataforma_id' => 'required|exists:plataformas,id',
             'max_times' => 'required|integer|min:1',
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
@@ -64,10 +55,22 @@ class LigaController extends Controller
             'periodos.*.fim' => 'nullable|date',
         ]);
 
+        $confederacao = Confederacao::with(['jogo', 'geracao', 'plataforma'])
+            ->findOrFail((int) $data['confederacao_id']);
+
+        if (! $confederacao->jogo_id || ! $confederacao->geracao_id || ! $confederacao->plataforma_id) {
+            throw ValidationException::withMessages([
+                'confederacao_id' => ['Confederacao precisa ter jogo, geracao e plataforma configurados.'],
+            ]);
+        }
+
         $data = array_merge($data, [
             'descricao' => '',
             'regras' => '',
             'tipo' => 'publica',
+            'jogo_id' => $confederacao->jogo_id,
+            'geracao_id' => $confederacao->geracao_id,
+            'plataforma_id' => $confederacao->plataforma_id,
         ]);
 
         unset($data['periodos']);
@@ -88,11 +91,7 @@ class LigaController extends Controller
     public function edit(Liga $liga): View
     {
         return view('admin.ligas.edit', [
-            'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'periodos']),
-            'confederacoes' => Confederacao::orderBy('nome')->get(),
-            'jogos' => Jogo::orderBy('nome')->get(),
-            'geracoes' => Geracao::orderBy('nome')->get(),
-            'plataformas' => Plataforma::orderBy('nome')->get(),
+            'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'confederacao.jogo', 'confederacao.geracao', 'confederacao.plataforma', 'periodos']),
             'statusOptions' => self::STATUS_OPTIONS,
             'hasClubes' => $liga->clubes()->exists(),
             'hasUsers' => $liga->users()->exists(),
@@ -101,8 +100,6 @@ class LigaController extends Controller
 
     public function update(Request $request, Liga $liga): RedirectResponse
     {
-        $hasClubes = $liga->clubes()->exists();
-
         $rules = [
             'nome' => 'required|string|max:255',
             'max_times' => 'required|integer|min:1',
@@ -114,16 +111,7 @@ class LigaController extends Controller
             'periodos' => 'array',
             'periodos.*.inicio' => 'nullable|date',
             'periodos.*.fim' => 'nullable|date',
-            'confederacao_id' => 'required|exists:confederacoes,id',
         ];
-
-        if (! $hasClubes) {
-            $rules = array_merge($rules, [
-                'jogo_id' => 'required|exists:jogos,id',
-                'geracao_id' => 'required|exists:geracoes,id',
-                'plataforma_id' => 'required|exists:plataformas,id',
-            ]);
-        }
 
         $data = $request->validate($rules);
 
@@ -135,13 +123,20 @@ class LigaController extends Controller
             }
         }
 
-        if ($hasClubes) {
-            unset($data['jogo_id'], $data['geracao_id'], $data['plataforma_id']);
-        }
-
         unset($data['periodos']);
 
         $periodos = $this->normalizePeriodos($request->input('periodos', []));
+
+        $liga->loadMissing('confederacao');
+        if (! $liga->confederacao) {
+            throw ValidationException::withMessages([
+                'confederacao_id' => ['Confederacao nao encontrada.'],
+            ]);
+        }
+
+        $data['jogo_id'] = $liga->confederacao->jogo_id;
+        $data['geracao_id'] = $liga->confederacao->geracao_id;
+        $data['plataforma_id'] = $liga->confederacao->plataforma_id;
 
         $liga->update($data);
         $liga->periodos()->delete();

@@ -5,36 +5,26 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LigaTransferencia extends Model
+class LigaProposta extends Model
 {
-    protected $table = 'liga_transferencias';
+    protected $table = 'liga_propostas';
 
     protected $fillable = [
-        'liga_id',
         'confederacao_id',
         'liga_origem_id',
         'liga_destino_id',
         'elencopadrao_id',
         'clube_origem_id',
         'clube_destino_id',
-        'tipo',
         'valor',
-        'observacao',
+        'oferta_elencopadrao_ids',
+        'status',
     ];
 
     protected $casts = [
         'valor' => 'integer',
+        'oferta_elencopadrao_ids' => 'array',
     ];
-
-    public function liga(): BelongsTo
-    {
-        return $this->belongsTo(Liga::class);
-    }
-
-    public function confederacao(): BelongsTo
-    {
-        return $this->belongsTo(Confederacao::class);
-    }
 
     public function ligaOrigem(): BelongsTo
     {
@@ -46,9 +36,9 @@ class LigaTransferencia extends Model
         return $this->belongsTo(Liga::class, 'liga_destino_id');
     }
 
-    public function elencopadrao(): BelongsTo
+    public function confederacao(): BelongsTo
     {
-        return $this->belongsTo(Elencopadrao::class, 'elencopadrao_id');
+        return $this->belongsTo(Confederacao::class);
     }
 
     public function clubeOrigem(): BelongsTo
@@ -59,5 +49,10 @@ class LigaTransferencia extends Model
     public function clubeDestino(): BelongsTo
     {
         return $this->belongsTo(LigaClube::class, 'clube_destino_id');
+    }
+
+    public function elencopadrao(): BelongsTo
+    {
+        return $this->belongsTo(Elencopadrao::class, 'elencopadrao_id');
     }
 }

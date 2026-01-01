@@ -20,13 +20,8 @@
                 'action' => route('admin.ligas.update', $liga),
                 'method' => 'PUT',
                 'liga' => $liga,
-                'confederacoes' => $confederacoes,
-                'jogos' => $jogos,
-                'geracoes' => $geracoes,
-                'plataformas' => $plataformas,
                 'statusOptions' => $statusOptions,
                 'submitLabel' => 'Salvar alterações',
-                'lockSelections' => $hasClubes,
             ])
 
             @if(! $hasClubes && ! $hasUsers)

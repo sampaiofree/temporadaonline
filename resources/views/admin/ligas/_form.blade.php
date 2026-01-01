@@ -2,26 +2,24 @@
     'action',
     'method' => 'POST',
     'liga' => null,
-    'confederacoes',
-    'jogos',
-    'geracoes',
-    'plataformas',
+    'confederacoes' => [],
     'statusOptions',
     'submitLabel' => 'Salvar liga',
-    'lockSelections' => false,
 ])
 
 @php
     $currentStatus = old('status', $liga->status ?? array_key_first($statusOptions));
     $currentConfederacaoId = old('confederacao_id', $liga->confederacao_id ?? '');
-    $currentJogoId = old('jogo_id', $liga->jogo_id ?? '');
-    $currentGeracaoId = old('geracao_id', $liga->geracao_id ?? '');
-    $currentPlataformaId = old('plataforma_id', $liga->plataforma_id ?? '');
     $currentMax = old('max_times', $liga->max_times ?? 20);
     $currentSaldoInicial = old('saldo_inicial', $liga->saldo_inicial ?? 0);
     $currentUsuarioPontuacao = old('usuario_pontuacao', $liga->usuario_pontuacao ?? '');
     $currentWhatsappLink = old('whatsapp_grupo_link', $liga->whatsapp_grupo_link ?? '');
     $currentNome = old('nome', $liga->nome ?? '');
+    $isEditing = (bool) $liga;
+    $selectedConfederacao = collect($confederacoes)->firstWhere('id', (int) $currentConfederacaoId);
+    $selectedJogo = $selectedConfederacao?->jogo?->nome;
+    $selectedGeracao = $selectedConfederacao?->geracao?->nome;
+    $selectedPlataforma = $selectedConfederacao?->plataforma?->nome;
     $periodos = old('periodos');
     if ($periodos === null) {
         $periodos = $liga?->periodos
@@ -109,84 +107,60 @@
 
     <div>
         <label for="confederacao_id" class="block text-sm font-semibold text-slate-700">Confederacao</label>
-        <select
-            id="confederacao_id"
-            name="confederacao_id"
-            class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-        >
-            <option value="">Selecione</option>
-            @foreach($confederacoes as $confederacao)
-                <option value="{{ $confederacao->id }}" @selected($currentConfederacaoId == $confederacao->id)>
-                    {{ $confederacao->nome }}
-                </option>
-            @endforeach
-        </select>
+        @if($isEditing)
+            <p class="mt-2 text-sm font-semibold text-slate-900">
+                {{ $liga->confederacao?->nome ?? '-' }}
+            </p>
+        @else
+            <select
+                id="confederacao_id"
+                name="confederacao_id"
+                required
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+                <option value="">Selecione</option>
+                @foreach($confederacoes as $confederacao)
+                    <option
+                        value="{{ $confederacao->id }}"
+                        data-jogo="{{ $confederacao->jogo?->nome ?? '' }}"
+                        data-geracao="{{ $confederacao->geracao?->nome ?? '' }}"
+                        data-plataforma="{{ $confederacao->plataforma?->nome ?? '' }}"
+                        @selected($currentConfederacaoId == $confederacao->id)
+                    >
+                        {{ $confederacao->nome }}
+                    </option>
+                @endforeach
+            </select>
+        @endif
         @error('confederacao_id')
             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
         @enderror
     </div>
 
-    <div class="grid gap-6 md:grid-cols-3">
-        <div>
-            <label for="jogo_id" class="block text-sm font-semibold text-slate-700">Jogo</label>
-            <select
-                id="jogo_id"
-                name="jogo_id"
-                {!! $lockSelections ? 'disabled' : '' !!}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-                <option value="">Selecione</option>
-                @foreach($jogos as $jogo)
-                    <option value="{{ $jogo->id }}" @selected($currentJogoId == $jogo->id)>{{ $jogo->nome }}</option>
-                @endforeach
-            </select>
-            @error('jogo_id')
-                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div>
-            <label for="geracao_id" class="block text-sm font-semibold text-slate-700">Geração</label>
-            <select
-                id="geracao_id"
-                name="geracao_id"
-                {!! $lockSelections ? 'disabled' : '' !!}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-                <option value="">Selecione</option>
-                @foreach($geracoes as $geracao)
-                    <option value="{{ $geracao->id }}" @selected($currentGeracaoId == $geracao->id)>{{ $geracao->nome }}</option>
-                @endforeach
-            </select>
-            @error('geracao_id')
-                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-            @enderror
-        </div>
-
-        <div>
-            <label for="plataforma_id" class="block text-sm font-semibold text-slate-700">Plataforma</label>
-            <select
-                id="plataforma_id"
-                name="plataforma_id"
-                {!! $lockSelections ? 'disabled' : '' !!}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-                <option value="">Selecione</option>
-                @foreach($plataformas as $plataforma)
-                    <option value="{{ $plataforma->id }}" @selected($currentPlataformaId == $plataforma->id)>{{ $plataforma->nome }}</option>
-                @endforeach
-            </select>
-            @error('plataforma_id')
-                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-            @enderror
+    <div class="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+        <p class="text-sm font-semibold text-slate-700">Dados herdados da confederacao</p>
+        <div class="mt-2 grid gap-2 md:grid-cols-3">
+            <div>
+                <span class="text-xs uppercase tracking-wide text-slate-400">Jogo</span>
+                <p id="confederacao-jogo" class="text-sm font-semibold text-slate-800">
+                    {{ $isEditing ? ($liga->confederacao?->jogo?->nome ?? $liga->jogo?->nome ?? '-') : ($selectedJogo ?: '-') }}
+                </p>
+            </div>
+            <div>
+                <span class="text-xs uppercase tracking-wide text-slate-400">Geracao</span>
+                <p id="confederacao-geracao" class="text-sm font-semibold text-slate-800">
+                    {{ $isEditing ? ($liga->confederacao?->geracao?->nome ?? $liga->geracao?->nome ?? '-') : ($selectedGeracao ?: '-') }}
+                </p>
+            </div>
+            <div>
+                <span class="text-xs uppercase tracking-wide text-slate-400">Plataforma</span>
+                <p id="confederacao-plataforma" class="text-sm font-semibold text-slate-800">
+                    {{ $isEditing ? ($liga->confederacao?->plataforma?->nome ?? $liga->plataforma?->nome ?? '-') : ($selectedPlataforma ?: '-') }}
+                </p>
+            </div>
         </div>
     </div>
 
-    @if($lockSelections)
-        <p class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            A liga ja possui clubes cadastrados, entao Jogo, Geracao e Plataforma nao podem ser alterados.
-        </p>
-    @endif
 
     <div>
         <label for="status" class="block text-sm font-semibold text-slate-700">Status</label>
@@ -380,6 +354,31 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        const confederacaoSelect = document.getElementById('confederacao_id');
+        const confederacaoJogo = document.getElementById('confederacao-jogo');
+        const confederacaoGeracao = document.getElementById('confederacao-geracao');
+        const confederacaoPlataforma = document.getElementById('confederacao-plataforma');
+
+        const updateConfederacaoInfo = () => {
+            if (! confederacaoSelect || ! confederacaoJogo || ! confederacaoGeracao || ! confederacaoPlataforma) {
+                return;
+            }
+
+            const option = confederacaoSelect.selectedOptions[0];
+            if (! option) {
+                return;
+            }
+
+            confederacaoJogo.textContent = option.dataset.jogo || '-';
+            confederacaoGeracao.textContent = option.dataset.geracao || '-';
+            confederacaoPlataforma.textContent = option.dataset.plataforma || '-';
+        };
+
+        if (confederacaoSelect) {
+            updateConfederacaoInfo();
+            confederacaoSelect.addEventListener('change', updateConfederacaoInfo);
+        }
+
         const addButton = document.getElementById('liga-periodos-add');
         const modal = document.getElementById('liga-periodos-modal');
         const modalForm = document.getElementById('liga-periodos-modal-form');

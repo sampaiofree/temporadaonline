@@ -27,9 +27,14 @@ class OtherLigaClubsSeeder extends Seeder
                 Log::warning('OtherLigaClubsSeeder skipped because liga is missing');
                 return;
             }
+            $confederacaoId = $liga->confederacao_id;
 
             $usedPlayerIds = LigaClubeElenco::query()
-                ->where('liga_id', $liga->id)
+                ->when(
+                    $confederacaoId,
+                    fn ($query) => $query->where('confederacao_id', $confederacaoId),
+                    fn ($query) => $query->where('liga_id', $liga->id),
+                )
                 ->pluck('elencopadrao_id')
                 ->all();
 
@@ -88,18 +93,29 @@ class OtherLigaClubsSeeder extends Seeder
                 while ($entries < 12 && $pointer < $available->count()) {
                     $player = $available[$pointer++];
 
-                    LigaClubeElenco::updateOrCreate(
-                        [
+                    $keys = $confederacaoId
+                        ? [
+                            'confederacao_id' => $confederacaoId,
+                            'elencopadrao_id' => $player->id,
+                        ]
+                        : [
                             'liga_id' => $liga->id,
                             'elencopadrao_id' => $player->id,
-                        ],
-                        [
-                            'liga_clube_id' => $club->id,
-                            'value_eur' => $player->value_eur ?? 0,
-                            'wage_eur' => $player->wage_eur ?? 0,
-                            'ativo' => true,
-                        ],
-                    );
+                        ];
+
+                    $payload = [
+                        'liga_id' => $liga->id,
+                        'liga_clube_id' => $club->id,
+                        'value_eur' => $player->value_eur ?? 0,
+                        'wage_eur' => $player->wage_eur ?? 0,
+                        'ativo' => true,
+                    ];
+
+                    if ($confederacaoId) {
+                        $payload['confederacao_id'] = $confederacaoId;
+                    }
+
+                    LigaClubeElenco::updateOrCreate($keys, $payload);
 
                     $entries++;
                 }

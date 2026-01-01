@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\ElencopadraoController;
 use App\Http\Controllers\Api\LeagueTransferController;
+use App\Http\Controllers\Api\LigaPropostaController;
 use App\Http\Controllers\Api\PlayerFavoriteController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\PartidaDesempenhoController;
@@ -17,6 +18,12 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/ligas/{liga}/clubes/{clube}/vender', [LeagueTransferController::class, 'sell']);
     Route::post('/ligas/{liga}/clubes/{clube}/multa', [LeagueTransferController::class, 'payReleaseClause']);
     Route::post('/ligas/{liga}/clubes/{clube}/trocar', [LeagueTransferController::class, 'swap']);
+
+    Route::get('/ligas/{liga}/clubes/{clube}/propostas', [LigaPropostaController::class, 'index']);
+    Route::post('/ligas/{liga}/clubes/{clube}/propostas', [LigaPropostaController::class, 'store']);
+    Route::post('/ligas/{liga}/clubes/{clube}/propostas/{proposta}/aceitar', [LigaPropostaController::class, 'accept']);
+    Route::post('/ligas/{liga}/clubes/{clube}/propostas/{proposta}/rejeitar', [LigaPropostaController::class, 'reject']);
+    Route::post('/ligas/{liga}/clubes/{clube}/propostas/{proposta}/cancelar', [LigaPropostaController::class, 'cancel']);
 
     Route::get('/elencopadrao/{player}', [ElencopadraoController::class, 'show']);
 

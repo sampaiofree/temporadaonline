@@ -14,10 +14,15 @@ class PlayerFavoriteController extends Controller
     public function index(Request $request, Liga $liga): JsonResponse
     {
         $userId = $request->user()->id;
+        $confederacaoId = $liga->confederacao_id;
 
         $favorites = PlayerFavorite::query()
             ->where('user_id', $userId)
-            ->where('liga_id', $liga->id)
+            ->when(
+                $confederacaoId,
+                fn ($query) => $query->where('confederacao_id', $confederacaoId),
+                fn ($query) => $query->where('liga_id', $liga->id),
+            )
             ->orderBy('id')
             ->pluck('elencopadrao_id')
             ->map(fn ($id) => (int) $id)
@@ -31,14 +36,21 @@ class PlayerFavoriteController extends Controller
     public function toggle(Request $request, Liga $liga): JsonResponse
     {
         $user = $request->user();
+        $confederacaoId = $liga->confederacao_id;
 
         $data = $request->validate([
             'elencopadrao_id' => ['required', 'integer', 'exists:elencopadrao,id'],
         ]);
 
-        $favorite = PlayerFavorite::query()
+        $favoriteQuery = PlayerFavorite::query()
             ->where('user_id', $user->id)
-            ->where('liga_id', $liga->id)
+            ->when(
+                $confederacaoId,
+                fn ($query) => $query->where('confederacao_id', $confederacaoId),
+                fn ($query) => $query->where('liga_id', $liga->id),
+            );
+
+        $favorite = $favoriteQuery
             ->where('elencopadrao_id', $data['elencopadrao_id'])
             ->first();
 
@@ -63,6 +75,7 @@ class PlayerFavoriteController extends Controller
         PlayerFavorite::create([
             'user_id' => $user->id,
             'liga_id' => $liga->id,
+            'confederacao_id' => $confederacaoId,
             'elencopadrao_id' => $data['elencopadrao_id'],
         ]);
 

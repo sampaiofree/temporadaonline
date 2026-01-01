@@ -19,6 +19,9 @@
             @include('admin.confederacoes._form', [
                 'action' => route('admin.confederacoes.store'),
                 'method' => 'POST',
+                'jogos' => $jogos,
+                'geracoes' => $geracoes,
+                'plataformas' => $plataformas,
                 'submitLabel' => 'Criar confederacao',
             ])
         </div>

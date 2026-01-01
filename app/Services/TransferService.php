@@ -6,6 +6,7 @@ use App\Models\Elencopadrao;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
+use App\Models\LigaProposta;
 use App\Models\LigaTransferencia;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
@@ -36,13 +37,16 @@ class TransferService
                 throw new \DomainException('Este jogador não pertence ao jogo desta liga.');
             }
 
+            [$scopeColumn, $scopeValue] = $this->resolveEntryScope($liga);
+            $scopeLabel = $liga->confederacao_id ? 'confederacao' : 'liga';
+
             $jaNaLiga = LigaClubeElenco::query()
-                ->where('liga_id', $ligaId)
+                ->where($scopeColumn, $scopeValue)
                 ->where('elencopadrao_id', $elencopadraoId)
                 ->exists();
 
             if ($jaNaLiga) {
-                throw new \DomainException('Esse jogador já faz parte de outro clube desta liga.');
+                throw new \DomainException("Esse jogador ja faz parte de outro clube desta {$scopeLabel}.");
             }
 
             $this->assertRosterLimit($liga, $compradorClubeId);
@@ -55,6 +59,7 @@ class TransferService
 
             try {
                 $entry = LigaClubeElenco::create([
+                    'confederacao_id' => $liga->confederacao_id,
                     'liga_id' => $ligaId,
                     'liga_clube_id' => $compradorClubeId,
                     'elencopadrao_id' => $elencopadraoId,
@@ -64,7 +69,7 @@ class TransferService
                 ]);
             } catch (QueryException $exception) {
                 if ($this->isUniqueViolation($exception)) {
-                    throw new \DomainException('Esse jogador já faz parte de outro clube desta liga.');
+                    throw new \DomainException("Esse jogador ja faz parte de outro clube desta {$scopeLabel}.");
                 }
 
                 throw $exception;
@@ -72,6 +77,9 @@ class TransferService
 
             LigaTransferencia::create([
                 'liga_id' => $ligaId,
+                'confederacao_id' => $liga->confederacao_id,
+                'liga_origem_id' => null,
+                'liga_destino_id' => $ligaId,
                 'elencopadrao_id' => $elencopadraoId,
                 'clube_origem_id' => null,
                 'clube_destino_id' => $compradorClubeId,
@@ -134,40 +142,54 @@ class TransferService
             $vendedor = LigaClube::query()->lockForUpdate()->findOrFail($vendedorClubeId);
             $comprador = LigaClube::query()->lockForUpdate()->findOrFail($compradorClubeId);
 
-            if ((int) $vendedor->liga_id !== (int) $liga->id || (int) $comprador->liga_id !== (int) $liga->id) {
-                throw new \DomainException('Um dos clubes não pertence a esta liga.');
+            if ((int) $comprador->liga_id !== (int) $liga->id) {
+                throw new \DomainException('Clube nao pertence a esta liga.');
             }
 
+            $ligaVendedor = (int) $vendedor->liga_id === (int) $liga->id
+                ? $liga
+                : Liga::query()->lockForUpdate()->findOrFail($vendedor->liga_id);
+
+            $this->assertSameScope($liga, $ligaVendedor);
+
+            [$scopeColumn, $scopeValue] = $this->resolveEntryScope($liga);
+
             $entry = LigaClubeElenco::query()
-                ->where('liga_id', $ligaId)
+                ->where($scopeColumn, $scopeValue)
                 ->where('elencopadrao_id', $elencopadraoId)
                 ->lockForUpdate()
                 ->first();
 
             if (! $entry || ! $entry->ativo) {
-                throw new \DomainException('Jogador não está disponível para transferência nesta liga.');
+                $scopeLabel = $liga->confederacao_id ? 'confederacao' : 'liga';
+                throw new \DomainException("Jogador nao esta disponivel para transferencia nesta {$scopeLabel}.");
             }
 
             if ((int) $entry->liga_clube_id !== (int) $vendedorClubeId) {
-                throw new \DomainException('O clube vendedor não possui este jogador.');
+                throw new \DomainException('O clube vendedor nao possui este jogador.');
             }
 
-            $minPrice = $this->minSellPrice($liga, (int) $entry->value_eur);
+            $minPrice = $this->minSellPrice($ligaVendedor, (int) $entry->value_eur);
             if ($price < $minPrice) {
-                throw new \DomainException('Preço abaixo do mínimo permitido para venda.');
+                throw new \DomainException('Preco abaixo do minimo permitido para venda.');
             }
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $price);
 
-            $this->finance->debit($ligaId, $compradorClubeId, $price, 'Compra de jogador');
-            $this->finance->credit($ligaId, $vendedorClubeId, $price, 'Venda de jogador');
+            $this->finance->debit($liga->id, $compradorClubeId, $price, 'Compra de jogador');
+            $this->finance->credit($ligaVendedor->id, $vendedorClubeId, $price, 'Venda de jogador');
 
             $entry->liga_clube_id = $compradorClubeId;
+            $entry->liga_id = $liga->id;
+            $entry->confederacao_id = $liga->confederacao_id;
             $entry->save();
 
             LigaTransferencia::create([
-                'liga_id' => $ligaId,
+                'liga_id' => $liga->id,
+                'confederacao_id' => $liga->confederacao_id,
+                'liga_origem_id' => $ligaVendedor->id,
+                'liga_destino_id' => $liga->id,
                 'elencopadrao_id' => $elencopadraoId,
                 'clube_origem_id' => $vendedorClubeId,
                 'clube_destino_id' => $compradorClubeId,
@@ -187,34 +209,48 @@ class TransferService
             $comprador = LigaClube::query()->lockForUpdate()->findOrFail($compradorClubeId);
 
             if ((int) $comprador->liga_id !== (int) $liga->id) {
-                throw new \DomainException('Clube não pertence a esta liga.');
+                throw new \DomainException('Clube nao pertence a esta liga.');
             }
 
+            [$scopeColumn, $scopeValue] = $this->resolveEntryScope($liga);
+
             $entry = LigaClubeElenco::query()
-                ->where('liga_id', $ligaId)
+                ->where($scopeColumn, $scopeValue)
                 ->where('elencopadrao_id', $elencopadraoId)
                 ->lockForUpdate()
                 ->first();
 
             if (! $entry || ! $entry->ativo) {
-                throw new \DomainException('Jogador não está em nenhum clube desta liga.');
+                $scopeLabel = $liga->confederacao_id ? 'confederacao' : 'liga';
+                throw new \DomainException("Jogador nao esta em nenhum clube desta {$scopeLabel}.");
             }
 
             $clubeOrigemId = (int) $entry->liga_clube_id;
 
-            $multa = (int) round(((int) $entry->value_eur) * (float) $liga->multa_multiplicador);
+            $ligaOrigem = (int) $entry->liga_id === (int) $liga->id
+                ? $liga
+                : Liga::query()->lockForUpdate()->findOrFail($entry->liga_id);
+
+            $this->assertSameScope($liga, $ligaOrigem);
+
+            $multa = (int) round(((int) $entry->value_eur) * (float) $ligaOrigem->multa_multiplicador);
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $multa);
 
-            $this->finance->debit($ligaId, $compradorClubeId, $multa, 'Pagamento de multa');
-            $this->finance->credit($ligaId, $clubeOrigemId, $multa, 'Recebimento de multa');
+            $this->finance->debit($liga->id, $compradorClubeId, $multa, 'Pagamento de multa');
+            $this->finance->credit($ligaOrigem->id, $clubeOrigemId, $multa, 'Recebimento de multa');
 
             $entry->liga_clube_id = $compradorClubeId;
+            $entry->liga_id = $liga->id;
+            $entry->confederacao_id = $liga->confederacao_id;
             $entry->save();
 
             LigaTransferencia::create([
-                'liga_id' => $ligaId,
+                'liga_id' => $liga->id,
+                'confederacao_id' => $liga->confederacao_id,
+                'liga_origem_id' => $ligaOrigem->id,
+                'liga_destino_id' => $liga->id,
                 'elencopadrao_id' => $elencopadraoId,
                 'clube_origem_id' => $clubeOrigemId,
                 'clube_destino_id' => $compradorClubeId,
@@ -234,18 +270,26 @@ class TransferService
             $clubeA = LigaClube::query()->lockForUpdate()->findOrFail($clubeAId);
             $clubeB = LigaClube::query()->lockForUpdate()->findOrFail($clubeBId);
 
-            if ((int) $clubeA->liga_id !== (int) $liga->id || (int) $clubeB->liga_id !== (int) $liga->id) {
-                throw new \DomainException('Um dos clubes não pertence a esta liga.');
+            if ((int) $clubeA->liga_id !== (int) $liga->id) {
+                throw new \DomainException('Clube nao pertence a esta liga.');
             }
 
+            $ligaB = (int) $clubeB->liga_id === (int) $liga->id
+                ? $liga
+                : Liga::query()->lockForUpdate()->findOrFail($clubeB->liga_id);
+
+            $this->assertSameScope($liga, $ligaB);
+
+            [$scopeColumn, $scopeValue] = $this->resolveEntryScope($liga);
+
             $entryA = LigaClubeElenco::query()
-                ->where('liga_id', $ligaId)
+                ->where($scopeColumn, $scopeValue)
                 ->where('elencopadrao_id', $jogadorAId)
                 ->lockForUpdate()
                 ->first();
 
             $entryB = LigaClubeElenco::query()
-                ->where('liga_id', $ligaId)
+                ->where($scopeColumn, $scopeValue)
                 ->where('elencopadrao_id', $jogadorBId)
                 ->lockForUpdate()
                 ->first();
@@ -255,26 +299,30 @@ class TransferService
             }
 
             if ((int) $entryA->liga_clube_id !== (int) $clubeAId || (int) $entryB->liga_clube_id !== (int) $clubeBId) {
-                throw new \DomainException('Os jogadores informados não pertencem aos clubes selecionados.');
+                throw new \DomainException('Os jogadores informados nao pertencem aos clubes selecionados.');
             }
 
             if ($ajusteValor !== 0) {
                 if ($ajusteValor > 0) {
                     $this->assertClubCanSpend($liga, $clubeAId, $ajusteValor);
-                    $this->finance->debit($ligaId, $clubeAId, $ajusteValor, 'Ajuste de troca');
-                    $this->finance->credit($ligaId, $clubeBId, $ajusteValor, 'Ajuste de troca');
+                    $this->finance->debit($liga->id, $clubeAId, $ajusteValor, 'Ajuste de troca');
+                    $this->finance->credit($ligaB->id, $clubeBId, $ajusteValor, 'Ajuste de troca');
                 } else {
                     $valor = abs($ajusteValor);
-                    $this->assertClubCanSpend($liga, $clubeBId, $valor);
-                    $this->finance->debit($ligaId, $clubeBId, $valor, 'Ajuste de troca');
-                    $this->finance->credit($ligaId, $clubeAId, $valor, 'Ajuste de troca');
+                    $this->assertClubCanSpend($ligaB, $clubeBId, $valor);
+                    $this->finance->debit($ligaB->id, $clubeBId, $valor, 'Ajuste de troca');
+                    $this->finance->credit($liga->id, $clubeAId, $valor, 'Ajuste de troca');
                 }
             }
 
             $entryA->liga_clube_id = $clubeBId;
+            $entryA->liga_id = $ligaB->id;
+            $entryA->confederacao_id = $liga->confederacao_id;
             $entryA->save();
 
             $entryB->liga_clube_id = $clubeAId;
+            $entryB->liga_id = $liga->id;
+            $entryB->confederacao_id = $liga->confederacao_id;
             $entryB->save();
 
             $observacao = sprintf(
@@ -285,7 +333,10 @@ class TransferService
             );
 
             LigaTransferencia::create([
-                'liga_id' => $ligaId,
+                'liga_id' => $ligaB->id,
+                'confederacao_id' => $liga->confederacao_id,
+                'liga_origem_id' => $liga->id,
+                'liga_destino_id' => $ligaB->id,
                 'elencopadrao_id' => $jogadorAId,
                 'clube_origem_id' => $clubeAId,
                 'clube_destino_id' => $clubeBId,
@@ -295,7 +346,10 @@ class TransferService
             ]);
 
             LigaTransferencia::create([
-                'liga_id' => $ligaId,
+                'liga_id' => $liga->id,
+                'confederacao_id' => $liga->confederacao_id,
+                'liga_origem_id' => $ligaB->id,
+                'liga_destino_id' => $liga->id,
                 'elencopadrao_id' => $jogadorBId,
                 'clube_origem_id' => $clubeBId,
                 'clube_destino_id' => $clubeAId,
@@ -306,6 +360,173 @@ class TransferService
 
             return [$entryA, $entryB];
         }, 3);
+    }
+
+    public function acceptProposal(LigaProposta $proposta): void
+    {
+        DB::transaction(function () use ($proposta): void {
+            $proposal = LigaProposta::query()->lockForUpdate()->findOrFail($proposta->id);
+
+            if ($proposal->status !== 'aberta') {
+                throw new \DomainException('Proposta nao esta mais disponivel.');
+            }
+
+            $ligaOrigem = Liga::query()->lockForUpdate()->findOrFail($proposal->liga_origem_id);
+            $ligaDestino = Liga::query()->lockForUpdate()->findOrFail($proposal->liga_destino_id);
+            $clubeOrigem = LigaClube::query()->lockForUpdate()->findOrFail($proposal->clube_origem_id);
+            $clubeDestino = LigaClube::query()->lockForUpdate()->findOrFail($proposal->clube_destino_id);
+
+            $this->assertSameScope($ligaDestino, $ligaOrigem);
+
+            [$scopeColumn, $scopeValue] = $this->resolveEntryScope($ligaDestino);
+
+            $targetEntry = LigaClubeElenco::query()
+                ->where($scopeColumn, $scopeValue)
+                ->where('elencopadrao_id', $proposal->elencopadrao_id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $targetEntry || ! $targetEntry->ativo) {
+                throw new \DomainException('Jogador nao esta mais disponivel para transferencia.');
+            }
+
+            if ((int) $targetEntry->liga_clube_id !== (int) $clubeOrigem->id) {
+                throw new \DomainException('Jogador nao pertence mais ao clube de origem.');
+            }
+
+            $offerIds = array_values(array_unique(array_map('intval', $proposal->oferta_elencopadrao_ids ?? [])));
+            $offerEntries = collect();
+
+            if ($offerIds) {
+                $offerEntries = LigaClubeElenco::query()
+                    ->where($scopeColumn, $scopeValue)
+                    ->where('liga_clube_id', $clubeDestino->id)
+                    ->whereIn('elencopadrao_id', $offerIds)
+                    ->where('ativo', true)
+                    ->lockForUpdate()
+                    ->get();
+
+                if ($offerEntries->count() !== count($offerIds)) {
+                    throw new \DomainException('Jogadores oferecidos nao pertencem mais ao clube de destino.');
+                }
+            }
+
+            $sellerCount = $this->countActivePlayers($ligaOrigem, $clubeOrigem->id);
+            $buyerCount = $this->countActivePlayers($ligaDestino, $clubeDestino->id);
+
+            $sellerFinal = $sellerCount - 1 + $offerEntries->count();
+            $buyerFinal = $buyerCount + 1 - $offerEntries->count();
+
+            $this->assertRosterLimitForCount($ligaOrigem, $sellerFinal);
+            $this->assertRosterLimitForCount($ligaDestino, $buyerFinal);
+
+            $valor = (int) $proposal->valor;
+            if ($valor > 0) {
+                $this->assertClubCanSpend($ligaDestino, $clubeDestino->id, $valor);
+                $this->finance->debit($ligaDestino->id, $clubeDestino->id, $valor, 'Proposta aceita');
+                $this->finance->credit($ligaOrigem->id, $clubeOrigem->id, $valor, 'Proposta aceita');
+            }
+
+            $targetEntry->liga_clube_id = $clubeDestino->id;
+            $targetEntry->liga_id = $ligaDestino->id;
+            $targetEntry->confederacao_id = $ligaDestino->confederacao_id;
+            $targetEntry->save();
+
+            foreach ($offerEntries as $entry) {
+                $entry->liga_clube_id = $clubeOrigem->id;
+                $entry->liga_id = $ligaOrigem->id;
+                $entry->confederacao_id = $ligaOrigem->confederacao_id;
+                $entry->save();
+            }
+
+            $proposal->status = 'aceita';
+            $proposal->save();
+
+            $cancelQuery = LigaProposta::query()
+                ->where('id', '<>', $proposal->id)
+                ->where('status', 'aberta')
+                ->where('elencopadrao_id', $proposal->elencopadrao_id);
+
+            if ($proposal->confederacao_id) {
+                $cancelQuery->where('confederacao_id', $proposal->confederacao_id);
+            } else {
+                $cancelQuery->where('liga_origem_id', $proposal->liga_origem_id);
+            }
+
+            $cancelQuery->update(['status' => 'cancelada']);
+
+            $observacao = 'Proposta aceita #'.$proposal->id;
+
+            LigaTransferencia::create([
+                'liga_id' => $ligaDestino->id,
+                'confederacao_id' => $ligaDestino->confederacao_id,
+                'liga_origem_id' => $ligaOrigem->id,
+                'liga_destino_id' => $ligaDestino->id,
+                'elencopadrao_id' => $proposal->elencopadrao_id,
+                'clube_origem_id' => $clubeOrigem->id,
+                'clube_destino_id' => $clubeDestino->id,
+                'tipo' => 'troca',
+                'valor' => $valor,
+                'observacao' => $observacao,
+            ]);
+
+            foreach ($offerEntries as $entry) {
+                LigaTransferencia::create([
+                    'liga_id' => $ligaOrigem->id,
+                    'confederacao_id' => $ligaOrigem->confederacao_id,
+                    'liga_origem_id' => $ligaDestino->id,
+                    'liga_destino_id' => $ligaOrigem->id,
+                    'elencopadrao_id' => $entry->elencopadrao_id,
+                    'clube_origem_id' => $clubeDestino->id,
+                    'clube_destino_id' => $clubeOrigem->id,
+                    'tipo' => 'troca',
+                    'valor' => 0,
+                    'observacao' => $observacao,
+                ]);
+            }
+        }, 3);
+    }
+
+    private function resolveEntryScope(Liga $liga): array
+    {
+        if ($liga->confederacao_id) {
+            return ['confederacao_id', (int) $liga->confederacao_id];
+        }
+
+        return ['liga_id', (int) $liga->id];
+    }
+
+    private function assertSameScope(Liga $liga, Liga $otherLiga): void
+    {
+        if ($liga->confederacao_id) {
+            if ((int) $otherLiga->confederacao_id !== (int) $liga->confederacao_id) {
+                throw new \DomainException('Um dos clubes nao pertence a esta confederacao.');
+            }
+
+            return;
+        }
+
+        if ((int) $otherLiga->id !== (int) $liga->id) {
+            throw new \DomainException('Um dos clubes nao pertence a esta liga.');
+        }
+    }
+
+    private function countActivePlayers(Liga $liga, int $clubeId): int
+    {
+        return LigaClubeElenco::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clubeId)
+            ->where('ativo', true)
+            ->count();
+    }
+
+    private function assertRosterLimitForCount(Liga $liga, int $count): void
+    {
+        $max = (int) ($liga->max_jogadores_por_clube ?? 18);
+
+        if ($count > $max) {
+            throw new \DomainException("Elenco cheio ({$count}/{$max}).");
+        }
     }
 
     private function assertRosterLimit(Liga $liga, int $clubeId): void

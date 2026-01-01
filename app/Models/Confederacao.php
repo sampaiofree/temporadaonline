@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Confederacao extends Model
@@ -13,10 +14,28 @@ class Confederacao extends Model
         'nome',
         'descricao',
         'imagem',
+        'jogo_id',
+        'geracao_id',
+        'plataforma_id',
     ];
 
     public function ligas(): HasMany
     {
         return $this->hasMany(Liga::class);
+    }
+
+    public function jogo(): BelongsTo
+    {
+        return $this->belongsTo(Jogo::class);
+    }
+
+    public function geracao(): BelongsTo
+    {
+        return $this->belongsTo(Geracao::class);
+    }
+
+    public function plataforma(): BelongsTo
+    {
+        return $this->belongsTo(Plataforma::class);
     }
 }

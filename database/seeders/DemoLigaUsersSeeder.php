@@ -20,6 +20,7 @@ class DemoLigaUsersSeeder extends Seeder
         if (! $liga) {
             return;
         }
+        $confederacaoId = $liga->confederacao_id;
 
         $players = Elencopadrao::where('jogo_id', $liga->jogo_id)
             ->orderBy('id')
@@ -65,18 +66,29 @@ class DemoLigaUsersSeeder extends Seeder
                 $player = $available[$pointer++];
                 $entryCount++;
 
-                LigaClubeElenco::updateOrCreate(
-                    [
+                $keys = $confederacaoId
+                    ? [
+                        'confederacao_id' => $confederacaoId,
+                        'elencopadrao_id' => $player->id,
+                    ]
+                    : [
                         'liga_id' => $liga->id,
                         'elencopadrao_id' => $player->id,
-                    ],
-                    [
-                        'liga_clube_id' => $club->id,
-                        'value_eur' => $player->value_eur ?? 0,
-                        'wage_eur' => $player->wage_eur ?? 0,
-                        'ativo' => true,
-                    ],
-                );
+                    ];
+
+                $payload = [
+                    'liga_id' => $liga->id,
+                    'liga_clube_id' => $club->id,
+                    'value_eur' => $player->value_eur ?? 0,
+                    'wage_eur' => $player->wage_eur ?? 0,
+                    'ativo' => true,
+                ];
+
+                if ($confederacaoId) {
+                    $payload['confederacao_id'] = $confederacaoId;
+                }
+
+                LigaClubeElenco::updateOrCreate($keys, $payload);
             }
 
             $wallet = LigaClubeFinanceiro::updateOrCreate(
