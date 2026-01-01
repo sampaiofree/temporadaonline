@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\PartidaAvaliacaoController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
 use App\Http\Controllers\Api\PartidaScheduleController;
 use App\Http\Controllers\Api\PartidaActionsController;
+use App\Http\Controllers\Api\PendingActionsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['web', 'auth'])->group(function (): void {
@@ -29,6 +30,7 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/me/disponibilidades', [UserDisponibilidadeController::class, 'store']);
     Route::put('/me/disponibilidades/{id}', [UserDisponibilidadeController::class, 'update']);
     Route::delete('/me/disponibilidades/{id}', [UserDisponibilidadeController::class, 'destroy']);
+    Route::get('/me/pendencias', [PendingActionsController::class, 'index']);
 
     // Partidas - agendamento pelo visitante
     Route::get('/partidas/{partida}/slots', [PartidaScheduleController::class, 'slots']);

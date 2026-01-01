@@ -27,7 +27,7 @@ class PartidaAvaliacaoController extends Controller
             abort(403, 'Apenas participantes podem avaliar esta partida.');
         }
 
-        if (! in_array($partida->estado, ['placar_registrado', 'placar_confirmado'], true)) {
+        if (! in_array($partida->estado, ['placar_registrado', 'placar_confirmado', 'em_reclamacao', 'finalizada'], true)) {
             abort(403, 'Avaliacao indisponivel para este estado.');
         }
 

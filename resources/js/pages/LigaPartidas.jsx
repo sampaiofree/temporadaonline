@@ -980,7 +980,8 @@ export default function LigaPartidas() {
                                 !isRegistrante;
                             const canAvaliar =
                                 isParticipant(partida) &&
-                                ['placar_registrado', 'placar_confirmado'].includes(partida.estado) &&
+                                ['placar_registrado', 'placar_confirmado', 'em_reclamacao', 'finalizada']
+                                    .includes(partida.estado) &&
                                 !hasAvaliacao;
                             const canWo = canDesistir(partida);
                             const finalizarUrl = `/liga/partidas/${partida.id}/finalizar?liga_id=${liga.id}`;

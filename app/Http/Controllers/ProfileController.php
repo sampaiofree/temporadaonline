@@ -89,6 +89,7 @@ class ProfileController extends Controller
             'plataforma' => $payload['plataforma'] ?? $profile->plataforma,
             'jogo' => $payload['jogo'] ?? $profile->jogo,
             'geracao' => $payload['geracao'] ?? $profile->geracao,
+            'whatsapp' => $payload['whatsapp'] ?? $profile->whatsapp,
         ]);
 
         $profile->save();
@@ -138,6 +139,7 @@ class ProfileController extends Controller
             'nome' => $user->name ?? null,
             'nickname' => $profile?->nickname,
             'email' => $user->email ?? null,
+            'whatsapp' => $profile?->whatsapp,
             'plataforma' => $profile?->plataforma_nome,
             'plataforma_id' => $profile?->plataforma_id,
             'geracao' => $profile?->geracao_nome,

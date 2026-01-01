@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponi
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
+use App\Http\Controllers\LigaElencoController;
 use App\Http\Controllers\LigaMercadoController;
 use App\Http\Controllers\LigaPartidasController;
 use App\Http\Controllers\LigaClubePerfilController;
@@ -97,6 +98,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/liga/partidas/{partida}/finalizar', [LigaPartidasController::class, 'finalizar'])
         ->name('liga.partidas.finalizar');
     Route::get('/liga/classificacao', [LigaClassificacaoController::class, 'index'])->name('liga.classificacao');
+    Route::get('/liga/elenco', [LigaElencoController::class, 'index'])->name('liga.elenco');
     Route::get('/liga/clubes/{clube}', [LigaClubePerfilController::class, 'show'])->name('liga.clube.perfil');
     Route::post('/minha_liga/clube/elenco', [MinhaLigaController::class, 'addPlayerToClub'])->name('minha_liga.clube.elenco');
     // Rota legada: redireciona antiga lista de elenco para o mercado da liga

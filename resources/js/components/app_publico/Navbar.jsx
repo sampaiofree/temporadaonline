@@ -1,3 +1,5 @@
+import PendingActionsGate from './PendingActionsGate';
+
 const GLOBAL_NAV_ITEMS = [
     {
         id: 'home',
@@ -112,24 +114,27 @@ export default function Navbar({ active: controlledActive }) {
     const activeId = shouldUseControlledActive ? controlledActive : resolvedActive;
 
     return (
-        <nav className="mco-navbar" aria-label="Menu principal">
-            {items.map((item) => {
-                const isActive = activeId === item.id;
+        <>
+            <PendingActionsGate />
+            <nav className="mco-navbar" aria-label="Menu principal">
+                {items.map((item) => {
+                    const isActive = activeId === item.id;
 
-                return (
-                    <a
-                        key={item.id}
-                        href={item.href}
-                        className={`nav-item${isActive ? ' active' : ''}`}
-                        aria-current={isActive ? 'page' : undefined}
-                    >
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                            <path d={item.iconPath} />
-                        </svg>
-                        {item.label}
-                    </a>
-                );
-            })}
-        </nav>
+                    return (
+                        <a
+                            key={item.id}
+                            href={item.href}
+                            className={`nav-item${isActive ? ' active' : ''}`}
+                            aria-current={isActive ? 'page' : undefined}
+                        >
+                            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                                <path d={item.iconPath} />
+                            </svg>
+                            {item.label}
+                        </a>
+                    );
+                })}
+            </nav>
+        </>
     );
 }

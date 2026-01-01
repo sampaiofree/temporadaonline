@@ -60,7 +60,7 @@ class DashboardController extends Controller
             [
                 'id' => 'perfil',
                 'title' => 'Completar perfil',
-                'description' => 'Adicione plataforma, jogo, nickname e geração no seu perfil.',
+                'description' => 'Adicione plataforma, jogo, nickname, geração e WhatsApp no seu perfil.',
                 'done' => $profileComplete,
                 
             ],

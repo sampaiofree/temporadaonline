@@ -62,8 +62,11 @@ export default function MinhaLiga() {
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
     const meuClubeHref = `/minha_liga/clube?liga_id=${liga.id}`;
+    const elencoLigaHref = `/liga/elenco?liga_id=${liga.id}`;
     const descricao = (liga?.descricao || '').toString().trim();
     const regras = (liga?.regras || '').toString().trim();
+    const whatsappLink = (liga?.whatsapp_grupo_link || '').toString().trim();
+    const hasWhatsappLink = Boolean(whatsappLink);
     const periodos = Array.isArray(liga?.periodos) ? liga.periodos : [];
     const activePeriod = liga?.periodo_atual ?? null;
     const isActivePeriod = (period) =>
@@ -132,18 +135,41 @@ export default function MinhaLiga() {
                         <strong>{liga.jogo || '—'}</strong>
                     </div>
                 </div>
-                {(descricao || regras) && (
+                {(descricao || regras || hasWhatsappLink) && (
                     <div className="league-info">
                         {descricao && (
                             <div className="league-info-block">
                                 <span className="league-info-title">Descrição</span>
                                 <p className="league-info-text">{descricao}</p>
+                                {hasWhatsappLink && (
+                                    <a
+                                        className="btn-primary league-info-whatsapp"
+                                        href={whatsappLink}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        Entrar no grupo do WhatsApp
+                                    </a>
+                                )}
                             </div>
                         )}
                         {regras && (
                             <div className="league-info-block">
                                 <span className="league-info-title">Regras</span>
                                 <p className="league-info-text">{regras}</p>
+                            </div>
+                        )}
+                        {!descricao && hasWhatsappLink && (
+                            <div className="league-info-block">
+                                <span className="league-info-title">WhatsApp</span>
+                                <a
+                                    className="btn-primary league-info-whatsapp"
+                                    href={whatsappLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
+                                    Entrar no grupo do WhatsApp
+                                </a>
                             </div>
                         )}
                     </div>
@@ -196,6 +222,9 @@ export default function MinhaLiga() {
                 </a>
                 <a className="control-card" href={meuClubeHref}>
                     <span className="control-card-title">Meu clube</span>
+                </a>
+                <a className="control-card" href={elencoLigaHref}>
+                    <span className="control-card-title">Elenco da liga</span>
                 </a>
             </section>
             <section className="league-periods">

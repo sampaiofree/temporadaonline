@@ -15,6 +15,7 @@ trait ChecksProfileCompletion
         return filled($profile->plataforma)
             && filled($profile->jogo)
             && filled($profile->nickname)
-            && filled($profile->geracao);
+            && filled($profile->geracao)
+            && filled($profile->whatsapp);
     }
 }

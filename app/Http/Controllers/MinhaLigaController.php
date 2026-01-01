@@ -78,6 +78,7 @@ class MinhaLigaController extends Controller
                 'imagem' => $liga->imagem,
                 'descricao' => $liga->descricao,
                 'regras' => $liga->regras,
+                'whatsapp_grupo_link' => $liga->whatsapp_grupo_link,
                 'tipo' => $liga->tipo,
                 'status' => $liga->status,
                 'jogo' => $liga->jogo?->nome,

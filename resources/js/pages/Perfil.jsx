@@ -25,6 +25,15 @@ const TEXT_FIELDS = [
         type: 'email',
         autoComplete: 'email',
     },
+    {
+        name: 'whatsapp',
+        label: 'WhatsApp',
+        placeholder: 'Informe seu WhatsApp (apenas números)',
+        required: false,
+        type: 'tel',
+        autoComplete: 'tel',
+        maxLength: 15,
+    },
 ];
 
 const getInitials = (name) => {
@@ -40,6 +49,7 @@ const mapPlayerToForm = (player) => ({
     nome: player?.nome ?? '',
     nickname: player?.nickname ?? '',
     email: player?.email ?? '',
+    whatsapp: player?.whatsapp ?? '',
     geracao_id: player?.geracao_id ?? '',
     plataforma_id: player?.plataforma_id ?? '',
     jogo_id: player?.jogo_id ?? '',
@@ -149,11 +159,13 @@ export default function Perfil() {
     const platformLabel = [playerData.plataforma, playerData.geracao].filter(Boolean).join(' · ') || 'Plataforma não informada';
     const gameLabel = playerData.jogo || 'Jogo não informado';
     const emailLabel = playerData.email || 'Email não informado';
+    const whatsappLabel = playerData.whatsapp || 'WhatsApp não informado';
 
     const profileFields = [
         { label: 'Nome', value: displayName || 'Nome não informado' },
         { label: 'Nickname', value: displayNickname ? `#${displayNickname}` : 'Nickname não informado' },
         { label: 'Email', value: emailLabel },
+        { label: 'WhatsApp', value: whatsappLabel },
         { label: 'Plataforma & Geração', value: platformLabel },
         { label: 'Jogo', value: gameLabel },
     ];
@@ -304,6 +316,7 @@ export default function Perfil() {
                                         value={formData[field.name]}
                                         onChange={handleChange}
                                         autoComplete={field.autoComplete}
+                                        maxLength={field.maxLength}
                                     />
                                     {errors[field.name]?.[0] && (
                                         <span className="profile-error">{errors[field.name][0]}</span>

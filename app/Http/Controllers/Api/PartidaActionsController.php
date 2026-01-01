@@ -270,15 +270,25 @@ class PartidaActionsController extends Controller
             'descricao' => ['required', 'string', 'max:1000'],
         ]);
 
-        PartidaDenuncia::create([
+        $denuncia = PartidaDenuncia::create([
             'partida_id' => $partida->id,
             'user_id' => $user->id,
             'motivo' => 'texto',
             'descricao' => $data['descricao'],
         ]);
 
+        $this->state->transitionTo(
+            $partida,
+            'em_reclamacao',
+            [],
+            'placar_denunciado',
+            $user->id,
+            ['denuncia_id' => $denuncia->id],
+        );
+
         return response()->json([
             'message' => 'Denúncia registrada.',
+            'estado' => $partida->estado,
         ]);
     }
 
