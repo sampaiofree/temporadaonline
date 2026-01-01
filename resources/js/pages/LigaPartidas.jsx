@@ -28,8 +28,9 @@ export default function LigaPartidas() {
     const [modalError, setModalError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [placarForm, setPlacarForm] = useState({ mandante: '', visitante: '' });
-    const [denunciaForm, setDenunciaForm] = useState({ motivo: '', descricao: '' });
+    const [denunciaForm, setDenunciaForm] = useState({ descricao: '' });
     const [reclamacaoForm, setReclamacaoForm] = useState({ motivo: '', descricao: '', imagem: '' });
+    const [avaliacaoForm, setAvaliacaoForm] = useState({ nota: 0 });
     const [successMessage, setSuccessMessage] = useState('');
 
     useEffect(() => {
@@ -56,7 +57,6 @@ export default function LigaPartidas() {
         agendada: 'Agendada',
         confirmacao_necessaria: 'Confirmação pendente',
         confirmada: 'Confirmada',
-        em_andamento: 'Em andamento',
         placar_registrado: 'Placar registrado',
         placar_confirmado: 'Placar confirmado',
         em_reclamacao: 'Em reclamação',
@@ -68,7 +68,6 @@ export default function LigaPartidas() {
     const estadoClass = {
         confirmacao_necessaria: 'warning',
         confirmada: 'success',
-        em_andamento: 'info',
         placar_registrado: 'warning',
         placar_confirmado: 'success',
         em_reclamacao: 'danger',
@@ -156,7 +155,6 @@ export default function LigaPartidas() {
         { id: 'all', label: 'Todas' },
         { id: 'aguardando', label: 'Aguardando confirmação' },
         { id: 'confirmadas', label: 'Confirmadas' },
-        { id: 'em_andamento', label: 'Em andamento' },
         { id: 'finalizadas', label: 'Finalizadas' },
     ];
 
@@ -182,8 +180,6 @@ export default function LigaPartidas() {
                 return partida.estado === 'confirmacao_necessaria';
             case 'confirmadas':
                 return ['confirmada', 'agendada'].includes(partida.estado);
-            case 'em_andamento':
-                return partida.estado === 'em_andamento';
             case 'finalizadas':
                 return [
                     'finalizada',
@@ -217,14 +213,15 @@ export default function LigaPartidas() {
         setSelectedSlot('');
         setModalError('');
         setPlacarForm({ mandante: '', visitante: '' });
-        setDenunciaForm({ motivo: '', descricao: '' });
+        setDenunciaForm({ descricao: '' });
         setReclamacaoForm({ motivo: '', descricao: '', imagem: '' });
+        setAvaliacaoForm({ nota: 0 });
     };
 
     const openModal = (type, partida) => {
         resetModalState();
         setModal({ type, partida });
-        if (type === 'agendar') {
+        if (type === 'agendar' || type === 'reagendar') {
             loadSlots(partida.id);
         }
         if (type === 'placar' && partida) {
@@ -275,7 +272,7 @@ export default function LigaPartidas() {
             );
 
             updatePartida(modal.partida.id, {
-                estado: 'confirmada',
+                estado: data.estado ?? modal.partida.estado,
                 scheduled_at: data.scheduled_at ?? modal.partida.scheduled_at,
                 sem_slot_disponivel: false,
                 forced_by_system: false,
@@ -339,6 +336,7 @@ export default function LigaPartidas() {
                 estado: data.estado ?? 'finalizada',
                 placar_mandante: data.placar_mandante,
                 placar_visitante: data.placar_visitante,
+                placar_registrado_por: clube?.user_id ?? modal.partida.placar_registrado_por,
             });
             closeModal();
         } catch (error) {
@@ -354,8 +352,8 @@ export default function LigaPartidas() {
 
     const handleDenuncia = async () => {
         if (!modal.partida) return;
-        if (!denunciaForm.motivo) {
-            setModalError('Selecione um motivo.');
+        if (!denunciaForm.descricao) {
+            setModalError('Informe o texto da denuncia.');
             return;
         }
 
@@ -364,7 +362,6 @@ export default function LigaPartidas() {
 
         try {
             await window.axios.post(`/api/partidas/${modal.partida.id}/denunciar`, {
-                motivo: denunciaForm.motivo,
                 descricao: denunciaForm.descricao,
             });
 
@@ -426,7 +423,44 @@ export default function LigaPartidas() {
             closeModal();
         } catch (error) {
             const message =
-                error.response?.data?.message ?? 'Não foi possível confirmar o placar.';
+                error.response?.data?.errors?.avaliacao?.[0] ??
+                error.response?.data?.message ??
+                'Não foi possível confirmar o placar.';
+            setModalError(message);
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleRegistrarAvaliacao = async () => {
+        if (!modal.partida) return;
+        if (!avaliacaoForm.nota) {
+            setModalError('Selecione uma nota de 1 a 5.');
+            return;
+        }
+
+        setSubmitting(true);
+        setModalError('');
+
+        try {
+            const { data } = await window.axios.post(
+                `/api/partidas/${modal.partida.id}/avaliacoes`,
+                { nota: Number(avaliacaoForm.nota) },
+            );
+
+            updatePartida(modal.partida.id, {
+                avaliacao: {
+                    nota: data.nota ?? Number(avaliacaoForm.nota),
+                    avaliado_user_id: data.avaliado_user_id ?? null,
+                },
+            });
+            closeModal();
+        } catch (error) {
+            const message =
+                error.response?.data?.errors?.avaliacao?.[0] ??
+                error.response?.data?.errors?.nota?.[0] ??
+                error.response?.data?.message ??
+                'Nao foi possivel registrar a avaliacao.';
             setModalError(message);
         } finally {
             setSubmitting(false);
@@ -472,12 +506,14 @@ export default function LigaPartidas() {
 
         const partida = modal.partida;
 
-        if (modal.type === 'agendar') {
+        if (modal.type === 'agendar' || modal.type === 'reagendar') {
+            const isReagendar = modal.type === 'reagendar';
+
             return (
                 <div className="meu-elenco-modal">
-                    <h3>Agendar partida</h3>
+                    <h3>{isReagendar ? 'Reagendar partida' : 'Agendar partida'}</h3>
                     <p className="meu-elenco-modal-description">
-                        Escolha um horário disponível com base na disponibilidade do mandante.
+                        Escolha um horário disponível com base na disponibilidade do adversário.
                     </p>
                     <small className="partida-calendar-timezone">Fuso da liga: {ligaTimezone}</small>
 
@@ -487,7 +523,7 @@ export default function LigaPartidas() {
                         <div className="partida-option-empty">
                             <p>Nenhum horário disponível no período da liga.</p>
                             <span className="partida-calendar-help">
-                                Aguarde o mandante atualizar sua disponibilidade.
+                                Aguarde o adversário atualizar sua disponibilidade.
                             </span>
                         </div>
                     ) : (
@@ -524,7 +560,11 @@ export default function LigaPartidas() {
                             onClick={handleScheduleSubmit}
                             disabled={submitting || !selectedSlot}
                         >
-                            {submitting ? 'Enviando...' : 'Confirmar horário'}
+                            {submitting
+                                ? 'Enviando...'
+                                : isReagendar
+                                ? 'Reagendar'
+                                : 'Confirmar horário'}
                         </button>
                     </div>
                 </div>
@@ -600,6 +640,47 @@ export default function LigaPartidas() {
             );
         }
 
+        if (modal.type === 'avaliar') {
+            const opponentName = isMandante(partida)
+                ? partida.visitante_nickname || partida.visitante
+                : partida.mandante_nickname || partida.mandante;
+
+            return (
+                <div className="meu-elenco-modal">
+                    <h3>Avaliar adversario</h3>
+                    <p className="meu-elenco-modal-description">
+                        Selecione uma nota de 1 a 5 para {opponentName ?? 'o adversario'}.
+                    </p>
+                    <div className="filter-pill-row filter-pill-row-compact">
+                        {[1, 2, 3, 4, 5].map((nota) => (
+                            <button
+                                key={nota}
+                                type="button"
+                                className={`filter-pill${avaliacaoForm.nota === nota ? ' active' : ''}`}
+                                onClick={() => setAvaliacaoForm({ nota })}
+                            >
+                                {nota}
+                            </button>
+                        ))}
+                    </div>
+                    {modalError && <p className="modal-error">{modalError}</p>}
+                    <div className="meu-elenco-modal-actions">
+                        <button type="button" className="btn-outline" onClick={closeModal} disabled={submitting}>
+                            Cancelar
+                        </button>
+                        <button
+                            type="button"
+                            className="btn-primary"
+                            onClick={handleRegistrarAvaliacao}
+                            disabled={submitting || !avaliacaoForm.nota}
+                        >
+                            {submitting ? 'Enviando...' : 'Enviar avaliacao'}
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         if (modal.type === 'confirmar_placar') {
             return (
                 <div className="meu-elenco-modal">
@@ -628,33 +709,14 @@ export default function LigaPartidas() {
         if (modal.type === 'denuncia') {
             return (
                 <div className="meu-elenco-modal">
-                    <h3>Denunciar</h3>
-                    <p className="meu-elenco-modal-description">Selecione o motivo e descreva, se necessário.</p>
-
-                    <div className="partida-option-list">
-                        {[
-                            { value: 'conduta_antidesportiva', label: 'Conduta antidesportiva' },
-                            { value: 'escala_irregular', label: 'Escalação irregular' },
-                            { value: 'conexao', label: 'Problema de conexão' },
-                            { value: 'outro', label: 'Outro' },
-                        ].map((item) => (
-                            <label key={item.value} className="partida-option">
-                                <input
-                                    type="radio"
-                                    name="denuncia-motivo"
-                                    checked={denunciaForm.motivo === item.value}
-                                    onChange={() =>
-                                        setDenunciaForm((prev) => ({ ...prev, motivo: item.value }))
-                                    }
-                                />
-                                <span>{item.label}</span>
-                            </label>
-                        ))}
-                    </div>
+                    <h3>Denunciar partida</h3>
+                    <p className="meu-elenco-modal-description">
+                        Descreva o ocorrido para registrar a denuncia da partida.
+                    </p>
 
                     <textarea
                         className="denuncia-textarea"
-                        placeholder="Descreva brevemente (opcional)"
+                        placeholder="Descreva a denuncia"
                         value={denunciaForm.descricao}
                         onChange={(e) =>
                             setDenunciaForm((prev) => ({ ...prev, descricao: e.target.value }))
@@ -893,13 +955,33 @@ export default function LigaPartidas() {
                                 ? 'Sem horário disponível'
                                 : formatDate(partida.scheduled_at);
                             const chips = chipsForPartida(partida);
+                            const hasAvaliacao = Boolean(partida.avaliacao?.nota);
+                            const isRegistrante =
+                                clube?.user_id &&
+                                Number(partida.placar_registrado_por) === Number(clube.user_id);
                             const canSchedule =
-                                isVisitante(partida) &&
+                                isParticipant(partida) &&
                                 partida.estado === 'confirmacao_necessaria' &&
                                 !partida.scheduled_at;
+                            const canReschedule =
+                                isParticipant(partida) &&
+                                ['confirmada', 'agendada'].includes(partida.estado) &&
+                                Boolean(partida.scheduled_at);
                             const canFinalizar =
-                                isVisitante(partida) &&
-                                ['confirmada', 'em_andamento'].includes(partida.estado);
+                                isParticipant(partida) &&
+                                ['confirmada'].includes(partida.estado);
+                            const canConfirmarPlacar =
+                                isParticipant(partida) &&
+                                partida.estado === 'placar_registrado' &&
+                                !isRegistrante;
+                            const canDenunciar =
+                                isParticipant(partida) &&
+                                partida.estado === 'placar_registrado' &&
+                                !isRegistrante;
+                            const canAvaliar =
+                                isParticipant(partida) &&
+                                ['placar_registrado', 'placar_confirmado'].includes(partida.estado) &&
+                                !hasAvaliacao;
                             const canWo = canDesistir(partida);
                             const finalizarUrl = `/liga/partidas/${partida.id}/finalizar?liga_id=${liga.id}`;
                             const isFinalizada = [
@@ -988,6 +1070,15 @@ export default function LigaPartidas() {
                                                 Agendar horário
                                             </button>
                                         )}
+                                        {canReschedule && (
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                onClick={() => openModal('reagendar', partida)}
+                                            >
+                                                Reagendar horário
+                                            </button>
+                                        )}
                                         {canFinalizar && (
                                             <button
                                                 type="button"
@@ -995,6 +1086,39 @@ export default function LigaPartidas() {
                                                 onClick={() => window.location.assign(finalizarUrl)}
                                             >
                                                 Finalizar partida
+                                            </button>
+                                        )}
+                                        {canAvaliar && (
+                                            <button
+                                                type="button"
+                                                className="btn-outline"
+                                                onClick={() => openModal('avaliar', partida)}
+                                            >
+                                                Avaliar adversario
+                                            </button>
+                                        )}
+                                        {canConfirmarPlacar && (
+                                            <button
+                                                type="button"
+                                                className="btn-primary"
+                                                onClick={() => openModal('confirmar_placar', partida)}
+                                                disabled={!hasAvaliacao}
+                                                title={
+                                                    hasAvaliacao
+                                                        ? 'Confirmar placar'
+                                                        : 'Avalie o adversario para confirmar'
+                                                }
+                                            >
+                                                Confirmar placar
+                                            </button>
+                                        )}
+                                        {canDenunciar && (
+                                            <button
+                                                type="button"
+                                                className="btn-outline"
+                                                onClick={() => openModal('denuncia', partida)}
+                                            >
+                                                Denunciar
                                             </button>
                                         )}
                                         {canWo && (
@@ -1006,7 +1130,13 @@ export default function LigaPartidas() {
                                                 Desistir (W.O.)
                                             </button>
                                         )}
-                                        {!canSchedule && !canFinalizar && !canWo && (
+                                        {!canSchedule &&
+                                            !canReschedule &&
+                                            !canFinalizar &&
+                                            !canWo &&
+                                            !canAvaliar &&
+                                            !canConfirmarPlacar &&
+                                            !canDenunciar && (
                                             <span className="partida-card-empty">Sem ações disponíveis.</span>
                                         )}
                                     </div>

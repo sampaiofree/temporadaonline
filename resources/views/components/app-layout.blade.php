@@ -11,6 +11,7 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        @include('components.app_assets')
         @vite(['resources/css/admin.css'])
     </head>
     <body class="h-full font-sans antialiased text-slate-900">
@@ -25,7 +26,9 @@
                         <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Dashboard
                         </a>
-                        
+                         <a href="{{ route('admin.app-assets.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Imagens do app
+                        </a>
                         <a href="{{ route('admin.geracoes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Gerações
                         </a>
@@ -37,6 +40,9 @@
                         </a>
                         <a href="{{ route('admin.paises.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Países
+                        </a>
+                        <a href="{{ route('admin.playstyles.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Playstyles
                         </a>
                         <a href="{{ route('admin.ligas-escudos.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Escudos de ligas
@@ -56,6 +62,10 @@
                         </a>
                         <a href="{{ route('admin.ligas-usuarios.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Usuários por liga
+                        </a>
+                       
+                        <a href="{{ route('admin.partidas-denuncias.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                            Denuncias de partidas
                         </a>
                         <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
                             Usuários

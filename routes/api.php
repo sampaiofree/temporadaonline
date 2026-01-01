@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\Api\ElencopadraoController;
 use App\Http\Controllers\Api\LeagueTransferController;
+use App\Http\Controllers\Api\PlayerFavoriteController;
 use App\Http\Controllers\Api\PayrollController;
 use App\Http\Controllers\Api\PartidaDesempenhoController;
+use App\Http\Controllers\Api\PartidaAvaliacaoController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
 use App\Http\Controllers\Api\PartidaScheduleController;
 use App\Http\Controllers\Api\PartidaActionsController;
@@ -16,6 +18,9 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/ligas/{liga}/clubes/{clube}/trocar', [LeagueTransferController::class, 'swap']);
 
     Route::get('/elencopadrao/{player}', [ElencopadraoController::class, 'show']);
+
+    Route::get('/ligas/{liga}/favoritos', [PlayerFavoriteController::class, 'index']);
+    Route::post('/ligas/{liga}/favoritos', [PlayerFavoriteController::class, 'toggle']);
 
     Route::post('/ligas/{liga}/rodadas/{rodada}/cobrar-salarios', [PayrollController::class, 'chargeRound']);
 
@@ -33,6 +38,7 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/partidas/{partida}/confirmar-placar', [PartidaActionsController::class, 'confirmarPlacar']);
     Route::post('/partidas/{partida}/reclamacoes', [PartidaActionsController::class, 'reclamar']);
     Route::post('/partidas/{partida}/denunciar', [PartidaActionsController::class, 'denunciar']);
+    Route::post('/partidas/{partida}/avaliacoes', [PartidaAvaliacaoController::class, 'store']);
     Route::post('/partidas/{partida}/desistir', [PartidaActionsController::class, 'desistir']);
     Route::post('/partidas/{partida}/desempenho/preview', [PartidaDesempenhoController::class, 'preview']);
     Route::post('/partidas/{partida}/desempenho/confirm', [PartidaDesempenhoController::class, 'confirm']);

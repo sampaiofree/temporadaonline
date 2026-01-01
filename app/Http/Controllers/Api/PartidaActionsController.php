@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Partida;
+use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDenuncia;
 use App\Models\ReclamacaoPartida;
-use App\Services\PartidaPlacarService;
 use App\Services\PartidaStateService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -17,7 +17,6 @@ class PartidaActionsController extends Controller
 {
     public function __construct(
         private readonly PartidaStateService $state,
-        private readonly PartidaPlacarService $placarService,
     ) {
     }
 
@@ -27,7 +26,7 @@ class PartidaActionsController extends Controller
         $this->assertParticipante($user->id, $partida);
 
         $partida->loadMissing(['mandante', 'visitante']);
-        $this->state->assertActionAllowed($partida, ['confirmada', 'em_andamento']);
+        $this->state->assertActionAllowed($partida, ['confirmada']);
 
         if (! $partida->scheduled_at) {
             throw ValidationException::withMessages([
@@ -57,7 +56,7 @@ class PartidaActionsController extends Controller
         if ($bothChecked && $partida->estado === 'confirmada') {
             $this->state->transitionTo(
                 $partida,
-                'em_andamento',
+                'confirmada',
                 [],
                 'inicio_partida',
                 $user->id,
@@ -77,7 +76,7 @@ class PartidaActionsController extends Controller
     {
         $user = $request->user();
         $this->assertParticipante($user->id, $partida);
-        $this->state->assertActionAllowed($partida, ['em_andamento']);
+        $this->state->assertActionAllowed($partida, ['confirmada']);
 
         $data = $request->validate([
             'placar_mandante' => ['required', 'integer', 'min:0'],
@@ -114,17 +113,21 @@ class PartidaActionsController extends Controller
         $user = $request->user();
         $this->assertParticipante($user->id, $partida);
 
-        if ($this->placarService->maybeAutoConfirm($partida)) {
-            return response()->json([
-                'message' => 'Placar confirmado automaticamente.',
-                'estado' => $partida->estado,
-            ]);
-        }
-
         $this->state->assertActionAllowed($partida, ['placar_registrado']);
 
         if ($partida->placar_registrado_por === $user->id) {
             abort(403, 'Somente o adversário pode confirmar o placar.');
+        }
+
+        $avaliou = PartidaAvaliacao::query()
+            ->where('partida_id', $partida->id)
+            ->where('avaliador_user_id', $user->id)
+            ->exists();
+
+        if (! $avaliou) {
+            throw ValidationException::withMessages([
+                'avaliacao' => ['Avalie o adversario antes de confirmar o placar.'],
+            ]);
         }
 
         $payload = [
@@ -153,13 +156,6 @@ class PartidaActionsController extends Controller
     {
         $user = $request->user();
         $this->assertParticipante($user->id, $partida);
-
-        if ($this->placarService->maybeAutoConfirm($partida)) {
-            return response()->json([
-                'message' => 'Placar confirmado automaticamente.',
-                'estado' => $partida->estado,
-            ]);
-        }
 
         $this->state->assertActionAllowed($partida, ['placar_registrado']);
 
@@ -264,18 +260,21 @@ class PartidaActionsController extends Controller
     {
         $user = $request->user();
         $this->assertParticipante($user->id, $partida);
-        $this->state->assertActionAllowed($partida, ['em_andamento']);
+        $this->state->assertActionAllowed($partida, ['placar_registrado']);
+
+        if ($partida->placar_registrado_por === $user->id) {
+            abort(403, 'O registrante nao pode denunciar a partida.');
+        }
 
         $data = $request->validate([
-            'motivo' => ['required', 'in:conduta_antidesportiva,escala_irregular,conexao,outro'],
-            'descricao' => ['nullable', 'string', 'max:500'],
+            'descricao' => ['required', 'string', 'max:1000'],
         ]);
 
         PartidaDenuncia::create([
             'partida_id' => $partida->id,
             'user_id' => $user->id,
-            'motivo' => $data['motivo'],
-            'descricao' => $data['descricao'] ?? null,
+            'motivo' => 'texto',
+            'descricao' => $data['descricao'],
         ]);
 
         return response()->json([

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\Partida;
-use App\Services\PartidaPlacarService;
+use App\Models\PartidaAvaliacao;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -12,10 +12,6 @@ use Illuminate\View\View;
 class LigaPartidasController extends Controller
 {
     use ResolvesLiga;
-
-    public function __construct(private readonly PartidaPlacarService $placarService)
-    {
-    }
 
     public function index(Request $request): View
     {
@@ -37,11 +33,19 @@ class LigaPartidasController extends Controller
                 ->get();
         }
 
-        $partidasCollection->each(fn (Partida $partida) => $this->placarService->maybeAutoConfirm($partida));
+        $avaliacoes = collect();
+        if ($clube) {
+            $avaliacoes = PartidaAvaliacao::query()
+                ->whereIn('partida_id', $partidasCollection->pluck('id'))
+                ->where('avaliador_user_id', $clube->user_id)
+                ->get()
+                ->keyBy('partida_id');
+        }
 
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($liga, $clube) {
+            ->map(function (Partida $partida) use ($liga, $clube, $avaliacoes) {
                 $tz = $liga->timezone ?? 'UTC';
+                $avaliacao = $avaliacoes->get($partida->id);
 
                 return [
                     'id' => $partida->id,
@@ -69,6 +73,10 @@ class LigaPartidasController extends Controller
                     'checkin_visitante_at' => $partida->checkin_visitante_at?->timezone($tz)->toIso8601String(),
                     'is_mandante' => $clube ? (int) $partida->mandante_id === (int) $clube->id : false,
                     'is_visitante' => $clube ? (int) $partida->visitante_id === (int) $clube->id : false,
+                    'avaliacao' => $avaliacao ? [
+                        'nota' => $avaliacao->nota,
+                        'avaliado_user_id' => $avaliacao->avaliado_user_id,
+                    ] : null,
                 ];
             })
             ->values()
@@ -108,12 +116,12 @@ class LigaPartidasController extends Controller
             abort(404, 'Partida não encontrada.');
         }
 
-        if ((int) $partida->visitante_id !== (int) $clube->id) {
-            abort(403, 'Somente o visitante pode finalizar esta partida.');
+        if ((int) $partida->mandante_id !== (int) $clube->id && (int) $partida->visitante_id !== (int) $clube->id) {
+            abort(403, 'Somente participantes podem finalizar esta partida.');
         }
 
-        if ($partida->estado !== 'confirmada') {
-            abort(403, 'Partida não está confirmada.');
+        if (! in_array($partida->estado, ['confirmada'], true)) {
+            abort(403, 'Partida não está disponível para finalização.');
         }
 
         $partida->loadMissing(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo']);

@@ -23,13 +23,13 @@ class PartidaScheduleController extends Controller
     public function slots(Request $request, Partida $partida): JsonResponse
     {
         $user = $request->user();
-        $this->assertVisitante($user->id, $partida);
+        $this->assertParticipante($user->id, $partida);
         $this->assertAgendamentoPermitido($partida);
 
         $partida->loadMissing('liga');
         $tz = $partida->liga->timezone ?? 'UTC';
 
-        $slots = $this->scheduler->availableVisitorSlots($partida);
+        $slots = $this->scheduler->availableOpponentSlots($partida, $user->id);
 
         $days = $slots
             ->groupBy(fn (Carbon $slot) => $slot->copy()->setTimezone($tz)->toDateString())
@@ -64,7 +64,7 @@ class PartidaScheduleController extends Controller
     public function agendar(Request $request, Partida $partida): JsonResponse
     {
         $user = $request->user();
-        $this->assertVisitante($user->id, $partida);
+        $this->assertParticipante($user->id, $partida);
         $this->assertAgendamentoPermitido($partida);
 
         $data = $request->validate([
@@ -74,7 +74,7 @@ class PartidaScheduleController extends Controller
         $partida->loadMissing('liga');
         $tz = $partida->liga->timezone ?? 'UTC';
         $slot = Carbon::parse($data['datetime'], 'UTC')->setTimezone('UTC')->second(0);
-        $validSlots = $this->scheduler->availableVisitorSlots($partida);
+        $validSlots = $this->scheduler->availableOpponentSlots($partida, $user->id);
 
         $isValid = $validSlots->contains(fn (Carbon $candidate) => $candidate->equalTo($slot));
 
@@ -84,9 +84,11 @@ class PartidaScheduleController extends Controller
             ]);
         }
 
+        $nextState = $partida->estado === 'confirmacao_necessaria' ? 'confirmada' : $partida->estado;
+
         $this->state->transitionTo(
             $partida,
-            'confirmada',
+            $nextState,
             [
                 'scheduled_at' => $slot,
                 'forced_by_system' => false,
@@ -102,24 +104,26 @@ class PartidaScheduleController extends Controller
 
         return response()->json([
             'message' => 'Horário confirmado.',
-            'estado' => 'confirmada',
+            'estado' => $partida->estado,
             'scheduled_at' => $slot->copy()->setTimezone($tz)->toIso8601String(),
         ]);
     }
 
-    private function assertVisitante(int $userId, Partida $partida): void
+    private function assertParticipante(int $userId, Partida $partida): void
     {
         $partida->loadMissing(['mandante', 'visitante']);
+        $mandanteUserId = $partida->mandante?->user_id;
         $visitanteUserId = $partida->visitante?->user_id;
 
-        if (! $visitanteUserId || $userId !== $visitanteUserId) {
-            abort(403, 'Apenas o visitante pode agendar esta partida.');
+        if (! in_array($userId, [$mandanteUserId, $visitanteUserId], true)) {
+            abort(403, 'Apenas participantes podem agendar esta partida.');
         }
     }
 
     private function assertAgendamentoPermitido(Partida $partida): void
     {
-        if ($partida->estado !== 'confirmacao_necessaria' || $partida->scheduled_at) {
+        $allowed = ['confirmacao_necessaria', 'confirmada', 'agendada'];
+        if (! in_array($partida->estado, $allowed, true)) {
             throw ValidationException::withMessages([
                 'estado' => ['Esta partida não permite agendamento agora.'],
             ]);

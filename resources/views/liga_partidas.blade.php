@@ -11,6 +11,7 @@
             window.__PARTIDAS__ = @json($partidas);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/liga_partidas.jsx'])
     </head>

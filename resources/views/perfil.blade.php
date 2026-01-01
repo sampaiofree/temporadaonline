@@ -12,6 +12,7 @@
             window.__GERACOES__ = @json($geracoes);
         </script>
         @include('components.app_context', ['appContext' => ['mode' => 'global', 'liga' => null, 'clube' => null, 'nav' => 'perfil']])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/perfil.jsx'])
     </head>

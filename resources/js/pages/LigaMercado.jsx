@@ -54,8 +54,14 @@ const normalizePositions = (positions) => {
     if (!positions) return [];
     return String(positions)
         .split(',')
-        .map((p) => p.trim())
+        .map((p) => p.trim().toUpperCase())
         .filter(Boolean);
+};
+
+const getRadarOnlyFromQuery = () => {
+    const params = new URLSearchParams(window.location.search);
+    const value = (params.get('radar') || '').toLowerCase();
+    return value === '1' || value === 'true' || value === 'sim';
 };
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
@@ -84,6 +90,55 @@ const OVR_FILTERS = [
     { value: '85-89', label: 'Ouro 85–89' },
     { value: '80-84', label: 'Prata 80–84' },
 ];
+
+const POSITION_GROUPS = [
+    {
+        sector: 'goleiros',
+        label: 'Goleiros',
+        items: [{ code: 'GK', ptbr: 'GOL', label: 'Goleiro' }],
+    },
+    {
+        sector: 'defensores',
+        label: 'Defensores',
+        items: [
+            { code: 'RB', ptbr: 'LD', label: 'Lateral Direito' },
+            { code: 'CB', ptbr: 'ZAG', label: 'Zagueiro' },
+            { code: 'LB', ptbr: 'LE', label: 'Lateral Esquerdo' },
+        ],
+    },
+    {
+        sector: 'meio-campistas',
+        label: 'Meio Campistas',
+        items: [
+            { code: 'CDM', ptbr: 'VOL', label: 'Volante' },
+            { code: 'CM', ptbr: 'MC', label: 'Meia Central' },
+            { code: 'CAM', ptbr: 'MEI', label: 'Meia Ofensivo' },
+            { code: 'RM', ptbr: 'MD', label: 'Meia Direito' },
+            { code: 'LM', ptbr: 'ME', label: 'Meia Esquerda' },
+        ],
+    },
+    {
+        sector: 'atacantes',
+        label: 'Atacantes',
+        items: [
+            { code: 'RW', ptbr: 'PD', label: 'Ponta Direita' },
+            { code: 'ST', ptbr: 'ATA', label: 'Atacante' },
+            { code: 'LW', ptbr: 'PE', label: 'Ponta Esquerda' },
+        ],
+    },
+];
+
+const POSITION_SECTORS = POSITION_GROUPS.map((group) => ({
+    value: group.sector,
+    label: group.label,
+}));
+
+const POSITION_SECTOR_BY_CODE = POSITION_GROUPS.reduce((acc, group) => {
+    group.items.forEach((item) => {
+        acc[item.code] = group.sector;
+    });
+    return acc;
+}, {});
 
 const getPlayerName = (p) => (p?.short_name || p?.long_name || '').toString().trim();
 
@@ -136,6 +191,10 @@ export default function LigaMercado() {
             : 'O mercado está fechado durante o período de partidas.';
 
     const [playersData, setPlayersData] = useState(mercado.players || []);
+    const [radarIds, setRadarIds] = useState(
+        () => new Set(Array.isArray(mercado?.radar_ids) ? mercado.radar_ids : []),
+    );
+    const [radarBusyIds, setRadarBusyIds] = useState(() => new Set());
     const [clubBalance, setClubBalance] = useState(clube?.saldo ?? 0);
     const [clubSalaryPerRound, setClubSalaryPerRound] = useState(clube?.salary_per_round ?? 0);
 
@@ -158,8 +217,10 @@ export default function LigaMercado() {
 
     // Filters
     const [statusFilter, setStatusFilter] = useState('all');
+    const [positionSectorFilter, setPositionSectorFilter] = useState('all');
     const [positionFilter, setPositionFilter] = useState('all');
     const [ovrFilter, setOvrFilter] = useState('all');
+    const [radarOnly, setRadarOnly] = useState(getRadarOnlyFromQuery);
     const [clubFilter, setClubFilter] = useState('all');
     const [minValue, setMinValue] = useState('');
     const [maxValue, setMaxValue] = useState('');
@@ -193,11 +254,13 @@ export default function LigaMercado() {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [filtersOpen]);
 
-    const positionOptions = useMemo(() => {
-        const set = new Set();
-        playersData.forEach((p) => normalizePositions(p.player_positions).forEach((pos) => set.add(pos)));
-        return ['all', ...Array.from(set).sort()];
-    }, [playersData]);
+    const positionGroupsForUI = useMemo(() => {
+        if (positionSectorFilter === 'all') {
+            return POSITION_GROUPS;
+        }
+        const group = POSITION_GROUPS.find((item) => item.sector === positionSectorFilter);
+        return group ? [group] : [];
+    }, [positionSectorFilter]);
 
     const clubOptions = useMemo(() => {
         const set = new Set();
@@ -231,7 +294,18 @@ export default function LigaMercado() {
             // Status
             if (statusFilter !== 'all' && p.club_status !== statusFilter) return false;
 
+            // Radar
+            if (radarOnly && !radarIds.has(p.elencopadrao_id)) return false;
+
             // Position
+            if (positionSectorFilter !== 'all') {
+                const pos = normalizePositions(p.player_positions);
+                const matchesSector = pos.some(
+                    (code) => POSITION_SECTOR_BY_CODE[code] === positionSectorFilter,
+                );
+                if (!matchesSector) return false;
+            }
+
             if (positionFilter !== 'all') {
                 const pos = normalizePositions(p.player_positions);
                 if (!pos.includes(positionFilter)) return false;
@@ -277,7 +351,21 @@ export default function LigaMercado() {
         });
 
         return base;
-    }, [playersData, q, statusFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue, sortKey, sortDir]);
+    }, [
+        playersData,
+        q,
+        statusFilter,
+        radarOnly,
+        radarIds,
+        positionSectorFilter,
+        positionFilter,
+        ovrFilter,
+        clubFilter,
+        minValue,
+        maxValue,
+        sortKey,
+        sortDir,
+    ]);
 
     const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
     const safePage = Math.min(Math.max(1, page), totalPages);
@@ -286,7 +374,7 @@ export default function LigaMercado() {
     useEffect(() => {
         // se filtros mudarem, volta pra página 1
         setPage(1);
-    }, [q, statusFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue]);
+    }, [q, statusFilter, radarOnly, positionSectorFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue]);
 
     useEffect(() => {
         if (!detailPlayer) return;
@@ -314,8 +402,10 @@ export default function LigaMercado() {
 
     const clearFilters = () => {
         setStatusFilter('all');
+        setPositionSectorFilter('all');
         setPositionFilter('all');
         setOvrFilter('all');
+        setRadarOnly(false);
         setClubFilter('all');
         setMinValue('');
         setMaxValue('');
@@ -471,6 +561,14 @@ export default function LigaMercado() {
           }
         : null;
 
+    const detailScoutAction = detailPlayer
+        ? {
+              label: radarIds.has(detailPlayer.elencopadrao_id) ? 'Remover do radar' : 'Enviar olheiro',
+              disabled: radarBusyIds.has(detailPlayer.elencopadrao_id),
+              onClick: () => toggleRadar(detailPlayer),
+          }
+        : null;
+
     const applyPlayerToMyClub = (playerId) => {
         setPlayersData((prev) =>
             prev.map((entry) =>
@@ -543,6 +641,52 @@ export default function LigaMercado() {
             );
         } finally {
             setIsModalSubmitting(false);
+        }
+    };
+
+    const toggleRadar = async (player) => {
+        if (!liga) return;
+
+        const playerId = player?.elencopadrao_id;
+        if (!playerId) return;
+
+        setRadarBusyIds((prev) => {
+            const next = new Set(prev);
+            next.add(playerId);
+            return next;
+        });
+
+        try {
+            const { data } = await window.axios.post(`/api/ligas/${liga.id}/favoritos`, {
+                elencopadrao_id: playerId,
+            });
+
+            setRadarIds((prev) => {
+                const next = new Set(prev);
+                if (data?.status === 'removed') {
+                    next.delete(playerId);
+                } else {
+                    next.add(playerId);
+                }
+                return next;
+            });
+
+            const name = getPlayerName(player) || 'Jogador';
+            if (data?.status === 'removed') {
+                setFeedback(`Olheiro removeu ${name} do radar.`);
+            } else {
+                setFeedback(`O olheiro iniciou o monitoramento de ${name}.`);
+            }
+        } catch (error) {
+            setFeedback(
+                error.response?.data?.message ?? 'Nao foi possivel atualizar o radar.',
+            );
+        } finally {
+            setRadarBusyIds((prev) => {
+                const next = new Set(prev);
+                next.delete(playerId);
+                return next;
+            });
         }
     };
 
@@ -708,6 +852,56 @@ export default function LigaMercado() {
                             </div>
 
                             <div className="mercado-drawer-grid mercado-drawer-grid-scout">
+                                <div className="mercado-drawer-field mercado-drawer-field-full">
+                                    <span className="mercado-drawer-label">Radar</span>
+                                    <div className="filter-pill-row filter-pill-row-scout filter-pill-row-compact">
+                                        <button
+                                            type="button"
+                                            className={`filter-pill${!radarOnly ? ' active' : ''}`}
+                                            onClick={() => setRadarOnly(false)}
+                                        >
+                                            Todos
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`filter-pill${radarOnly ? ' active' : ''}`}
+                                            onClick={() => setRadarOnly(true)}
+                                        >
+                                            Apenas no radar
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="mercado-drawer-field">
+                                    <label className="mercado-drawer-label" htmlFor="filtro-setor">
+                                        Setor
+                                    </label>
+                                    <select
+                                        id="filtro-setor"
+                                        className="mercado-drawer-select"
+                                        value={positionSectorFilter}
+                                        onChange={(e) => {
+                                            const value = e.target.value;
+                                            setPositionSectorFilter(value);
+                                            if (value !== 'all') {
+                                                const group = POSITION_GROUPS.find(
+                                                    (item) => item.sector === value,
+                                                );
+                                                const allowed = group?.items ?? [];
+                                                if (!allowed.some((item) => item.code === positionFilter)) {
+                                                    setPositionFilter('all');
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <option value="all">Todos</option>
+                                        {POSITION_SECTORS.map((sector) => (
+                                            <option key={sector.value} value={sector.value}>
+                                                {sector.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+
                                 <div className="mercado-drawer-field">
                                     <label className="mercado-drawer-label" htmlFor="filtro-posicao">
                                         Posição
@@ -718,10 +912,15 @@ export default function LigaMercado() {
                                         value={positionFilter}
                                         onChange={(e) => setPositionFilter(e.target.value)}
                                     >
-                                        {positionOptions.map((p) => (
-                                            <option key={p} value={p}>
-                                                {p === 'all' ? 'Todas' : p}
-                                            </option>
+                                        <option value="all">Todas</option>
+                                        {positionGroupsForUI.map((group) => (
+                                            <optgroup key={group.sector} label={group.label}>
+                                                {group.items.map((item) => (
+                                                    <option key={item.code} value={item.code}>
+                                                        {item.ptbr} · {item.label}
+                                                    </option>
+                                                ))}
+                                            </optgroup>
                                         ))}
                                     </select>
                                 </div>
@@ -848,9 +1047,16 @@ export default function LigaMercado() {
                                     : p.club_status === 'meu'
                                     ? 'Meu clube'
                                     : p.club_name || 'Outro clube';
+                            const isRadar = radarIds.has(p.elencopadrao_id);
+                            const isRadarBusy = radarBusyIds.has(p.elencopadrao_id);
 
                             return (
                                 <article key={p.elencopadrao_id} className={`mercado-player-card status-${p.club_status}`}>
+                                    {isRadar && (
+                                        <span className="mercado-player-radar-badge">
+                                            📡 No radar
+                                        </span>
+                                    )}
                                     <div className="mercado-player-card-content">
                                         <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
                                             {p.overall ?? '—'}
@@ -877,7 +1083,19 @@ export default function LigaMercado() {
                                     </div>
                                     <div className="mercado-player-card-right">
                                         <div className="mercado-player-values">
-                                            <span className="mercado-player-value">{formatShortMoney(p.value_eur)}</span>
+                                            <div className="mercado-player-value-row">
+                                                <span className="mercado-player-value">{formatShortMoney(p.value_eur)}</span>
+                                                <button
+                                                    type="button"
+                                                    className={`mercado-player-scout-button${isRadar ? ' active' : ''}`}
+                                                    onClick={() => toggleRadar(p)}
+                                                    disabled={isRadarBusy}
+                                                    aria-label={isRadar ? 'Remover do radar' : 'Enviar olheiro'}
+                                                    title={isRadar ? 'Remover do radar' : 'Enviar olheiro'}
+                                                >
+                                                    🔭
+                                                </button>
+                                            </div>
                                             <span className="mercado-player-salary">
                                                 SAL: {formatShortMoney(p.wage_eur)}
                                             </span>
@@ -963,6 +1181,7 @@ export default function LigaMercado() {
                     onClose={closeDetailModal}
                     onToggleDetails={handleToggleDetails}
                     primaryAction={detailPrimaryAction}
+                    secondaryAction={detailScoutAction}
                 />
             )}
 

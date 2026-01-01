@@ -11,6 +11,7 @@
             window.__MEU_ELENCO__ = @json($elenco);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/minha_liga_meu_elenco.jsx'])
     </head>

@@ -13,9 +13,8 @@ class PartidaStateService
      */
     private array $transitions = [
         'confirmacao_necessaria' => ['agendada', 'confirmada', 'cancelada', 'wo'],
-        'agendada' => ['confirmada', 'em_andamento', 'cancelada', 'wo'],
-        'confirmada' => ['em_andamento', 'finalizada', 'wo', 'cancelada'],
-        'em_andamento' => ['placar_registrado', 'wo', 'cancelada'],
+        'agendada' => ['confirmada', 'cancelada', 'wo'],
+        'confirmada' => ['placar_registrado', 'finalizada', 'wo', 'cancelada'],
         'placar_registrado' => ['placar_confirmado', 'em_reclamacao'],
         'placar_confirmado' => [],
         'em_reclamacao' => ['placar_confirmado'],

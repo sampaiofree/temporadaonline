@@ -10,6 +10,7 @@
             window.__CLUBE_PERFIL__ = @json($clube);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/liga_clube_perfil.jsx'])
     </head>

@@ -13,6 +13,9 @@ use App\Http\Controllers\Admin\ClubeController as AdminClubeController;
 use App\Http\Controllers\Admin\LigaEscudoController as AdminLigaEscudoController;
 use App\Http\Controllers\Admin\LigaJogadorController as AdminLigaJogadorController;
 use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeController;
+use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
+use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
+use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
 use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\LigaClassificacaoController;
@@ -36,11 +39,17 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('paises', AdminPaisController::class, ['parameters' => ['paises' => 'pais']])
         ->except(['show', 'create']);
     Route::delete('paises/bulk-destroy', [AdminPaisController::class, 'bulkDestroy'])->name('paises.bulk-destroy');
+    Route::resource('playstyles', AdminPlaystyleController::class)->only(['index', 'store', 'destroy']);
+    Route::delete('playstyles/bulk-destroy', [AdminPlaystyleController::class, 'bulkDestroy'])->name('playstyles.bulk-destroy');
     Route::resource('clubes', AdminClubeController::class)
         ->only(['index', 'edit', 'update', 'destroy']);
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
         'parameters' => ['ligas-usuarios' => 'liga_jogador'],
     ])->only(['index', 'destroy']);
+    Route::get('app-assets', [AdminAppAssetController::class, 'edit'])->name('app-assets.edit');
+    Route::put('app-assets', [AdminAppAssetController::class, 'update'])->name('app-assets.update');
+    Route::get('partidas-denuncias', [AdminPartidaDenunciaController::class, 'index'])
+        ->name('partidas-denuncias.index');
     Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');
     Route::resource('ligas-escudos', AdminLigaEscudoController::class, [
         'parameters' => ['ligas-escudos' => 'liga_escudo'],

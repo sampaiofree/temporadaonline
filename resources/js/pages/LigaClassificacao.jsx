@@ -28,10 +28,10 @@ export default function LigaClassificacao() {
 
             <section className="liga-classificacao-table">
                 <div className="classificacao-row header">
-                    <span>Pos</span>
-                    <span>Clube</span>
-                    <span>V</span>
-                    <span>Pontos</span>
+                    <span className="classificacao-col classificacao-col-pos">Pos</span>
+                    <span className="classificacao-col classificacao-col-clube">Clube</span>
+                    <span className="classificacao-col classificacao-col-vitorias">V</span>
+                    <span className="classificacao-col classificacao-col-pontos">Pontos</span>
                 </div>
                 {classificacao.length === 0 ? (
                     <p className="ligas-empty">Não há clubes nessa liga ainda.</p>

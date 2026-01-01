@@ -5,6 +5,7 @@ import Navbar from '../components/app_publico/Navbar';
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
 const getEsquemaFromWindow = () => window.__ESQUEMA_TATICO__ ?? {};
+const getAppAssets = () => window.__APP_ASSETS__ ?? null;
 
 const clamp = (value, min = 0.04, max = 0.96) => Math.min(max, Math.max(min, value));
 
@@ -77,6 +78,7 @@ function PlayerChip({
 }) {
     const [failed, setFailed] = useState(false);
     const showFallback = !imageUrl || failed;
+    const labelBelow = position?.y <= 0.18;
 
     const metaPosition = positionLabel || '—';
     const metaOverall = overall ?? '—';
@@ -84,7 +86,7 @@ function PlayerChip({
     return (
         <button
             type="button"
-            className="esquema-player"
+            className={`esquema-player${labelBelow ? ' label-below' : ''}`}
             style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -122,6 +124,8 @@ export default function EsquemaTatico() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const esquema = getEsquemaFromWindow();
+    const appAssets = getAppAssets();
+    const fieldImage = appAssets?.imagem_campo_url ?? null;
     const players = Array.isArray(esquema?.players) ? esquema.players : [];
     const initialPlacements = useMemo(
         () => buildInitialPlacements(esquema?.layout, players),
@@ -335,6 +339,7 @@ export default function EsquemaTatico() {
                 <div
                     className={`esquema-field${isCapturing ? ' is-capturing' : ''}`}
                     ref={fieldRef}
+                    style={fieldImage ? { '--esquema-field-image': `url(${fieldImage})` } : undefined}
                 >
                     {Object.keys(placements).length === 0 && (
                         <div className="esquema-field-empty">

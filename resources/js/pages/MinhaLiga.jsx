@@ -58,6 +58,7 @@ export default function MinhaLiga() {
     }
 
     const mercadoHref = `/liga/mercado?liga_id=${liga.id}`;
+    const mercadoRadarHref = `/liga/mercado?liga_id=${liga.id}&radar=1`;
     const financeiroHref = `/minha_liga/financeiro?liga_id=${liga.id}`;
     const meuElencoHref = `/minha_liga/meu-elenco?liga_id=${liga.id}`;
     const meuClubeHref = `/minha_liga/clube?liga_id=${liga.id}`;
@@ -183,6 +184,9 @@ export default function MinhaLiga() {
             <section className="league-actions grid league-actions-custom">
                 <a className="control-card" href={mercadoHref}>
                     <span className="control-card-title">Mercado</span>
+                </a>
+                <a className="control-card" href={mercadoRadarHref}>
+                    <span className="control-card-title">Jogadores monitorados</span>
                 </a>
                 <a className="control-card" href={financeiroHref}>
                     <span className="control-card-title">Financeiro</span>

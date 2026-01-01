@@ -7,6 +7,7 @@ use App\Models\Elencopadrao;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaPeriodo;
+use App\Models\PlayerFavorite;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -91,10 +92,19 @@ class LigaMercadoController extends Controller
             ->values()
             ->all();
 
+        $favoriteIds = PlayerFavorite::query()
+            ->where('user_id', $request->user()->id)
+            ->where('liga_id', $liga->id)
+            ->pluck('elencopadrao_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
         $mercadoPayload = [
             'players' => $players,
             'closed' => $mercadoFechado,
             'period' => $periodoAtivo,
+            'radar_ids' => $favoriteIds,
         ];
 
         return view('liga_mercado', [

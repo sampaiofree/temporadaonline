@@ -20,6 +20,7 @@
             window.__CLUBE_EDITOR__ = @json($clubeEditorData);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/minha_liga_clube.jsx'])
     </head>

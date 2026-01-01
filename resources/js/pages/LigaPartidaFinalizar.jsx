@@ -47,7 +47,6 @@ export default function LigaPartidaFinalizar() {
         agendada: 'Agendada',
         confirmacao_necessaria: 'Confirmação pendente',
         confirmada: 'Confirmada',
-        em_andamento: 'Em andamento',
         placar_registrado: 'Placar registrado',
         placar_confirmado: 'Placar confirmado',
         em_reclamacao: 'Em reclamação',
@@ -59,7 +58,6 @@ export default function LigaPartidaFinalizar() {
     const estadoClass = {
         confirmacao_necessaria: 'warning',
         confirmada: 'success',
-        em_andamento: 'info',
         placar_registrado: 'warning',
         placar_confirmado: 'success',
         em_reclamacao: 'danger',
@@ -96,6 +94,13 @@ export default function LigaPartidaFinalizar() {
     const labelWithClub = (labelText, clubName) =>
         clubName ? `${labelText} (${clubName})` : labelText;
 
+    const isMandante = clube && Number(partida.mandante_id) === Number(clube.id);
+    const roleText = isMandante ? 'mandante' : 'visitante';
+    const roleLabel = isMandante
+        ? labelWithClub('Mandante', partida.mandante)
+        : labelWithClub('Visitante', partida.visitante);
+    const roleClass = isMandante ? 'mandante' : 'visitante';
+
     const label = estadoLabels[estado] ?? estado;
     const badgeClass = estadoClass[estado] ?? 'muted';
     const horario = formatDate(partida.scheduled_at);
@@ -117,7 +122,7 @@ export default function LigaPartidaFinalizar() {
 
     const resolvedPlacar = manualDirty ? manualPlacar : placar;
     const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
-    const canAnalyze = ['confirmada', 'em_andamento'].includes(estado);
+    const canAnalyze = ['confirmada'].includes(estado);
 
     useEffect(() => {
         if (!hasPreview || manualDirty) return;
@@ -253,7 +258,7 @@ export default function LigaPartidaFinalizar() {
                 <h1 className="ligas-title">Dados da partida</h1>
                 <p className="ligas-subtitle">
                     {clube
-                        ? `Você finaliza a partida como visitante: ${clube.nome}.`
+                        ? `Você finaliza a partida como ${roleText}: ${clube.nome}.`
                         : 'Revise os dados antes de finalizar a partida.'}
                 </p>
             </section>
@@ -320,8 +325,8 @@ export default function LigaPartidaFinalizar() {
                             <div className="partida-meta-item">
                                 <small>Seu papel</small>
                                 <p>
-                                    <span className="partida-role-pill visitante">
-                                        {labelWithClub('Visitante', partida.visitante)}
+                                    <span className={`partida-role-pill ${roleClass}`}>
+                                        {roleLabel}
                                     </span>
                                 </p>
                             </div>

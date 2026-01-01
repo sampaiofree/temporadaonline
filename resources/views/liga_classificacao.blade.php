@@ -10,6 +10,7 @@
             window.__CLASSIFICACAO__ = @json($classification);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/liga_classificacao.jsx'])
     </head>

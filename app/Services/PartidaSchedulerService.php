@@ -74,6 +74,25 @@ class PartidaSchedulerService
      */
     public function availableVisitorSlots(Partida $partida): Collection
     {
+        return $this->availableSlotsForRole($partida, 'mandante');
+    }
+
+    /**
+     * Calcula slots para o usuario logado (UTC), usando disponibilidade do adversario.
+     */
+    public function availableOpponentSlots(Partida $partida, int $requesterUserId): Collection
+    {
+        $partida->loadMissing(['mandante.user', 'visitante.user']);
+        $mandanteUserId = $partida->mandante?->user_id;
+        $visitanteUserId = $partida->visitante?->user_id;
+
+        $availabilityRole = $requesterUserId === $mandanteUserId ? 'visitante' : 'mandante';
+
+        return $this->availableSlotsForRole($partida, $availabilityRole);
+    }
+
+    private function availableSlotsForRole(Partida $partida, string $availabilityRole): Collection
+    {
         $partida->loadMissing(['liga.periodos', 'mandante.user', 'visitante.user']);
         $liga = $partida->liga;
         $tz = $liga->timezone ?? 'UTC';
@@ -84,8 +103,12 @@ class PartidaSchedulerService
             return collect();
         }
 
-        $mandanteRanges = $this->groupDisponibilidades($partida->mandante->user);
-        if (empty($mandanteRanges)) {
+        $availabilityUser = $availabilityRole === 'visitante'
+            ? $partida->visitante?->user
+            : $partida->mandante?->user;
+
+        $availabilityRanges = $this->groupDisponibilidades($availabilityUser);
+        if (empty($availabilityRanges)) {
             return collect();
         }
 
@@ -101,7 +124,7 @@ class PartidaSchedulerService
                 }
 
                 $dayOfWeek = $date->dayOfWeek;
-                $dayRanges = $mandanteRanges[$dayOfWeek] ?? [];
+                $dayRanges = $availabilityRanges[$dayOfWeek] ?? [];
 
                 if (empty($dayRanges)) {
                     continue;
@@ -214,7 +237,7 @@ class PartidaSchedulerService
 
         return Partida::query()
             ->whereNotNull('scheduled_at')
-            ->whereIn('estado', ['agendada', 'confirmada', 'em_andamento'])
+            ->whereIn('estado', ['agendada', 'confirmada'])
             ->where(function ($q) use ($clubeId): void {
                 $q->where('mandante_id', $clubeId)
                     ->orWhere('visitante_id', $clubeId);

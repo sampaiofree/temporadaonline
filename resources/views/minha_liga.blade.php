@@ -12,6 +12,7 @@
             window.__USED_ESCUDOS__ = @json($usedEscudos);
         </script>
         @include('components.app_context', ['appContext' => $appContext ?? null])
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/minha_liga.jsx'])
     </head>

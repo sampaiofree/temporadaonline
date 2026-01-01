@@ -10,6 +10,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>MCO | Dashboard</title>
         @include('components.app_context', ['appContext' => $appContext])
+        @include('components.app_assets')
         <script>
             window.__CHECKLIST__ = @json([
                 'show' => $showChecklist ?? false,

@@ -23,7 +23,7 @@ class PartidaDesempenhoController extends Controller
     public function preview(Request $request, Partida $partida): JsonResponse
     {
         $user = $request->user();
-        $this->assertVisitor($user->id, $partida);
+        $this->assertParticipant($user->id, $partida);
         $this->assertAllowedState($partida);
 
         $data = $request->validate([
@@ -78,7 +78,7 @@ class PartidaDesempenhoController extends Controller
     public function confirm(Request $request, Partida $partida): JsonResponse
     {
         $user = $request->user();
-        $this->assertVisitor($user->id, $partida);
+        $this->assertParticipant($user->id, $partida);
         $this->assertAllowedState($partida);
 
         $data = $request->validate([
@@ -139,13 +139,18 @@ class PartidaDesempenhoController extends Controller
         ]);
     }
 
-    private function assertVisitor(int $userId, Partida $partida): void
+    private function assertParticipant(int $userId, Partida $partida): void
     {
-        $partida->loadMissing(['visitante']);
+        $partida->loadMissing(['mandante', 'visitante']);
+        $mandanteUserId = $partida->mandante?->user_id;
         $visitanteUserId = $partida->visitante?->user_id;
 
-        if (! $visitanteUserId || $visitanteUserId !== $userId) {
-            abort(403, 'Somente o visitante pode finalizar esta partida.');
+        if (! $mandanteUserId || ! $visitanteUserId) {
+            abort(403, 'Partida sem participantes válidos.');
+        }
+
+        if (! in_array($userId, [$mandanteUserId, $visitanteUserId], true)) {
+            abort(403, 'Somente participantes podem finalizar esta partida.');
         }
     }
 
@@ -155,7 +160,7 @@ class PartidaDesempenhoController extends Controller
             abort(403, 'Esta partida já foi registrada.');
         }
 
-        if (! in_array($partida->estado, ['confirmada', 'em_andamento'], true)) {
+        if (! in_array($partida->estado, ['confirmada'], true)) {
             abort(403, 'Partida não está disponível para finalização.');
         }
     }

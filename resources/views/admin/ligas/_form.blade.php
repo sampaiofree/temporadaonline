@@ -17,6 +17,8 @@
     $currentPlataformaId = old('plataforma_id', $liga->plataforma_id ?? '');
     $currentMax = old('max_times', $liga->max_times ?? 20);
     $currentSaldoInicial = old('saldo_inicial', $liga->saldo_inicial ?? 0);
+    $currentUsuarioPontuacao = old('usuario_pontuacao', $liga->usuario_pontuacao ?? '');
+    $currentWhatsappLink = old('whatsapp_grupo_link', $liga->whatsapp_grupo_link ?? '');
     $currentNome = old('nome', $liga->nome ?? '');
     $periodos = old('periodos');
     if ($periodos === null) {
@@ -179,6 +181,39 @@
         @error('status')
             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
         @enderror
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <label for="usuario_pontuacao" class="block text-sm font-semibold text-slate-700">Pontuacao do usuario (0 a 5)</label>
+            <input
+                type="number"
+                id="usuario_pontuacao"
+                name="usuario_pontuacao"
+                min="0"
+                max="5"
+                step="0.1"
+                value="{{ $currentUsuarioPontuacao }}"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+            @error('usuario_pontuacao')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label for="whatsapp_grupo_link" class="block text-sm font-semibold text-slate-700">Link do grupo WhatsApp</label>
+            <input
+                type="url"
+                id="whatsapp_grupo_link"
+                name="whatsapp_grupo_link"
+                value="{{ $currentWhatsappLink }}"
+                placeholder="https://chat.whatsapp.com/..."
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+            @error('whatsapp_grupo_link')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
     </div>
 
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">

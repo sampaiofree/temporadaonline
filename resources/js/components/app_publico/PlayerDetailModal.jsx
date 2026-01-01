@@ -64,6 +64,78 @@ const getOvrTone = (overall) => {
     return 'low';
 };
 
+const ATTRIBUTE_GROUPS = [
+    {
+        key: 'pace',
+        label: 'Pace',
+        items: [
+            { key: 'movement_acceleration', label: 'Acceleration' },
+            { key: 'movement_sprint_speed', label: 'Sprint Speed' },
+        ],
+    },
+    {
+        key: 'shooting',
+        label: 'Shooting',
+        items: [
+            { key: 'mentality_positioning', label: 'Positioning' },
+            { key: 'attacking_finishing', label: 'Finishing' },
+            { key: 'power_shot_power', label: 'Shot Power' },
+            { key: 'power_long_shots', label: 'Long Shots' },
+            { key: 'attacking_volleys', label: 'Volleys' },
+            { key: 'mentality_penalties', label: 'Penalties' },
+        ],
+    },
+    {
+        key: 'passing',
+        label: 'Passing',
+        items: [
+            { key: 'mentality_vision', label: 'Vision' },
+            { key: 'attacking_crossing', label: 'Crossing' },
+            { key: 'skill_fk_accuracy', label: 'Fk Accuracy' },
+            { key: 'attacking_short_passing', label: 'Short Passing' },
+            { key: 'skill_long_passing', label: 'Long Passing' },
+            { key: 'skill_curve', label: 'Curve' },
+        ],
+    },
+    {
+        key: 'dribbling',
+        label: 'Dribbling',
+        items: [
+            { key: 'movement_agility', label: 'Agility' },
+            { key: 'movement_balance', label: 'Balance' },
+            { key: 'movement_reactions', label: 'Reactions' },
+            { key: 'skill_ball_control', label: 'Ball Control' },
+            { key: 'skill_dribbling', label: 'Dribbling' },
+            { key: 'mentality_composure', label: 'Composure' },
+        ],
+    },
+    {
+        key: 'defending',
+        label: 'Defending',
+        items: [
+            { key: 'mentality_interceptions', label: 'Interceptions' },
+            { key: 'attacking_heading_accuracy', label: 'Heading Accuracy' },
+            { key: 'defending_marking_awareness', label: 'Marking Awareness' },
+            { key: 'defending_standing_tackle', label: 'Standing Tackle' },
+            { key: 'defending_sliding_tackle', label: 'Sliding Tackle' },
+        ],
+    },
+    {
+        key: 'physic',
+        label: 'Physic',
+        items: [
+            { key: 'power_jumping', label: 'Jumping' },
+            { key: 'power_stamina', label: 'Stamina' },
+            { key: 'power_strength', label: 'Strength' },
+            { key: 'mentality_aggression', label: 'Aggression' },
+        ],
+    },
+];
+
+const ATTRIBUTE_KEYS = new Set(
+    ATTRIBUTE_GROUPS.flatMap((group) => [group.key, ...group.items.map((item) => item.key)]),
+);
+
 const getPlayerName = (player) => (player?.short_name || player?.long_name || '').toString().trim();
 
 const resolveFaceUrl = (url) => {
@@ -71,6 +143,13 @@ const resolveFaceUrl = (url) => {
     if (url.startsWith('/')) return url;
     const trimmed = url.replace(/^https?:\/\//, '');
     return `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&w=240&h=240`;
+};
+
+const resolveAttributeValue = (value) => {
+    if (value === null || value === undefined || value === '') {
+        return '-';
+    }
+    return value;
 };
 
 function PlayerAvatar({ src, alt, fallback }) {
@@ -102,6 +181,7 @@ export default function PlayerDetailModal({
     onClose,
     onToggleDetails,
     primaryAction,
+    secondaryAction,
 }) {
     if (!player) return null;
 
@@ -110,7 +190,15 @@ export default function PlayerDetailModal({
     const avatarName = getPlayerName(player) || name;
     const statusText = statusLabel || '—';
     const positions = normalizePositions(detailSnapshot?.player_positions);
+    const nationalityName = detailSnapshot?.nationality_name || '—';
+    const nationalityFlagUrl = detailSnapshot?.nationality_flag_url || null;
+    const playstyleBadges = Array.isArray(detailSnapshot?.playstyle_badges)
+        ? detailSnapshot.playstyle_badges
+        : [];
     const canToggle = typeof onToggleDetails === 'function';
+    const detailEntries = fullData
+        ? Object.entries(fullData).filter(([key]) => !ATTRIBUTE_KEYS.has(key))
+        : [];
 
     return (
         <div
@@ -133,7 +221,18 @@ export default function PlayerDetailModal({
                         <div className="player-detail-meta">
                             <span className="player-detail-status">● {statusText}</span>
                             <span className="player-detail-nationality">
-                                {detailSnapshot?.nationality_name || '—'}
+                                {nationalityFlagUrl ? (
+                                    <span className="player-detail-flag">
+                                        <img
+                                            src={nationalityFlagUrl}
+                                            alt={`Bandeira do pais ${nationalityName}`}
+                                            className="player-detail-flag-image"
+                                        />
+                                        <span className="player-detail-flag-name">{nationalityName}</span>
+                                    </span>
+                                ) : (
+                                    nationalityName
+                                )}
                             </span>
                         </div>
                     </div>
@@ -162,25 +261,43 @@ export default function PlayerDetailModal({
                 </div>
             </div>
 
+            {playstyleBadges.length > 0 && (
+                <section className="player-detail-playstyles">
+                    <h4>Playstyles</h4>
+                    <div className="player-detail-playstyle-grid">
+                        {playstyleBadges.map((badge) => (
+                            <div className="player-detail-playstyle" key={badge.name}>
+                                <img
+                                    src={badge.image_url}
+                                    alt={badge.name}
+                                    className="player-detail-playstyle-image"
+                                />
+                                <span className="player-detail-playstyle-name">{badge.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            )}
+
             <section className="player-detail-performance">
                 <h4>Atributos de Performance</h4>
-                <div className="player-detail-performance-grid">
-                    <div className="player-detail-stat">
-                        <span>PAC</span>
-                        <strong>{detailSnapshot?.pace ?? '—'}</strong>
-                    </div>
-                    <div className="player-detail-stat">
-                        <span>DRI</span>
-                        <strong>{detailSnapshot?.dribbling ?? '—'}</strong>
-                    </div>
-                    <div className="player-detail-stat">
-                        <span>SHO</span>
-                        <strong>{detailSnapshot?.shooting ?? '—'}</strong>
-                    </div>
-                    <div className="player-detail-stat danger">
-                        <span>DEF</span>
-                        <strong>{detailSnapshot?.defending ?? '—'}</strong>
-                    </div>
+                <div className="player-detail-attributes-grid">
+                    {ATTRIBUTE_GROUPS.map((group) => (
+                        <div className="player-detail-attribute-group" key={group.key}>
+                            <div className="player-detail-attribute-header">
+                                <span>{group.label}</span>
+                                <strong>{resolveAttributeValue(detailSnapshot?.[group.key])}</strong>
+                            </div>
+                            <div className="player-detail-attribute-list">
+                                {group.items.map((item) => (
+                                    <div className="player-detail-attribute-row" key={item.key}>
+                                        <span>{item.label}</span>
+                                        <strong>{resolveAttributeValue(detailSnapshot?.[item.key])}</strong>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </section>
 
@@ -200,9 +317,9 @@ export default function PlayerDetailModal({
 
                 {error && <p className="modal-error">{error}</p>}
 
-                {expanded && fullData && (
+                {expanded && detailEntries.length > 0 && (
                     <div className="player-detail-full-list">
-                        {Object.entries(fullData).map(([key, value]) => (
+                        {detailEntries.map(([key, value]) => (
                             <div className="player-detail-full-row" key={key}>
                                 <span>{formatDetailLabel(key)}</span>
                                 <strong>{formatDetailValue(key, value)}</strong>
@@ -216,6 +333,16 @@ export default function PlayerDetailModal({
                 <button type="button" className="btn-outline" onClick={onClose}>
                     Fechar
                 </button>
+                {secondaryAction && (
+                    <button
+                        type="button"
+                        className="btn-outline"
+                        onClick={secondaryAction.onClick}
+                        disabled={secondaryAction.disabled}
+                    >
+                        {secondaryAction.label}
+                    </button>
+                )}
                 {primaryAction && (
                     <button
                         type="button"

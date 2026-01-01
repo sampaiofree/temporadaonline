@@ -13,11 +13,18 @@ if (csrfToken) {
 
 const LOADER_ID = 'page-loader';
 const LOADER_ACTIVE_CLASS = 'is-loading';
+const getAppAssets = () => window.__APP_ASSETS__ ?? null;
 
 const ensureLoader = () => {
     if (!document.body || document.getElementById(LOADER_ID)) {
         return;
     }
+
+    const appAssets = getAppAssets();
+    const logoUrl = appAssets?.logo_dark_url || appAssets?.logo_padrao_url || null;
+    const logoMarkup = logoUrl
+        ? `<img class="page-loader-logo" src="${logoUrl}" alt="" aria-hidden="true">`
+        : '';
 
     const loader = document.createElement('div');
     loader.id = LOADER_ID;
@@ -25,6 +32,7 @@ const ensureLoader = () => {
     loader.setAttribute('aria-hidden', 'true');
     loader.innerHTML = `
         <div class="page-loader-spinner" role="status" aria-live="polite">
+            ${logoMarkup}
             <span class="page-loader-text">Carregando...</span>
         </div>
     `;
