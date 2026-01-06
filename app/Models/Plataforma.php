@@ -11,6 +11,7 @@ class Plataforma extends Model
     protected $fillable = [
         'nome',
         'slug',
+        'imagem',
     ];
 
     public function profiles(): HasMany

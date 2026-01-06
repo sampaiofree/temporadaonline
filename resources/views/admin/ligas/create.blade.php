@@ -21,6 +21,7 @@
                 'method' => 'POST',
                 'confederacoes' => $confederacoes,
                 'statusOptions' => $statusOptions,
+                'whatsappGroups' => $whatsappGroups ?? [],
                 'submitLabel' => 'Criar liga',
             ])
         </div>

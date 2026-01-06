@@ -62,7 +62,7 @@ Criar ou editar o clube do usuário dentro da liga.
 
 ### Objetivo
 
-Exibir **todos os jogadores da liga**, permitindo compra, venda, troca ou multa.
+Exibir **todos os jogadores da Confederação**, permitindo compra, venda, troca ou multa.
 
 ### Listagem de Jogadores
 

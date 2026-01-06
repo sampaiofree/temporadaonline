@@ -90,7 +90,7 @@ export default function Perfil() {
     const [availabilityMessage, setAvailabilityMessage] = useState('');
     const [availabilityError, setAvailabilityError] = useState('');
     const [availabilityForm, setAvailabilityForm] = useState({
-        dia_semana: '',
+        dias_semana: [],
         hora_inicio: '',
         hora_fim: '',
     });
@@ -207,33 +207,74 @@ export default function Perfil() {
         setAvailabilityForm((prev) => ({ ...prev, [name]: value }));
     };
 
+    const setAvailabilityDays = (days) => {
+        const uniqueDays = Array.from(new Set(days)).sort((a, b) => a - b);
+        setAvailabilityForm((prev) => ({ ...prev, dias_semana: uniqueDays }));
+    };
+
+    const toggleAvailabilityDay = (dayValue) => {
+        setAvailabilityForm((prev) => {
+            const daySet = new Set(prev.dias_semana);
+            if (daySet.has(dayValue)) {
+                daySet.delete(dayValue);
+            } else {
+                daySet.add(dayValue);
+            }
+            return { ...prev, dias_semana: Array.from(daySet).sort((a, b) => a - b) };
+        });
+    };
+
+    const selectedDays = availabilityForm.dias_semana;
+    const selectedDaySet = useMemo(() => new Set(selectedDays), [selectedDays]);
+    const dayLabelMap = useMemo(() => {
+        const map = new Map();
+        DAY_OPTIONS.forEach((day) => map.set(day.value, day.label));
+        return map;
+    }, []);
+
     const handleAvailabilitySubmit = async (event) => {
         event.preventDefault();
         setAvailabilityMessage('');
         setAvailabilityError('');
 
-        if (!availabilityForm.dia_semana || !availabilityForm.hora_inicio || !availabilityForm.hora_fim) {
-            setAvailabilityError('Preencha dia, início e fim.');
+        if (selectedDays.length === 0 || !availabilityForm.hora_inicio || !availabilityForm.hora_fim) {
+            setAvailabilityError('Selecione os dias e preencha início e fim.');
             return;
         }
 
         try {
-            await window.axios.post('/api/me/disponibilidades', {
-                dia_semana: Number(availabilityForm.dia_semana),
+            const { data } = await window.axios.post('/api/me/disponibilidades', {
+                dias_semana: selectedDays,
                 hora_inicio: availabilityForm.hora_inicio,
                 hora_fim: availabilityForm.hora_fim,
             });
-            setAvailabilityMessage('Horário salvo');
-            setAvailabilityForm({
-                dia_semana: '',
-                hora_inicio: '',
-                hora_fim: '',
-            });
+
+            const created = Array.isArray(data?.created) ? data.created : [];
+            const skipped = Array.isArray(data?.skipped) ? data.skipped : [];
+            const createdCount = created.length || (data?.row ? 1 : 0);
+
+            if (createdCount > 0) {
+                setAvailabilityMessage(`Horário salvo para ${createdCount} dia(s).`);
+                setAvailabilityForm({
+                    dias_semana: [],
+                    hora_inicio: '',
+                    hora_fim: '',
+                });
+            }
+
+            if (skipped.length > 0) {
+                const labels = skipped
+                    .map((item) => dayLabelMap.get(item.dia_semana) || `Dia ${item.dia_semana}`)
+                    .join(', ');
+                setAvailabilityError(`Conflito nos dias: ${labels}.`);
+            }
+
             fetchAvailability();
         } catch (error) {
             const msg =
                 error.response?.data?.message ??
                 error.response?.data?.errors?.hora_inicio?.[0] ??
+                error.response?.data?.errors?.dia_semana?.[0] ??
                 'Não foi possível salvar. Verifique conflitos.';
             setAvailabilityError(msg);
         }
@@ -450,23 +491,48 @@ export default function Perfil() {
                         </div>
                     </div>
 
-                    <form className="availability-form" onSubmit={handleAvailabilitySubmit}>
-                        <label className="availability-field">
-                            <span>Dia</span>
-                            <select
-                                name="dia_semana"
-                                value={availabilityForm.dia_semana}
-                                onChange={handleAvailabilityChange}
-                                required
+                    <div className="availability-days">
+                        <p className="availability-days-label">Dias</p>
+                        <div className="filter-pill-row">
+                            {DAY_OPTIONS.map((day) => (
+                                <button
+                                    key={day.value}
+                                    type="button"
+                                    className={`filter-pill${selectedDaySet.has(day.value) ? ' active' : ''}`}
+                                    onClick={() => toggleAvailabilityDay(day.value)}
+                                    aria-pressed={selectedDaySet.has(day.value)}
+                                >
+                                    {day.label}
+                                </button>
+                            ))}
+                        </div>
+                        <div className="availability-days-actions">
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={() => setAvailabilityDays([1, 2, 3, 4, 5])}
                             >
-                                <option value="">Selecione</option>
-                                {DAY_OPTIONS.map((day) => (
-                                    <option key={day.value} value={day.value}>
-                                        {day.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
+                                Seg-Sex
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={() => setAvailabilityDays([0, 1, 2, 3, 4, 5, 6])}
+                            >
+                                Todos
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-outline"
+                                onClick={() => setAvailabilityDays([])}
+                                disabled={selectedDays.length === 0}
+                            >
+                                Limpar
+                            </button>
+                        </div>
+                    </div>
+
+                    <form className="availability-form" onSubmit={handleAvailabilitySubmit}>
                         <label className="availability-field">
                             <span>Início</span>
                             <input

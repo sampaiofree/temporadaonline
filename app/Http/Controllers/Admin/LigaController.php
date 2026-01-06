@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Confederacao;
 use App\Models\Liga;
+use App\Models\WhatsappConnection;
+use App\Services\EvolutionService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -31,15 +34,16 @@ class LigaController extends Controller
         ]);
     }
 
-    public function create(): View
+    public function create(EvolutionService $evolutionService): View
     {
         return view('admin.ligas.create', [
             'confederacoes' => Confederacao::with(['jogo', 'geracao', 'plataforma'])->orderBy('nome')->get(),
             'statusOptions' => self::STATUS_OPTIONS,
+            'whatsappGroups' => $this->resolveWhatsappGroups($evolutionService),
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, EvolutionService $evolutionService): RedirectResponse
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
@@ -48,6 +52,9 @@ class LigaController extends Controller
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
+            'whatsapp_grupo_jid' => 'nullable|string|max:255',
+            'descricao' => 'nullable|string|max:2000',
+            'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
             'periodos' => 'array',
@@ -58,15 +65,13 @@ class LigaController extends Controller
         $confederacao = Confederacao::with(['jogo', 'geracao', 'plataforma'])
             ->findOrFail((int) $data['confederacao_id']);
 
-        if (! $confederacao->jogo_id || ! $confederacao->geracao_id || ! $confederacao->plataforma_id) {
+        if (! $confederacao->jogo_id || ! $confederacao->geracao_id) {
             throw ValidationException::withMessages([
-                'confederacao_id' => ['Confederacao precisa ter jogo, geracao e plataforma configurados.'],
+                'confederacao_id' => ['Confederacao precisa ter jogo e geracao configurados.'],
             ]);
         }
 
         $data = array_merge($data, [
-            'descricao' => '',
-            'regras' => '',
             'tipo' => 'publica',
             'jogo_id' => $confederacao->jogo_id,
             'geracao_id' => $confederacao->geracao_id,
@@ -74,6 +79,15 @@ class LigaController extends Controller
         ]);
 
         unset($data['periodos']);
+
+        if (! empty($data['whatsapp_grupo_jid'])) {
+            $data['whatsapp_grupo_link'] = $this->resolveWhatsappInviteLink(
+                $data['whatsapp_grupo_jid'],
+                $evolutionService,
+            );
+        } else {
+            $data['whatsapp_grupo_link'] = null;
+        }
 
         $periodos = $this->normalizePeriodos($request->input('periodos', []));
         if ($request->hasFile('imagem')) {
@@ -88,17 +102,18 @@ class LigaController extends Controller
         return redirect()->route('admin.ligas.index')->with('success', 'Liga criada com sucesso.');
     }
 
-    public function edit(Liga $liga): View
+    public function edit(Liga $liga, EvolutionService $evolutionService): View
     {
         return view('admin.ligas.edit', [
             'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'confederacao.jogo', 'confederacao.geracao', 'confederacao.plataforma', 'periodos']),
             'statusOptions' => self::STATUS_OPTIONS,
             'hasClubes' => $liga->clubes()->exists(),
             'hasUsers' => $liga->users()->exists(),
+            'whatsappGroups' => $this->resolveWhatsappGroups($evolutionService),
         ]);
     }
 
-    public function update(Request $request, Liga $liga): RedirectResponse
+    public function update(Request $request, Liga $liga, EvolutionService $evolutionService): RedirectResponse
     {
         $rules = [
             'nome' => 'required|string|max:255',
@@ -106,6 +121,9 @@ class LigaController extends Controller
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
+            'whatsapp_grupo_jid' => 'nullable|string|max:255',
+            'descricao' => 'nullable|string|max:2000',
+            'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
             'periodos' => 'array',
@@ -114,6 +132,21 @@ class LigaController extends Controller
         ];
 
         $data = $request->validate($rules);
+
+        if (! empty($data['whatsapp_grupo_jid'])) {
+            $currentJid = $liga->whatsapp_grupo_jid;
+            $currentLink = $liga->whatsapp_grupo_link;
+            if ($currentLink && $currentJid === $data['whatsapp_grupo_jid']) {
+                $data['whatsapp_grupo_link'] = $currentLink;
+            } else {
+                $data['whatsapp_grupo_link'] = $this->resolveWhatsappInviteLink(
+                    $data['whatsapp_grupo_jid'],
+                    $evolutionService,
+                );
+            }
+        } else {
+            $data['whatsapp_grupo_link'] = null;
+        }
 
         if ($request->hasFile('imagem')) {
             $oldImage = $liga->imagem;
@@ -194,6 +227,48 @@ class LigaController extends Controller
         }
 
         return $normalized;
+    }
+
+    private function resolveWhatsappGroups(EvolutionService $evolutionService): array
+    {
+        $connection = WhatsappConnection::first();
+        if (! $connection || ! config('services.evolution.url') || ! config('services.evolution.key')) {
+            return [];
+        }
+
+        return $evolutionService->listGroups($connection->instance_name);
+    }
+
+    private function resolveWhatsappInviteLink(string $groupJid, EvolutionService $evolutionService): string
+    {
+        $connection = WhatsappConnection::first();
+        if (! $connection || ! config('services.evolution.url') || ! config('services.evolution.key')) {
+            throw ValidationException::withMessages([
+                'whatsapp_grupo_jid' => ['Conecte o WhatsApp do administrador antes de selecionar o grupo.'],
+            ]);
+        }
+
+        $result = $evolutionService->fetchInviteCode($connection->instance_name, $groupJid);
+        if (is_string($result)) {
+            throw ValidationException::withMessages([
+                'whatsapp_grupo_jid' => ['Nao foi possivel obter o link do grupo. Confirme se o WhatsApp conectado e admin.'],
+            ]);
+        }
+
+        $code = $result['inviteCode']
+            ?? $result['code']
+            ?? $result['invite_code']
+            ?? Arr::get($result, 'response.inviteCode')
+            ?? Arr::get($result, 'response.code')
+            ?? Arr::get($result, 'data.inviteCode');
+
+        if (! $code || ! is_string($code)) {
+            throw ValidationException::withMessages([
+                'whatsapp_grupo_jid' => ['Nao foi possivel obter o link do grupo. Confirme se o WhatsApp conectado e admin.'],
+            ]);
+        }
+
+        return 'https://chat.whatsapp.com/' . trim($code);
     }
 
     public function destroy(Liga $liga): RedirectResponse

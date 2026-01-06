@@ -21,6 +21,7 @@
                 'method' => 'PUT',
                 'liga' => $liga,
                 'statusOptions' => $statusOptions,
+                'whatsappGroups' => $whatsappGroups ?? [],
                 'submitLabel' => 'Salvar alterações',
             ])
 

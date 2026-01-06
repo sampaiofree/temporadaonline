@@ -21,7 +21,6 @@
                 'method' => 'POST',
                 'jogos' => $jogos,
                 'geracoes' => $geracoes,
-                'plataformas' => $plataformas,
                 'submitLabel' => 'Criar confederacao',
             ])
         </div>

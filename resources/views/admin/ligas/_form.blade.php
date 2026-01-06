@@ -5,6 +5,7 @@
     'confederacoes' => [],
     'statusOptions',
     'submitLabel' => 'Salvar liga',
+    'whatsappGroups' => [],
 ])
 
 @php
@@ -14,6 +15,9 @@
     $currentSaldoInicial = old('saldo_inicial', $liga->saldo_inicial ?? 0);
     $currentUsuarioPontuacao = old('usuario_pontuacao', $liga->usuario_pontuacao ?? '');
     $currentWhatsappLink = old('whatsapp_grupo_link', $liga->whatsapp_grupo_link ?? '');
+    $currentWhatsappGroupJid = old('whatsapp_grupo_jid', $liga->whatsapp_grupo_jid ?? '');
+    $currentDescricao = old('descricao', $liga->descricao ?? '');
+    $currentRegras = old('regras', $liga->regras ?? '');
     $currentNome = old('nome', $liga->nome ?? '');
     $isEditing = (bool) $liga;
     $selectedConfederacao = collect($confederacoes)->firstWhere('id', (int) $currentConfederacaoId);
@@ -196,16 +200,82 @@
             @enderror
         </div>
         <div>
-            <label for="whatsapp_grupo_link" class="block text-sm font-semibold text-slate-700">Link do grupo WhatsApp</label>
-            <input
-                type="url"
-                id="whatsapp_grupo_link"
-                name="whatsapp_grupo_link"
-                value="{{ $currentWhatsappLink }}"
-                placeholder="https://chat.whatsapp.com/..."
+            <label for="whatsapp_grupo_select" class="block text-sm font-semibold text-slate-700">Grupo WhatsApp</label>
+            <select
+                id="whatsapp_grupo_select"
+                name="whatsapp_grupo_jid"
                 class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
-            @error('whatsapp_grupo_link')
+                <option value="">Selecione um grupo</option>
+                @foreach($whatsappGroups as $group)
+                    @php
+                        $groupId = is_array($group) ? ($group['id'] ?? '') : '';
+                        $groupName = is_array($group) ? ($group['subject'] ?? $groupId) : '';
+                        $groupLabel = $groupName ?: $groupId;
+                    @endphp
+                    @if($groupId)
+                        <option value="{{ $groupId }}" @selected($currentWhatsappGroupJid === $groupId)>
+                            {{ $groupLabel }} ({{ $groupId }})
+                        </option>
+                    @endif
+                @endforeach
+            </select>
+            @if(empty($whatsappGroups))
+                <p class="mt-1 text-xs text-amber-600">Nenhum grupo carregado. Confirme a conexao em Admin &gt; WhatsApp.</p>
+            @endif
+            @error('whatsapp_grupo_jid')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <span class="block text-sm font-semibold text-slate-700">JID do grupo WhatsApp</span>
+            <p class="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                {{ $currentWhatsappGroupJid ?: '-' }}
+            </p>
+            <p class="mt-1 text-xs text-slate-500">Preenchido automaticamente apos salvar.</p>
+        </div>
+        <div>
+            <span class="block text-sm font-semibold text-slate-700">Link do grupo WhatsApp</span>
+            <div class="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                @if($currentWhatsappLink)
+                    <a href="{{ $currentWhatsappLink }}" class="text-blue-600 hover:text-blue-700" target="_blank" rel="noopener noreferrer">
+                        {{ $currentWhatsappLink }}
+                    </a>
+                @else
+                    -
+                @endif
+            </div>
+            <p class="mt-1 text-xs text-slate-500">Preenchido automaticamente apos salvar.</p>
+        </div>
+    </div>
+
+    <div class="grid gap-6 md:grid-cols-2">
+        <div>
+            <label for="descricao" class="block text-sm font-semibold text-slate-700">Descricao</label>
+            <textarea
+                id="descricao"
+                name="descricao"
+                rows="5"
+                maxlength="2000"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >{{ $currentDescricao }}</textarea>
+            @error('descricao')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+        <div>
+            <label for="regras" class="block text-sm font-semibold text-slate-700">Regras</label>
+            <textarea
+                id="regras"
+                name="regras"
+                rows="5"
+                maxlength="2000"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >{{ $currentRegras }}</textarea>
+            @error('regras')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
         </div>

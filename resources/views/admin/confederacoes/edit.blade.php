@@ -22,7 +22,6 @@
                 'confederacao' => $confederacao,
                 'jogos' => $jogos,
                 'geracoes' => $geracoes,
-                'plataformas' => $plataformas,
                 'lockSelections' => $lockSelections ?? false,
                 'submitLabel' => 'Salvar alteracoes',
             ])

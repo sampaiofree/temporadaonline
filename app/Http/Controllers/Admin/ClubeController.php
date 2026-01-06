@@ -50,11 +50,12 @@ class ClubeController extends Controller
 
     public function edit(LigaClube $clube, Request $request): View
     {
+        $clube->loadMissing('liga');
         $escudos = EscudoClube::orderBy('clube_nome')->get();
         $selectedEscudoId = $clube->escudo_clube_id;
         $usedEscudos = LigaClube::query()
-            ->where('liga_id', $clube->liga_id)
             ->whereNotNull('escudo_clube_id')
+            ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $clube->liga?->confederacao_id))
             ->where('id', '<>', $clube->id)
             ->pluck('escudo_clube_id')
             ->all();
@@ -72,6 +73,7 @@ class ClubeController extends Controller
 
     public function update(Request $request, LigaClube $clube): RedirectResponse
     {
+        $clube->loadMissing('liga');
         $validated = $request->validate([
             'nome' => 'required|string|max:150',
             'escudo_id' => 'nullable|exists:escudos_clubes,id',
@@ -81,14 +83,14 @@ class ClubeController extends Controller
         $escudoId = $validated['escudo_id'] ?? null;
         if ($escudoId) {
             $escudoInUse = LigaClube::query()
-                ->where('liga_id', $clube->liga_id)
                 ->where('escudo_clube_id', $escudoId)
+                ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $clube->liga?->confederacao_id))
                 ->where('id', '<>', $clube->id)
                 ->exists();
 
             if ($escudoInUse) {
                 return back()
-                    ->withErrors(['escudo_id' => 'Este escudo já está em uso por outro clube nesta liga.'])
+                    ->withErrors(['escudo_id' => 'Este escudo já está em uso por outro clube nesta confederação.'])
                     ->withInput();
             }
         }

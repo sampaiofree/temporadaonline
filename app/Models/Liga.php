@@ -15,6 +15,7 @@ class Liga extends Model
         'regras',
         'usuario_pontuacao',
         'whatsapp_grupo_link',
+        'whatsapp_grupo_jid',
         'imagem',
         'tipo',
         'status',

@@ -8,6 +8,10 @@ use Illuminate\Validation\ValidationException;
 
 class PartidaStateService
 {
+    public function __construct(private readonly PartidaPayrollService $payroll)
+    {
+    }
+
     /**
      * Mapa de transições permitidas.
      */
@@ -36,6 +40,7 @@ class PartidaStateService
     public function transitionTo(Partida $partida, string $targetState, array $attributes = [], ?string $eventType = null, ?int $userId = null, array $payload = []): Partida
     {
         $current = $partida->estado;
+        $stateChanged = $current !== $targetState;
 
         if ($current !== $targetState && ! $this->canTransition($current, $targetState)) {
             throw ValidationException::withMessages([
@@ -54,6 +59,10 @@ class PartidaStateService
                 'user_id' => $userId,
                 'payload' => $payload,
             ]);
+        }
+
+        if ($stateChanged && in_array($targetState, ['placar_confirmado', 'wo'], true)) {
+            $this->payroll->chargeIfNeeded($partida);
         }
 
         return $partida;

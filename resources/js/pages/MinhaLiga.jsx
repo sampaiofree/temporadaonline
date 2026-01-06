@@ -239,10 +239,10 @@ export default function MinhaLiga() {
             )}
             <section className="league-actions grid league-actions-custom">
                 <a className="control-card" href={mercadoHref}>
-                    <span className="control-card-title">Mercado</span>
+                    <span className="control-card-title">Transferências</span>
                 </a>
                 <a className="control-card" href={mercadoRadarHref}>
-                    <span className="control-card-title">Jogadores monitorados</span>
+                    <span className="control-card-title">Olheiro</span>
                 </a>
                 <a className="control-card" href={financeiroHref}>
                     <span className="control-card-title">Financeiro</span>

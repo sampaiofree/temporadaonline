@@ -8,7 +8,6 @@
     'confederacao' => null,
     'jogos',
     'geracoes',
-    'plataformas',
     'submitLabel' => 'Salvar',
     'lockSelections' => false,
 ])
@@ -18,7 +17,6 @@
     $descricaoAtual = old('descricao', $confederacao->descricao ?? '');
     $currentJogoId = old('jogo_id', $confederacao->jogo_id ?? '');
     $currentGeracaoId = old('geracao_id', $confederacao->geracao_id ?? '');
-    $currentPlataformaId = old('plataforma_id', $confederacao->plataforma_id ?? '');
 @endphp
 
 <form action="{{ $action }}" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -55,7 +53,7 @@
         @enderror
     </div>
 
-    <div class="grid gap-6 md:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2">
         <div>
             <label for="jogo_id" class="block text-sm font-semibold text-slate-700">Jogo</label>
             <select
@@ -91,29 +89,11 @@
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
         </div>
-
-        <div>
-            <label for="plataforma_id" class="block text-sm font-semibold text-slate-700">Plataforma</label>
-            <select
-                id="plataforma_id"
-                name="plataforma_id"
-                {!! $lockSelections ? 'disabled' : '' !!}
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
-            >
-                <option value="">Selecione</option>
-                @foreach($plataformas as $plataforma)
-                    <option value="{{ $plataforma->id }}" @selected($currentPlataformaId == $plataforma->id)>{{ $plataforma->nome }}</option>
-                @endforeach
-            </select>
-            @error('plataforma_id')
-                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
-            @enderror
-        </div>
     </div>
 
     @if($lockSelections)
         <p class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            A confederacao ja possui ligas cadastradas, entao Jogo, Geracao e Plataforma nao podem ser alterados.
+            A confederacao ja possui ligas cadastradas, entao Jogo e Geracao nao podem ser alterados.
         </p>
     @endif
 

@@ -27,6 +27,8 @@ const TYPE_LABELS = {
     multa: 'Multa',
     troca: 'Troca',
     compra: 'Compra',
+    salario_partida: 'Salário da partida',
+    multa_wo: 'Multa W.O.',
 };
 
 export default function FinanceiroClube() {
@@ -45,7 +47,7 @@ export default function FinanceiroClube() {
             ? 'Sem gasto fixo'
             : rodadas < 0
             ? 'Saldo Negativo'
-            : `${rodadas} rodadas`;
+            : `${rodadas} partidas`;
 
     if (!liga) {
         return (
@@ -117,7 +119,7 @@ export default function FinanceiroClube() {
 
                         <div className="financeiro-stats-grid">
                             <article className="financeiro-stat-card is-negative">
-                                <p className="financeiro-stat-label">Salário / rodada</p>
+                                <p className="financeiro-stat-label">Salário / partida</p>
                                 <p className="financeiro-stat-value">
                                     {salario > 0 ? '-' : ''}
                                     {formatCurrency(salario)}

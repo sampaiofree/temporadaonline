@@ -27,7 +27,8 @@ class LigaClubePerfilController extends Controller
         }
 
         $clube->load([
-            'user',
+            'user.profile',
+            'escudo',
             'clubeElencos.elencopadrao',
         ]);
 
@@ -37,10 +38,15 @@ class LigaClubePerfilController extends Controller
             return [
                 'id' => $player?->id,
                 'short_name' => $player?->short_name,
+                'long_name' => $player?->long_name,
                 'player_positions' => $player?->player_positions,
                 'overall' => $player?->overall,
+                'player_face_url' => $player?->player_face_url,
             ];
-        });
+        })->filter(fn ($player) => $player['id'])->values();
+
+        $owner = $clube->user;
+        $profile = $owner?->profile;
 
         return view('liga_clube_perfil', [
             'liga' => [
@@ -50,10 +56,49 @@ class LigaClubePerfilController extends Controller
             'clube' => [
                 'id' => $clube->id,
                 'nome' => $clube->nome,
-                'dono' => $clube->user?->name,
+                'nickname' => $profile?->nickname,
+                'dono' => $owner?->name,
+                'plataforma' => $profile?->plataforma_nome,
+                'geracao' => $profile?->geracao_nome,
+                'escudo_url' => $this->resolveEscudoUrl($clube->escudo?->clube_imagem),
+                'esquema_tatico_imagem_url' => $this->resolveStorageUrl($clube->esquema_tatico_imagem),
                 'players' => $players,
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, $nav),
         ]);
+    }
+
+    private function resolveEscudoUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return \Storage::disk('public')->url($path);
+    }
+
+    private function resolveStorageUrl(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
+        return \Storage::disk('public')->url($path);
     }
 }

@@ -74,6 +74,15 @@ const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
 const getMercadoFromWindow = () => window.__MERCADO__ ?? { players: [] };
 
+const normalizeText = (value) => {
+    if (!value) return '';
+    return value
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+};
+
 /* =========================
    Constantes UI
 ========================= */
@@ -92,9 +101,10 @@ const MODAL_MODES = {
 
 const OVR_FILTERS = [
     { value: 'all', label: 'Todos' },
-    { value: '90+', label: 'Elite 90+' },
-    { value: '85-89', label: 'Ouro 85–89' },
-    { value: '80-84', label: 'Prata 80–84' },
+    { value: 'elite', label: 'Elite 88+' },
+    { value: 'gold', label: 'Ouro 84–87' },
+    { value: 'silver', label: 'Prata 80–83' },
+    { value: 'bronze', label: 'Bronze ≤79' },
 ];
 
 const POSITION_GROUPS = [
@@ -286,21 +296,23 @@ export default function LigaMercado() {
     const matchesOvr = (overall) => {
         const ovr = Number(overall ?? 0);
         if (ovrFilter === 'all') return true;
-        if (ovrFilter === '90+') return ovr >= 90;
-        const [min, max] = ovrFilter.split('-').map(Number);
-        return Number.isFinite(min) && Number.isFinite(max) ? ovr >= min && ovr <= max : true;
+        if (ovrFilter === 'elite') return ovr >= 88;
+        if (ovrFilter === 'gold') return ovr >= 84 && ovr <= 87;
+        if (ovrFilter === 'silver') return ovr >= 80 && ovr <= 83;
+        if (ovrFilter === 'bronze') return ovr <= 79;
+        return true;
     };
 
     const filtered = useMemo(() => {
-        const query = q.trim().toLowerCase();
+        const query = normalizeText(q.trim());
         const minValueEur = parseMillionsInput(minValue);
         const maxValueEur = parseMillionsInput(maxValue);
 
         const base = playersData.filter((p) => {
             // Search
             if (query) {
-                const name = getPlayerName(p).toLowerCase();
-                const clubName = (p.club_name || '').toString().toLowerCase();
+                const name = normalizeText(getPlayerName(p));
+                const clubName = normalizeText(p.club_name || '');
                 if (!name.includes(query) && !clubName.includes(query)) return false;
             }
 
@@ -891,7 +903,7 @@ export default function LigaMercado() {
             {/* HERO */}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">MERCADO</p>
-                <h1 className="ligas-title">Jogadores da liga</h1>
+                <h1 className="ligas-title">Jogadores da Confederação</h1>
                 <p className="ligas-subtitle">
                     {clube ? `Operando como ${clube.nome}` : 'Crie seu clube para negociar no mercado.'}
                 </p>

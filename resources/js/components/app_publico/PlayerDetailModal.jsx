@@ -1,3 +1,4 @@
+import { visibility } from 'html2canvas/dist/types/css/property-descriptors/visibility';
 import { useState } from 'react';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
@@ -303,10 +304,11 @@ export default function PlayerDetailModal({
 
             <div className="player-detail-full">
                 <button
-                    type="button"
-                    className="player-detail-full-toggle"
+                    type="hidden"
+                    className=""
                     onClick={onToggleDetails}
                     disabled={loading || !canToggle}
+                    
                 >
                     {expanded
                         ? 'Ocultar informações detalhadas'

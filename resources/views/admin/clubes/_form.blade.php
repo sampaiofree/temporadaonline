@@ -88,7 +88,7 @@
                         @selected((string) $escudo->id === (string) $currentEscudoId)
                         @disabled($isUsed && ! $isSelected)
                     >
-                        {{ $escudo->clube_nome }}{{ $isUsed && ! $isSelected ? ' (em uso)' : '' }}
+                        {{ $escudo->clube_nome }}{{ $isUsed && ! $isSelected ? ' (em uso na confederação)' : '' }}
                     </option>
                 @endforeach
             </select>

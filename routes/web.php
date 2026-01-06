@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenuncia
 use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
 use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\WhatsappConnectionController as AdminWhatsappConnectionController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
 use App\Http\Controllers\LigaElencoController;
@@ -53,6 +54,12 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     ])->only(['index', 'destroy']);
     Route::get('app-assets', [AdminAppAssetController::class, 'edit'])->name('app-assets.edit');
     Route::put('app-assets', [AdminAppAssetController::class, 'update'])->name('app-assets.update');
+    Route::get('whatsapp', [AdminWhatsappConnectionController::class, 'index'])->name('whatsapp.index');
+    Route::post('whatsapp/instance', [AdminWhatsappConnectionController::class, 'createInstance'])->name('whatsapp.instance.create');
+    Route::post('whatsapp/{connection}/connect', [AdminWhatsappConnectionController::class, 'connect'])->name('whatsapp.connect');
+    Route::post('whatsapp/{connection}/status', [AdminWhatsappConnectionController::class, 'refreshStatus'])->name('whatsapp.status');
+    Route::post('whatsapp/{connection}/restart', [AdminWhatsappConnectionController::class, 'restart'])->name('whatsapp.restart');
+    Route::post('whatsapp/{connection}/logout', [AdminWhatsappConnectionController::class, 'logout'])->name('whatsapp.logout');
     Route::get('partidas-denuncias', [AdminPartidaDenunciaController::class, 'index'])
         ->name('partidas-denuncias.index');
     Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');

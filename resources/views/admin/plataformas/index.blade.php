@@ -1,3 +1,7 @@
+@php
+    use Illuminate\Support\Facades\Storage;
+@endphp
+
 <x-app-layout title="Plataformas">
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
@@ -26,6 +30,7 @@
                 <table class="min-w-full text-left text-sm">
                     <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                         <tr>
+                            <th class="px-4 py-3 font-semibold">Imagem</th>
                             <th class="px-4 py-3 font-semibold">Nome</th>
                             <th class="px-4 py-3 font-semibold">Slug</th>
                             <th class="px-4 py-3 font-semibold">Ligas</th>
@@ -36,6 +41,17 @@
                     <tbody class="divide-y divide-slate-100">
                         @forelse($plataformas as $plataforma)
                             <tr class="hover:bg-slate-50 transition-colors">
+                                <td class="px-4 py-4 align-top">
+                                    @if($plataforma->imagem)
+                                        <img
+                                            src="{{ Storage::disk('public')->url($plataforma->imagem) }}"
+                                            alt="{{ $plataforma->nome }}"
+                                            class="h-10 w-10 rounded-lg border border-slate-200 object-cover"
+                                        >
+                                    @else
+                                        <div class="h-10 w-10 rounded-lg border border-dashed border-slate-200 bg-slate-50"></div>
+                                    @endif
+                                </td>
                                 <td class="px-4 py-4 align-top">
                                     <div class="text-sm font-semibold text-slate-900">{{ $plataforma->nome }}</div>
                                 </td>

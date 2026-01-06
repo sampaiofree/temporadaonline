@@ -97,9 +97,6 @@ function PlayerChip({
         >
             <span className="esquema-player-label">
                 <span className="esquema-player-name">{name}</span>
-                <span className="esquema-player-meta">
-                    {metaOverall} | {metaPosition}
-                </span>
             </span>
             <span className="esquema-player-chip">
                 {showFallback ? (
@@ -115,6 +112,9 @@ function PlayerChip({
                         onError={() => setFailed(true)}
                     />
                 )}
+            </span>
+            <span className="esquema-player-meta">
+                {metaOverall} | {metaPosition}
             </span>
         </button>
     );

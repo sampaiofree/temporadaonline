@@ -9,6 +9,7 @@ use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaEscudo;
 use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
+use App\Models\PartidaFolhaPagamento;
 use App\Models\EscudoClube;
 use App\Models\Pais;
 use App\Services\LeagueFinanceService;
@@ -33,8 +34,8 @@ class MinhaLigaController extends Controller
             ->first();
         $escudos = EscudoClube::orderBy('clube_nome')->get(['id', 'clube_nome', 'clube_imagem']);
         $usedEscudos = LigaClube::query()
-            ->where('liga_id', $liga->id)
             ->whereNotNull('escudo_clube_id')
+            ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $liga->confederacao_id))
             ->when($userClub, fn ($query) => $query->where('id', '<>', $userClub->id))
             ->pluck('escudo_clube_id')
             ->values();
@@ -130,14 +131,14 @@ class MinhaLigaController extends Controller
                 ? (int) floor($saldo / $salarioPorRodada)
                 : null;
 
-            $movimentos = LigaTransferencia::query()
+            $movimentosTransferencias = LigaTransferencia::query()
                 ->where(function ($query) use ($userClub): void {
                     $query->where('clube_origem_id', $userClub->id)
                         ->orWhere('clube_destino_id', $userClub->id);
                 })
                 ->with(['elencopadrao:id,short_name,long_name'])
                 ->latest()
-                ->limit(5)
+                ->limit(10)
                 ->get([
                     'id',
                     'tipo',
@@ -164,6 +165,48 @@ class MinhaLigaController extends Controller
                         'jogador_nome' => $jogadorNome,
                     ];
                 })
+                ->values()
+                ->all();
+
+            $movimentosPartida = PartidaFolhaPagamento::query()
+                ->where('liga_id', $liga->id)
+                ->where('clube_id', $userClub->id)
+                ->latest()
+                ->limit(10)
+                ->get(['id', 'partida_id', 'total_wage', 'multa_wo', 'created_at'])
+                ->flatMap(function (PartidaFolhaPagamento $pagamento) use ($userClub) {
+                    $items = [];
+
+                    $items[] = [
+                        'id' => 'partida-salario-'.$pagamento->id,
+                        'tipo' => 'salario_partida',
+                        'valor' => (int) $pagamento->total_wage,
+                        'observacao' => "Salário da partida #{$pagamento->partida_id}",
+                        'created_at' => $pagamento->created_at,
+                        'clube_origem_id' => $userClub->id,
+                        'clube_destino_id' => null,
+                    ];
+
+                    if ((int) $pagamento->multa_wo > 0) {
+                        $items[] = [
+                            'id' => 'partida-multa-'.$pagamento->id,
+                            'tipo' => 'multa_wo',
+                            'valor' => (int) $pagamento->multa_wo,
+                            'observacao' => "Multa W.O. partida #{$pagamento->partida_id}",
+                            'created_at' => $pagamento->created_at,
+                            'clube_origem_id' => $userClub->id,
+                            'clube_destino_id' => null,
+                        ];
+                    }
+
+                    return $items;
+                })
+                ->values()
+                ->all();
+
+            $movimentos = collect(array_merge($movimentosTransferencias, $movimentosPartida))
+                ->sortByDesc('created_at')
+                ->take(5)
                 ->values()
                 ->all();
         }
@@ -205,8 +248,8 @@ class MinhaLigaController extends Controller
         ];
 
         $usedEscudos = LigaClube::query()
-            ->where('liga_id', $liga->id)
             ->whereNotNull('escudo_clube_id')
+            ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $liga->confederacao_id))
             ->pluck('escudo_clube_id')
             ->values();
 
@@ -514,14 +557,14 @@ class MinhaLigaController extends Controller
         $escudoId = $validated['escudo_id'] ?? null;
         if ($escudoId) {
             $escudoInUse = LigaClube::query()
-                ->where('liga_id', $liga->id)
                 ->where('escudo_clube_id', $escudoId)
+                ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $liga->confederacao_id))
                 ->when($existingClub, fn ($query) => $query->where('id', '<>', $existingClub->id))
                 ->exists();
 
             if ($escudoInUse) {
                 return response()->json([
-                    'message' => 'Este escudo já está em uso por outro clube nesta liga.',
+                    'message' => 'Este escudo já está em uso por outro clube nesta confederação.',
                 ], 422);
             }
         }

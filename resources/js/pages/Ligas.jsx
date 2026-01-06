@@ -209,7 +209,7 @@ export default function Ligas() {
                         <p className="ligas-blocked-eyebrow">Acesso restrito</p>
                         <h3>Complete seu perfil e adicione um horário disponível</h3>
                         <p>
-                            Você precisa cadastrar plataforma, jogo, nickname e geração e ter pelo menos um horário de
+                            Você precisa cadastrar jogo, nickname e geração e ter pelo menos um horário de
                             disponibilidade registrado para desbloquear as ligas.
                         </p>
                         <div className="ligas-blocked-actions">
@@ -435,7 +435,7 @@ export default function Ligas() {
                         <div className="ligas-modal-body">
                             <p>
                                 Detectamos dados pendentes. Cadastre{' '}
-                                <span>plataforma, jogo, nickname</span> e ao menos um{' '}
+                                <span>jogo, nickname</span> e ao menos um{' '}
                                 <span>horário disponível</span> para competir.
                             </p>
                         </div>

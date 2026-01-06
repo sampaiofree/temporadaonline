@@ -68,7 +68,7 @@
 - `club_status`: `livre`, `meu`, `outro`.
 - `can_buy`/`can_multa`: flags derivadas para a UI.
 - Não há `sale_price_eur` nem stats detalhados no payload atual.
- - O backend entrega **todos os jogadores da liga**, ordenados por `overall`, garantindo que os dados sempre reflitam a liga completa.
+ - O backend entrega **todos os jogadores da Confederaçao**, ordenados por `overall`, garantindo que os dados sempre reflitam a liga completa.
 
 ## window.__MEU_ELENCO__
 ```json

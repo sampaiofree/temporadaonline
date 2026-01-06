@@ -41,4 +41,10 @@ return [
         'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
     ],
 
+    'evolution' => [
+        'url' => env('EVOLUTION_API_URL'),
+        'key' => env('EVOLUTION_API_KEY'),
+        'integration' => env('EVOLUTION_INTEGRATION', 'WHATSAPP-BAILEYS'),
+    ],
+
 ];

@@ -52,7 +52,7 @@ class LigaController extends Controller
 
         $myLigas = array_values(array_filter($ligas, fn (array $liga) => $liga['registered']));
 
-        $profileComplete = $this->hasCompleteProfile($user?->profile ?? null);
+        $profileComplete = $this->hasCompleteProfileForLiga($user?->profile ?? null);
         $hasAvailability = $userId
             ? UserDisponibilidade::query()->where('user_id', $userId)->exists()
             : false;
@@ -82,14 +82,14 @@ class LigaController extends Controller
         }
 
         $profile = $user->profile;
-        if (! $this->hasCompleteProfile($profile)) {
+        if (! $this->hasCompleteProfileForLiga($profile)) {
             return response()->json([
                 'message' => 'Complete seu perfil antes de entrar em uma liga.',
             ], 422);
         }
 
-        if (! $profile->jogo_id || ! $profile->geracao_id || ! $profile->plataforma_id) {
-            $liga->loadMissing(['jogo', 'geracao', 'plataforma']);
+        if (! $profile->jogo_id || ! $profile->geracao_id) {
+            $liga->loadMissing(['jogo', 'geracao']);
         }
 
         $mismatches = $this->profileLigaMismatches($profile, $liga);
@@ -130,16 +130,19 @@ class LigaController extends Controller
             $mismatches[] = 'geracao';
         }
 
-        if (! $this->matchesProfileAttribute(
-            $profile->plataforma_id,
-            $liga->plataforma_id,
-            $profile->plataforma,
-            $liga->plataforma?->nome,
-        )) {
-            $mismatches[] = 'plataforma';
+        return $mismatches;
+    }
+
+    private function hasCompleteProfileForLiga(?Profile $profile): bool
+    {
+        if (! $profile) {
+            return false;
         }
 
-        return $mismatches;
+        return filled($profile->jogo)
+            && filled($profile->geracao)
+            && filled($profile->nickname)
+            && filled($profile->whatsapp);
     }
 
     private function matchesProfileAttribute(
