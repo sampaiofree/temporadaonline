@@ -1,4 +1,3 @@
-import { visibility } from 'html2canvas/dist/types/css/property-descriptors/visibility';
 import { useState } from 'react';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
