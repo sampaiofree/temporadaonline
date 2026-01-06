@@ -165,7 +165,7 @@ export default function MinhaLiga() {
                         <strong>{liga.jogo || '—'}</strong>
                     </div>
                 </div>
-                {(descricao || regras || hasWhatsappLink) && (
+                {(descricao || hasWhatsappLink) && (
                     <div className="league-info">
                         {descricao && (
                             <div className="league-info-block">
@@ -181,12 +181,6 @@ export default function MinhaLiga() {
                                         Entrar no grupo do WhatsApp
                                     </a>
                                 )}
-                            </div>
-                        )}
-                        {regras && (
-                            <div className="league-info-block">
-                                <span className="league-info-title">Regras</span>
-                                <p className="league-info-text">{regras}</p>
                             </div>
                         )}
                         {!descricao && hasWhatsappLink && (
@@ -239,21 +233,141 @@ export default function MinhaLiga() {
             )}
             <section className="league-actions grid league-actions-custom">
                 <a className="control-card" href={mercadoHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                                d="M7 7h11m0 0-3-3m3 3-3 3M17 17H6m0 0 3-3m-3 3 3 3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Transferências</span>
                 </a>
                 <a className="control-card" href={mercadoRadarHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                                d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6z"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <circle
+                                cx="12"
+                                cy="12"
+                                r="3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Olheiro</span>
                 </a>
                 <a className="control-card" href={financeiroHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <rect
+                                x="3"
+                                y="7"
+                                width="18"
+                                height="12"
+                                rx="2"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            />
+                            <path
+                                d="M16 13h3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Financeiro</span>
                 </a>
                 <a className="control-card" href={meuElencoHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <circle
+                                cx="8"
+                                cy="9"
+                                r="3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            />
+                            <circle
+                                cx="16"
+                                cy="9"
+                                r="3"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                            />
+                            <path
+                                d="M2 20a6 6 0 0 1 12 0"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                            />
+                            <path
+                                d="M10 20a6 6 0 0 1 12 0"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Meu elenco</span>
                 </a>
                 <a className="control-card" href={meuClubeHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 3l7 4v5c0 4.5-3.5 8-7 9-3.5-1-7-4.5-7-9V7l7-4z"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Meu clube</span>
                 </a>
                 <a className="control-card" href={elencoLigaHref}>
+                    <span className="control-card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                            <path
+                                d="M12 3l9 5-9 5-9-5 9-5z"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                            <path
+                                d="M3 13l9 5 9-5"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.8"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                    </span>
                     <span className="control-card-title">Elenco da liga</span>
                 </a>
             </section>
@@ -313,6 +427,14 @@ export default function MinhaLiga() {
                     </p>
                 </div>
             </section>
+            {regras && (
+                <section className="league-rules league-info">
+                    <div className="league-info-block">
+                        <span className="league-info-title">Regras</span>
+                        <p className="league-info-text">{regras}</p>
+                    </div>
+                </section>
+            )}
             <Navbar active="ligas" />
         </main>
     );

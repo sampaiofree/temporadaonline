@@ -4152,6 +4152,20 @@ a:focus-visible {
     text-decoration: none;
 }
 
+.control-card-icon{
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #edff05;
+    margin-right: 12px;
+    flex: 0 0 auto;
+}
+
+.control-card-icon svg{
+    width: 20px;
+    height: 20px;
+}
+
 .control-card-title{
     z-index: 2;
     font-size: 14px;
@@ -4205,6 +4219,11 @@ a:focus-visible {
     display: flex;
     flex-direction: column;
     gap: 16px;
+}
+
+.league-rules{
+    width: min(520px, 100%);
+    margin: var(--gap-lg) auto 0;
 }
 
 .league-periods-header {
