@@ -13,6 +13,10 @@
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
         @include('components.app_assets')
         @vite(['resources/css/admin.css'])
+        <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+        <style>
+            [x-cloak] { display: none !important; }
+        </style>
     </head>
     <body class="h-full font-sans antialiased text-slate-900">
         <div class="flex min-h-screen">
@@ -22,60 +26,55 @@
                         <span class="text-xl font-bold text-blue-600 tracking-tight">ADMIN<span class="text-slate-400">CORE</span></span>
                     </div>
 
-                    <nav class="flex-1 space-y-1 px-3 py-4">
-                        <a href="{{ route('admin.dashboard') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
+                    <nav class="flex-1 space-y-4 px-3 py-4">
+                        <a href="{{ route('admin.dashboard') }}" 
+                        class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
+                            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                             Dashboard
                         </a>
-                        <a href="{{ route('admin.app-assets.edit') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Imagens do app
-                        </a>
-                        <a href="{{ route('admin.whatsapp.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            WhatsApp
-                        </a>
-                        <a href="{{ route('admin.geracoes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Gerações
-                        </a>
-                        <a href="{{ route('admin.jogos.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Jogos
-                        </a>
-                        <a href="{{ route('admin.plataformas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Plataformas
-                        </a>
-                        <a href="{{ route('admin.paises.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Países
-                        </a>
-                        <a href="{{ route('admin.playstyles.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Playstyles
-                        </a>
-                        <a href="{{ route('admin.ligas-escudos.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Escudos de ligas
-                        </a>
-                       
-                        <a href="{{ route('admin.escudos-clubes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Escudos de clubes
-                        </a>
-                        <a href="{{ route('admin.elenco-padrao.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Elenco padrao
-                        </a>
-                        <a href="{{ route('admin.confederacoes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Confederacoes
-                        </a>
-                        <a href="{{ route('admin.ligas.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Ligas
-                        </a>
-                         <a href="{{ route('admin.clubes.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Clubes por liga
-                        </a>
-                        <a href="{{ route('admin.ligas-usuarios.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Usuários por liga
-                        </a>
-                       
-                        <a href="{{ route('admin.partidas-denuncias.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Denuncias de partidas
-                        </a>
-                        <a href="{{ route('admin.users.index') }}" class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900">
-                            Usuários
-                        </a>
+
+                        <x-sidebar-group 
+                            title="CADASTRO" 
+                            icon="plus-circle" 
+                            :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*'])"
+                        >
+                            <div class="space-y-1 py-1">
+                                <x-nav-link href="{{ route('admin.jogos.index') }}" :active="request()->routeIs('admin.jogos.*')">Jogos</x-nav-link>
+                                <x-nav-link href="{{ route('admin.geracoes.index') }}" :active="request()->routeIs('admin.geracoes.*')">Gerações</x-nav-link>
+                                <x-nav-link href="{{ route('admin.plataformas.index') }}" :active="request()->routeIs('admin.plataformas.*')">Plataformas</x-nav-link>
+                                <x-nav-link href="{{ route('admin.elenco-padrao.index') }}" :active="request()->routeIs('admin.elenco-padrao.*')">Elenco Padrão</x-nav-link>
+                                <x-nav-link href="{{ route('admin.confederacoes.index') }}" :active="request()->routeIs('admin.confederacoes.*')">Confederação</x-nav-link>
+                                <x-nav-link href="{{ route('admin.ligas.index') }}" :active="request()->routeIs('admin.ligas.*')">Liga</x-nav-link>
+                            </div>
+                        </x-sidebar-group>
+
+                        <x-sidebar-group 
+                            title="ADMINISTRAÇÃO" 
+                            icon="shield-check" 
+                            :active="request()->routeIs(['admin.clubes.*', 'admin.ligas-usuarios.*', 'admin.users.*', 'admin.partidas-denuncias.*', 'admin.whatsapp.*'])"
+                        >
+                            <div class="space-y-1 py-1">
+                                <x-nav-link href="{{ route('admin.clubes.index') }}" :active="request()->routeIs('admin.clubes.*')">Clubes por Liga</x-nav-link>
+                                <x-nav-link href="{{ route('admin.ligas-usuarios.index') }}" :active="request()->routeIs('admin.ligas-usuarios.*')">Usuários por Liga</x-nav-link>
+                                <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')">Usuários</x-nav-link>
+                                <x-nav-link href="{{ route('admin.partidas-denuncias.index') }}" :active="request()->routeIs('admin.partidas-denuncias.*')">Denúncias de Partida</x-nav-link>
+                                <x-nav-link href="{{ route('admin.whatsapp.index') }}" :active="request()->routeIs('admin.whatsapp.*')">WhatsApp</x-nav-link>
+                            </div>
+                        </x-sidebar-group>
+
+                        <x-sidebar-group 
+                            title="UPLOAD IMAGENS" 
+                            icon="image-plus" 
+                            :active="request()->routeIs(['admin.paises.*', 'admin.ligas-escudos.*', 'admin.escudos-clubes.*', 'admin.playstyles.*', 'admin.app-assets.*'])"
+                        >
+                            <div class="space-y-1 py-1">
+                                <x-nav-link href="{{ route('admin.paises.index') }}" :active="request()->routeIs('admin.paises.*')">Países</x-nav-link>
+                                <x-nav-link href="{{ route('admin.ligas-escudos.index') }}" :active="request()->routeIs('admin.ligas-escudos.*')">Escudos de Ligas</x-nav-link>
+                                <x-nav-link href="{{ route('admin.escudos-clubes.index') }}" :active="request()->routeIs('admin.escudos-clubes.*')">Escudos de Clubes</x-nav-link>
+                                <x-nav-link href="{{ route('admin.playstyles.index') }}" :active="request()->routeIs('admin.playstyles.*')">Playstyles</x-nav-link>
+                                <x-nav-link href="{{ route('admin.app-assets.edit') }}" :active="request()->routeIs('admin.app-assets.*')">Imagens do App</x-nav-link>
+                            </div>
+                        </x-sidebar-group>
                     </nav>
 
                     <div class="border-t border-slate-100 p-4">

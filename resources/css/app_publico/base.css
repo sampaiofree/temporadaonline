@@ -3295,6 +3295,22 @@ a:focus-visible {
     font-weight: 700;
 }
 
+.player-detail-attribute-value.attr-red {
+    color: #ef4444;
+}
+
+.player-detail-attribute-value.attr-orange {
+    color: #f59e0b;
+}
+
+.player-detail-attribute-value.attr-green {
+    color: #a3e635;
+}
+
+.player-detail-attribute-value.attr-green-dark {
+    color: #16a34a;
+}
+
 .player-detail-stat {
     display: flex;
     justify-content: space-between;

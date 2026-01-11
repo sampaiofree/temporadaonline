@@ -152,6 +152,23 @@ const resolveAttributeValue = (value) => {
     return value;
 };
 
+const getAttributeTone = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+        return '';
+    }
+    if (numeric <= 50) return 'attr-red';
+    if (numeric <= 70) return 'attr-orange';
+    if (numeric <= 84) return 'attr-green';
+    if (numeric <= 99) return 'attr-green-dark';
+    return 'attr-green-dark';
+};
+
+const buildAttributeClassName = (value) => {
+    const tone = getAttributeTone(value);
+    return tone ? `player-detail-attribute-value ${tone}` : 'player-detail-attribute-value';
+};
+
 function PlayerAvatar({ src, alt, fallback }) {
     const [failed, setFailed] = useState(false);
 
@@ -286,13 +303,17 @@ export default function PlayerDetailModal({
                         <div className="player-detail-attribute-group" key={group.key}>
                             <div className="player-detail-attribute-header">
                                 <span>{group.label}</span>
-                                <strong>{resolveAttributeValue(detailSnapshot?.[group.key])}</strong>
+                                <strong className={buildAttributeClassName(detailSnapshot?.[group.key])}>
+                                    {resolveAttributeValue(detailSnapshot?.[group.key])}
+                                </strong>
                             </div>
                             <div className="player-detail-attribute-list">
                                 {group.items.map((item) => (
                                     <div className="player-detail-attribute-row" key={item.key}>
                                         <span>{item.label}</span>
-                                        <strong>{resolveAttributeValue(detailSnapshot?.[item.key])}</strong>
+                                        <strong className={buildAttributeClassName(detailSnapshot?.[item.key])}>
+                                            {resolveAttributeValue(detailSnapshot?.[item.key])}
+                                        </strong>
                                     </div>
                                 ))}
                             </div>
