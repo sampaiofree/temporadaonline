@@ -6526,9 +6526,15 @@ img.club-editor-card-image {
 
 .esquema-field.is-capturing .esquema-player-name {
     display: inline-block;
-    line-height: 2.2;
-    padding-bottom: 0px;
+    line-height: 1.5;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 10px;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.75);
+    background: rgba(8, 8, 8, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 10px;
+    
 }
 
 .esquema-field-empty {
@@ -6612,9 +6618,12 @@ img.club-editor-card-image {
     text-transform: uppercase;
     background: rgba(8, 8, 8, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.16);
-    padding: 2px 6px;
-    border-radius: 999px;
-    line-height: 1;
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-bottom: 8px;
+    padding-top: 1px;
+    border-radius: 10px;
+    line-height: 0.8;
     z-index: 2;
     pointer-events: none;
 }

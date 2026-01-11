@@ -22,6 +22,7 @@ export default defineConfig({
                 'resources/js/liga_partidas.jsx',
                 'resources/js/liga_partida_finalizar.jsx',
                 'resources/js/liga_classificacao.jsx',
+                'resources/js/liga_elenco.jsx',
                 'resources/js/liga_clube_perfil.jsx',
                 'resources/js/register.jsx',
                 'resources/js/login.jsx',
