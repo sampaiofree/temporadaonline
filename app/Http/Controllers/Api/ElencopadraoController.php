@@ -43,7 +43,7 @@ class ElencopadraoController extends Controller
         $data['nationality_flag_url'] = $flagUrl;
 
         $playstyleBadges = [];
-        $rawTags = (string) ($player->player_tags ?? '');
+        $rawTags = (string) ($player->player_traits ?? ''); 
         $tags = collect(explode(',', $rawTags))
             ->map(fn ($tag) => trim($tag))
             ->filter()

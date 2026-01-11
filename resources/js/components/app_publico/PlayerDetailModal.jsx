@@ -13,11 +13,6 @@ const formatCurrency = (value) => {
     return currencyFormatter.format(value);
 };
 
-const formatDetailLabel = (key) =>
-    key
-        .replace(/_/g, ' ')
-        .replace(/\b\w/g, (char) => char.toUpperCase());
-
 const formatDetailValue = (key, value) => {
     if (value === null || value === undefined || value === '') {
         return '—';
@@ -47,6 +42,14 @@ const formatDetailValue = (key, value) => {
     }
 
     return String(value);
+};
+
+const formatStarValue = (value) => {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+        return '—';
+    }
+    return `${numeric}★`;
 };
 
 const normalizePositions = (positions) => {
@@ -132,9 +135,28 @@ const ATTRIBUTE_GROUPS = [
     },
 ];
 
-const ATTRIBUTE_KEYS = new Set(
-    ATTRIBUTE_GROUPS.flatMap((group) => [group.key, ...group.items.map((item) => item.key)]),
-);
+const DETAIL_FIELDS = [
+    { key: 'short_name', label: 'Short Name' },
+    { key: 'long_name', label: 'Long Name' },
+    {
+        key: 'player_positions',
+        label: 'Player Positions',
+        format: (_value, context) => context?.positionsLabel || '—',
+    },
+    { key: 'overall', label: 'Overall' },
+    { key: 'value_eur', label: 'Value Eur' },
+    { key: 'wage_eur', label: 'Wage Eur' },
+    { key: 'age', label: 'Age' },
+    { key: 'height_cm', label: 'Height Cm' },
+    { key: 'weight_kg', label: 'Weight Kg' },
+    { key: 'nationality_name', label: 'Nationality Name' },
+    { key: 'preferred_foot', label: 'Preferred Foot' },
+    { key: 'weak_foot', label: 'Weak Foot', format: formatStarValue },
+    { key: 'skill_moves', label: 'Skill Moves', format: formatStarValue },
+    { key: 'international_reputation', label: 'International Reputation' },
+    { key: 'body_type', label: 'Body Type' },
+    { key: 'real_face', label: 'Real Face' },
+];
 
 const getPlayerName = (player) => (player?.short_name || player?.long_name || '').toString().trim();
 
@@ -207,15 +229,21 @@ export default function PlayerDetailModal({
     const avatarName = getPlayerName(player) || name;
     const statusText = statusLabel || '—';
     const positions = normalizePositions(detailSnapshot?.player_positions);
+    const positionsLabel = positions.join(' · ') || '—';
     const nationalityName = detailSnapshot?.nationality_name || '—';
     const nationalityFlagUrl = detailSnapshot?.nationality_flag_url || null;
     const playstyleBadges = Array.isArray(detailSnapshot?.playstyle_badges)
         ? detailSnapshot.playstyle_badges
         : [];
     const canToggle = typeof onToggleDetails === 'function';
-    const detailEntries = fullData
-        ? Object.entries(fullData).filter(([key]) => !ATTRIBUTE_KEYS.has(key))
-        : [];
+    const detailSource = fullData ?? detailSnapshot;
+    const detailRows = DETAIL_FIELDS.map((field) => {
+        const rawValue = detailSource?.[field.key];
+        const value = field.format
+            ? field.format(rawValue, { positionsLabel })
+            : formatDetailValue(field.key, rawValue);
+        return { label: field.label, value };
+    });
 
     return (
         <div
@@ -262,7 +290,7 @@ export default function PlayerDetailModal({
             <div className="player-detail-summary">
                 <div className="player-detail-summary-card highlight">
                     <span>Posições</span>
-                    <strong>{positions.join(' · ') || '—'}</strong>
+                    <strong>{positionsLabel}</strong>
                 </div>
                 <div className="player-detail-summary-card">
                     <span>Idade</span>
@@ -275,6 +303,14 @@ export default function PlayerDetailModal({
                 <div className="player-detail-summary-card">
                     <span>Salário</span>
                     <strong>{formatCurrency(detailSnapshot?.wage_eur)}</strong>
+                </div>
+                <div className="player-detail-summary-card">
+                    <span>Weak Foot</span>
+                    <strong>{formatStarValue(detailSnapshot?.weak_foot)}</strong>
+                </div>
+                <div className="player-detail-summary-card">
+                    <span>Skill Moves</span>
+                    <strong>{formatStarValue(detailSnapshot?.skill_moves)}</strong>
                 </div>
             </div>
 
@@ -324,11 +360,10 @@ export default function PlayerDetailModal({
 
             <div className="player-detail-full">
                 <button
-                    type="hidden"
-                    className=""
+                    type="button"
+                    className="player-detail-full-toggle"
                     onClick={onToggleDetails}
                     disabled={loading || !canToggle}
-                    
                 >
                     {expanded
                         ? 'Ocultar informações detalhadas'
@@ -339,12 +374,12 @@ export default function PlayerDetailModal({
 
                 {error && <p className="modal-error">{error}</p>}
 
-                {expanded && detailEntries.length > 0 && (
+                {expanded && detailRows.length > 0 && (
                     <div className="player-detail-full-list">
-                        {detailEntries.map(([key, value]) => (
-                            <div className="player-detail-full-row" key={key}>
-                                <span>{formatDetailLabel(key)}</span>
-                                <strong>{formatDetailValue(key, value)}</strong>
+                        {detailRows.map((row) => (
+                            <div className="player-detail-full-row" key={row.label}>
+                                <span>{row.label}</span>
+                                <strong>{row.value}</strong>
                             </div>
                         ))}
                     </div>
