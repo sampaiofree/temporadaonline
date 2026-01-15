@@ -19,6 +19,10 @@ const getFinanceiroFromWindow = () =>
         salarioPorRodada: 0,
         rodadasRestantes: null,
         movimentos: [],
+        ganhosPartidas: {
+            total: 0,
+            details: [],
+        },
     };
 
 const TYPE_LABELS = {
@@ -39,18 +43,13 @@ export default function FinanceiroClube() {
     const patrocinioMovimentos = Array.isArray(financeiro.patrocinios)
         ? financeiro.patrocinios
         : [];
+    const ganhosPartidas = financeiro.ganhosPartidas ?? { total: 0, details: [] };
+    const ganhosDetails = Array.isArray(ganhosPartidas.details) ? ganhosPartidas.details : [];
+    const ganhosCount = ganhosDetails.length;
 
     const saldo = financeiro.saldo;
     const salario = financeiro.salarioPorRodada ?? 0;
     const rodadas = financeiro.rodadasRestantes;
-
-    // Lógica de texto de fôlego do desenvolvedor
-    const folegoText =
-        rodadas === null
-            ? 'Sem gasto fixo'
-            : rodadas < 0
-            ? 'Saldo Negativo'
-            : `${rodadas} partidas`;
 
     if (!liga) {
         return (
@@ -63,14 +62,6 @@ export default function FinanceiroClube() {
 
     const minhaLigaHref = `/minha_liga?liga_id=${liga.id}`;
     const headerSubtitle = clube?.nome ? `${liga.nome} · ${clube.nome}` : `${liga.nome} · Clube não criado`;
-
-    const folegoTone = rodadas === null
-        ? 'is-neutral'
-        : rodadas < 0
-            ? 'is-danger'
-            : rodadas <= 3
-                ? 'is-warning'
-                : 'is-safe';
 
     const formatShortDate = (value) => {
         if (!value) return null;
@@ -122,22 +113,60 @@ export default function FinanceiroClube() {
 
                         <div className="financeiro-stats-grid">
                             <article className="financeiro-stat-card is-negative">
-                                <p className="financeiro-stat-label">Salário / partida</p>
+                                <p className="financeiro-stat-label">Salário</p>
                                 <p className="financeiro-stat-value">
                                     {salario > 0 ? '-' : ''}
                                     {formatCurrency(salario)}
                                 </p>
                                 <p className="financeiro-stat-meta">Custo fixo do elenco.</p>
                             </article>
-
-                            <article className={`financeiro-stat-card ${folegoTone}`}>
-                                <p className="financeiro-stat-label">Fôlego de caixa</p>
-                                <p className="financeiro-stat-value">{folegoText}</p>
-                                {rodadas !== null && rodadas <= 3 && (
-                                    <p className="financeiro-stat-alert">Atenção ao caixa.</p>
-                                )}
-                            </article>
                         </div>
+                    </section>
+
+                    <section className="wallet-card ganhos-partidas-card">
+                        <div className="financeiro-movimentos-header">
+                            <h2>Ganhos por partidas</h2>
+                            <span className="financeiro-movimentos-count">
+                                {ganhosCount}
+                            </span>
+                        </div>
+                        <div className="ganhos-total-row">
+                            <p className="financeiro-stat-label">Total acumulado</p>
+                            <p className="financeiro-stat-value">
+                                {formatCurrency(ganhosPartidas.total)}
+                            </p>
+                        </div>
+                        {ganhosCount === 0 ? (
+                            <p className="card-meta">Nenhum ganho registrado ainda.</p>
+                        ) : (
+                            <div className="financeiro-movimento-list">
+                                {ganhosDetails.map((ganho) => {
+                                    const dateLabel = formatShortDate(ganho.scheduled_at) || '—';
+
+                                    return (
+                                        <article
+                                            key={ganho.id}
+                                            className="financeiro-movimento is-in"
+                                        >
+                                            <div className="financeiro-movimento-icon">
+                                                ★
+                                            </div>
+                                            <div className="financeiro-movimento-body">
+                                                <span className="financeiro-movimento-title">
+                                                    {ganho.label}
+                                                </span>
+                                                <span className="financeiro-movimento-subtitle">
+                                                    {dateLabel}
+                                                </span>
+                                            </div>
+                                            <span className="financeiro-movimento-amount is-in">
+                                                {formatCurrency(ganho.valor)}
+                                            </span>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        )}
                     </section>
 
                     {patrocinioMovimentos.length > 0 && (

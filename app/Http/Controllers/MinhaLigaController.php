@@ -30,6 +30,10 @@ use Illuminate\Support\Str;
 class MinhaLigaController extends Controller
 {
     use ResolvesLiga;
+
+    private const MATCH_WINNER_PRIZE = 750_000;
+    private const MATCH_LOSER_PRIZE = 50_000;
+    private const MATCH_DRAW_PRIZE = 300_000;
     public function show(Request $request): View
     {
         $liga = $this->resolveUserLiga($request);
@@ -119,6 +123,10 @@ class MinhaLigaController extends Controller
         $rodadasRestantes = null;
         $movimentos = [];
         $patrocinioResgatados = [];
+        $ganhosPartidasDetalhes = [];
+        $ganhosPartidasTotal = 0;
+        $ganhosPartidasDetalhes = [];
+        $ganhosPartidasTotal = 0;
 
         if ($userClub) {
             $walletSaldo = LigaClubeFinanceiro::query()
@@ -137,6 +145,47 @@ class MinhaLigaController extends Controller
             $rodadasRestantes = $salarioPorRodada > 0
                 ? (int) floor($saldo / $salarioPorRodada)
                 : null;
+
+            $matches = Partida::query()
+                ->with(['mandante:id,nome', 'visitante:id,nome'])
+                ->where('liga_id', $liga->id)
+                ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
+                ->where(function ($query) use ($userClub): void {
+                    $query->where('mandante_id', $userClub->id)
+                        ->orWhere('visitante_id', $userClub->id);
+                })
+                ->orderByDesc('id')
+                ->get([
+                    'id',
+                    'mandante_id',
+                    'visitante_id',
+                    'placar_mandante',
+                    'placar_visitante',
+                    'estado',
+                    'scheduled_at',
+                ]);
+
+            $ganhosPartidasDetalhes = [];
+            $ganhosPartidasTotal = 0;
+
+            foreach ($matches as $partida) {
+                $earnings = $this->calculateMatchEarningsForClub($partida, (int) $userClub->id);
+
+                if ($earnings <= 0) {
+                    continue;
+                }
+
+                $ganhosPartidasTotal += $earnings;
+                $ganhosPartidasDetalhes[] = [
+                    'id' => "partida-ganho-{$partida->id}",
+                    'partida_id' => $partida->id,
+                    'label' => $this->describeMatchEarningsLabel($partida, (int) $userClub->id),
+                    'valor' => $earnings,
+                    'scheduled_at' => $partida->scheduled_at?->toDateString(),
+                ];
+            }
+
+            $ganhosPartidasDetalhes = array_slice($ganhosPartidasDetalhes, 0, 5);
 
             $movimentosTransferencias = LigaTransferencia::query()
                 ->where(function ($query) use ($userClub): void {
@@ -237,6 +286,25 @@ class MinhaLigaController extends Controller
                 })
                 ->values()
                 ->all();
+
+            foreach ($matches as $partida) {
+                $earnings = $this->calculateMatchEarningsForClub($partida, (int) $userClub->id);
+
+                if ($earnings <= 0) {
+                    continue;
+                }
+
+                $ganhosPartidasTotal += $earnings;
+                $ganhosPartidasDetalhes[] = [
+                    'id' => "partida-ganho-{$partida->id}",
+                    'partida_id' => $partida->id,
+                    'label' => $this->describeMatchEarningsLabel($partida, (int) $userClub->id),
+                    'valor' => $earnings,
+                    'scheduled_at' => $partida->scheduled_at?->toDateString(),
+                ];
+            }
+
+            $ganhosPartidasDetalhes = array_slice($ganhosPartidasDetalhes, 0, 5);
         }
 
         return view('minha_liga_financeiro', [
@@ -256,6 +324,10 @@ class MinhaLigaController extends Controller
                 'rodadasRestantes' => $rodadasRestantes,
                 'movimentos' => $movimentos,
                 'patrocinios' => $patrocinioResgatados,
+                'ganhosPartidas' => [
+                    'total' => $ganhosPartidasTotal,
+                    'details' => $ganhosPartidasDetalhes,
+                ],
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
         ]);
@@ -919,6 +991,39 @@ class MinhaLigaController extends Controller
         }
 
         return Storage::disk('public')->url($path);
+    }
+
+    private function calculateMatchEarningsForClub(Partida $partida, int $clubeId): int
+    {
+        $mandanteGoals = (int) ($partida->placar_mandante ?? 0);
+        $visitanteGoals = (int) ($partida->placar_visitante ?? 0);
+
+        if ($mandanteGoals === $visitanteGoals) {
+            return self::MATCH_DRAW_PRIZE;
+        }
+
+        $isMandante = (int) $clubeId === (int) $partida->mandante_id;
+        $mandanteWins = $mandanteGoals > $visitanteGoals;
+        $clubWon = ($isMandante && $mandanteWins) || (! $isMandante && ! $mandanteWins);
+
+        return $clubWon ? self::MATCH_WINNER_PRIZE : self::MATCH_LOSER_PRIZE;
+    }
+
+    private function describeMatchEarningsLabel(Partida $partida, int $clubeId): string
+    {
+        $isMandante = (int) $clubeId === (int) $partida->mandante_id;
+        $mandanteGoals = (int) ($partida->placar_mandante ?? 0);
+        $visitanteGoals = (int) ($partida->placar_visitante ?? 0);
+        $opponent = $isMandante ? $partida->visitante?->nome : $partida->mandante?->nome;
+        $opponent = $opponent ?: 'adversário';
+
+        if ($mandanteGoals === $visitanteGoals) {
+            return "Empate vs {$opponent}";
+        }
+
+        $result = ($isMandante === ($mandanteGoals > $visitanteGoals)) ? 'Vitória' : 'Derrota';
+
+        return "{$result} vs {$opponent}";
     }
 
     public function storeClube(Request $request): JsonResponse

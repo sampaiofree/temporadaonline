@@ -81,4 +81,9 @@ class Liga extends Model
     {
         return $this->hasMany(LigaPeriodo::class);
     }
+
+    public function leiloes(): HasMany
+    {
+        return $this->hasMany(LigaLeilao::class);
+    }
 }

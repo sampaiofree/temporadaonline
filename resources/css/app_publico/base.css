@@ -1417,6 +1417,14 @@ a:focus-visible {
     font-size: 16px;
 }
 
+.ganhos-total-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0 20px;
+    margin-bottom: 12px;
+}
+
 .financeiro-movimentos-count {
     background: rgba(237, 255, 5, 0.1);
     color: #edff05;

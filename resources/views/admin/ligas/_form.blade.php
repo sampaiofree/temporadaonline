@@ -37,6 +37,19 @@
     $nextPeriodoIndex = $periodoKeys->isNotEmpty()
         ? ((int) $periodoKeys->max() + 1)
         : count($periodos);
+    $leiloes = old('leiloes');
+    if ($leiloes === null) {
+        $leiloes = $liga?->leiloes
+            ? $liga->leiloes->map(fn ($leilao) => [
+                'inicio' => $leilao->inicio?->toDateString(),
+                'fim' => $leilao->fim?->toDateString(),
+            ])->toArray()
+            : [];
+    }
+    $leilaoKeys = collect($leiloes)->keys();
+    $nextLeilaoIndex = $leilaoKeys->isNotEmpty()
+        ? ((int) $leilaoKeys->max() + 1)
+        : count($leiloes);
 @endphp
 
 <form action="{{ $action }}" method="POST" class="space-y-6" enctype="multipart/form-data">
@@ -351,6 +364,75 @@
 
     </div>
 
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-sm font-semibold text-slate-700">Períodos de leilão</p>
+                <p class="text-xs text-slate-500">Defina janelas para leilões relacionados à liga.</p>
+            </div>
+            <button
+                type="button"
+                id="liga-leiloes-add"
+                class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            >
+                Adicionar período de leilão
+            </button>
+        </div>
+
+        @error('leiloes')
+            <p class="mt-3 text-xs text-red-600">{{ $message }}</p>
+        @enderror
+
+        <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">Início</th>
+                            <th class="px-4 py-3 font-semibold">Fim</th>
+                            <th class="px-4 py-3 font-semibold text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="liga-leiloes-table-body" data-next-index="{{ $nextLeilaoIndex }}">
+                        @foreach ($leiloes as $index => $leilao)
+                            @php
+                                $inicio = $leilao['inicio'] ?? '';
+                                $fim = $leilao['fim'] ?? '';
+                            @endphp
+                            <tr class="border-b border-slate-100 bg-white" data-leilao-row>
+                                <td class="px-4 py-3 text-sm text-slate-900">
+                                    <div class="font-semibold">{{ $inicio ?: '—' }}</div>
+                                    <input type="hidden" name="leiloes[{{ $index }}][inicio]" value="{{ $inicio }}">
+                                </td>
+                                <td class="px-4 py-3 text-sm text-slate-900">
+                                    <div class="font-semibold">{{ $fim ?: '—' }}</div>
+                                    <input type="hidden" name="leiloes[{{ $index }}][fim]" value="{{ $fim }}">
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button
+                                        type="button"
+                                        data-remove-leilao
+                                        class="rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50"
+                                    >
+                                        Excluir
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                        <tr
+                            id="liga-leiloes-empty"
+                            class="border-b border-slate-100 bg-white {{ count($leiloes) ? 'hidden' : '' }}"
+                        >
+                            <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-500">
+                                Ainda não há períodos de leilão cadastrados.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="flex items-center justify-between gap-3 pt-6">
         <a href="{{ route('admin.ligas.index') }}" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Voltar para listagem</a>
         <button
@@ -422,6 +504,66 @@
     </div>
 </div>
 
+<div
+    id="liga-leiloes-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-black/40 p-4"
+    role="dialog"
+    aria-modal="true"
+>
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-900">Adicionar período de leilão</h3>
+                <p class="text-sm text-slate-500">Configure as datas de início e término.</p>
+            </div>
+            <button
+                type="button"
+                data-close-leiloes-modal
+                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+            >
+                Fechar
+            </button>
+        </div>
+
+        <form id="liga-leiloes-modal-form" class="mt-6 space-y-4">
+            <div>
+                <label for="liga-leilao-modal-inicio" class="text-sm font-semibold text-slate-700">Data de início</label>
+                <input
+                    id="liga-leilao-modal-inicio"
+                    type="date"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    required
+                >
+            </div>
+            <div>
+                <label for="liga-leilao-modal-fim" class="text-sm font-semibold text-slate-700">Data de término</label>
+                <input
+                    id="liga-leilao-modal-fim"
+                    type="date"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    required
+                >
+            </div>
+            <p id="liga-leiloes-modal-error" class="text-xs text-rose-600 hidden"></p>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button
+                    type="button"
+                    data-close-leiloes-modal
+                    class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                    Salvar período
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const confederacaoSelect = document.getElementById('confederacao_id');
@@ -449,126 +591,266 @@
             confederacaoSelect.addEventListener('change', updateConfederacaoInfo);
         }
 
-        const addButton = document.getElementById('liga-periodos-add');
-        const modal = document.getElementById('liga-periodos-modal');
-        const modalForm = document.getElementById('liga-periodos-modal-form');
-        const tableBody = document.getElementById('liga-periodos-table-body');
-        const emptyRow = document.getElementById('liga-periodos-empty');
-        const inicioInput = document.getElementById('liga-periodo-modal-inicio');
-        const fimInput = document.getElementById('liga-periodo-modal-fim');
-        const errorMessage = document.getElementById('liga-periodos-modal-error');
+        const periodoAddButton = document.getElementById('liga-periodos-add');
+        const periodoModal = document.getElementById('liga-periodos-modal');
+        const periodoModalForm = document.getElementById('liga-periodos-modal-form');
+        const periodoTableBody = document.getElementById('liga-periodos-table-body');
+        const periodoEmptyRow = document.getElementById('liga-periodos-empty');
+        const periodoInicioInput = document.getElementById('liga-periodo-modal-inicio');
+        const periodoFimInput = document.getElementById('liga-periodo-modal-fim');
+        const periodoErrorMessage = document.getElementById('liga-periodos-modal-error');
 
-        if (! addButton || ! modal || ! modalForm || ! tableBody || ! inicioInput || ! fimInput) {
-            return;
+        if (periodoAddButton && periodoModal && periodoModalForm && periodoTableBody && periodoInicioInput && periodoFimInput) {
+            let nextIndex = parseInt(periodoTableBody.getAttribute('data-next-index') ?? '0', 10);
+
+            const toggleEmptyState = () => {
+                const hasRows = periodoTableBody.querySelectorAll('[data-periodo-row]').length > 0;
+                if (periodoEmptyRow) {
+                    periodoEmptyRow.classList.toggle('hidden', hasRows);
+                }
+            };
+
+            const closeModal = () => {
+                periodoModal.classList.add('hidden');
+                periodoModalForm.reset();
+                if (periodoErrorMessage) {
+                    periodoErrorMessage.classList.add('hidden');
+                    periodoErrorMessage.textContent = '';
+                }
+            };
+
+            const openModal = () => {
+                periodoModal.classList.remove('hidden');
+                periodoInicioInput.focus();
+            };
+
+            const createRow = (inicio, fim) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-100 bg-white';
+                row.setAttribute('data-periodo-row', '');
+                const formattedInicio = inicio || '—';
+                const formattedFim = fim || '—';
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-slate-900">
+                        <div class="font-semibold">${formattedInicio}</div>
+                        <input type="hidden" name="periodos[${nextIndex}][inicio]" value="${inicio}">
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-900">
+                        <div class="font-semibold">${formattedFim}</div>
+                        <input type="hidden" name="periodos[${nextIndex}][fim]" value="${fim}">
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button
+                            type="button"
+                            data-remove-periodo
+                            class="rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50"
+                        >
+                            Excluir
+                        </button>
+                    </td>
+                `;
+
+                if (periodoEmptyRow && periodoEmptyRow.parentNode === periodoTableBody) {
+                    periodoTableBody.insertBefore(row, periodoEmptyRow);
+                } else {
+                    periodoTableBody.appendChild(row);
+                }
+
+                nextIndex += 1;
+                periodoTableBody.setAttribute('data-next-index', String(nextIndex));
+                toggleEmptyState();
+            };
+
+            periodoAddButton.addEventListener('click', openModal);
+
+            periodoModal.addEventListener('click', (event) => {
+                if (event.target === periodoModal) {
+                    closeModal();
+                }
+            });
+
+            document.querySelectorAll('[data-close-periodos-modal]').forEach((button) => {
+                button.addEventListener('click', closeModal);
+            });
+
+            periodoModalForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const inicio = periodoInicioInput.value;
+                const fim = periodoFimInput.value;
+
+                if (! inicio || ! fim) {
+                    return;
+                }
+
+                if (inicio > fim) {
+                    if (periodoErrorMessage) {
+                        periodoErrorMessage.textContent = 'A data de início precisa ser anterior ou igual à data de término.';
+                        periodoErrorMessage.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                createRow(inicio, fim);
+                closeModal();
+            });
+
+            periodoTableBody.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-remove-periodo]');
+                if (! button) {
+                    return;
+                }
+
+                const row = button.closest('[data-periodo-row]');
+                if (row) {
+                    row.remove();
+                    toggleEmptyState();
+                }
+            });
+
+            toggleEmptyState();
         }
 
-        let nextIndex = parseInt(tableBody.getAttribute('data-next-index') ?? '0', 10);
+        const leilaoAddButton = document.getElementById('liga-leiloes-add');
+        const leilaoModal = document.getElementById('liga-leiloes-modal');
+        const leilaoModalForm = document.getElementById('liga-leiloes-modal-form');
+        const leilaoTableBody = document.getElementById('liga-leiloes-table-body');
+        const leilaoEmptyRow = document.getElementById('liga-leiloes-empty');
+        const leilaoInicioInput = document.getElementById('liga-leilao-modal-inicio');
+        const leilaoFimInput = document.getElementById('liga-leilao-modal-fim');
+        const leilaoErrorMessage = document.getElementById('liga-leiloes-modal-error');
 
-        const toggleEmptyState = () => {
-            const hasRows = tableBody.querySelectorAll('[data-periodo-row]').length > 0;
-            if (emptyRow) {
-                emptyRow.classList.toggle('hidden', hasRows);
-            }
-        };
+        if (leilaoAddButton && leilaoModal && leilaoModalForm && leilaoTableBody && leilaoInicioInput && leilaoFimInput) {
+            let nextLeilaoIndex = parseInt(leilaoTableBody.getAttribute('data-next-index') ?? '0', 10);
 
-        const closeModal = () => {
-            modal.classList.add('hidden');
-            modalForm.reset();
-            if (errorMessage) {
-                errorMessage.classList.add('hidden');
-                errorMessage.textContent = '';
-            }
-        };
-
-        const openModal = () => {
-            modal.classList.remove('hidden');
-            inicioInput.focus();
-        };
-
-        const createRow = (inicio, fim) => {
-            const row = document.createElement('tr');
-            row.className = 'border-b border-slate-100 bg-white';
-            row.setAttribute('data-periodo-row', '');
-            const formattedInicio = inicio || '—';
-            const formattedFim = fim || '—';
-
-            row.innerHTML = `
-                <td class="px-4 py-3 text-sm text-slate-900">
-                    <div class="font-semibold">${formattedInicio}</div>
-                    <input type="hidden" name="periodos[${nextIndex}][inicio]" value="${inicio}">
-                </td>
-                <td class="px-4 py-3 text-sm text-slate-900">
-                    <div class="font-semibold">${formattedFim}</div>
-                    <input type="hidden" name="periodos[${nextIndex}][fim]" value="${fim}">
-                </td>
-                <td class="px-4 py-3 text-right">
-                    <button
-                        type="button"
-                        data-remove-periodo
-                        class="rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50"
-                    >
-                        Excluir
-                    </button>
-                </td>
-            `;
-
-            if (emptyRow && emptyRow.parentNode === tableBody) {
-                tableBody.insertBefore(row, emptyRow);
-            } else {
-                tableBody.appendChild(row);
-            }
-
-            nextIndex += 1;
-            tableBody.setAttribute('data-next-index', String(nextIndex));
-            toggleEmptyState();
-        };
-
-        addButton.addEventListener('click', openModal);
-
-        modal.addEventListener('click', (event) => {
-            if (event.target === modal) {
-                closeModal();
-            }
-        });
-
-        document.querySelectorAll('[data-close-periodos-modal]').forEach((button) => {
-            button.addEventListener('click', closeModal);
-        });
-
-        modalForm.addEventListener('submit', (event) => {
-            event.preventDefault();
-            const inicio = inicioInput.value;
-            const fim = fimInput.value;
-
-            if (! inicio || ! fim) {
-                return;
-            }
-
-            if (inicio > fim) {
-                if (errorMessage) {
-                    errorMessage.textContent = 'A data de início precisa ser anterior ou igual à data de término.';
-                    errorMessage.classList.remove('hidden');
+            const toggleLeilaoEmptyState = () => {
+                const hasRows = leilaoTableBody.querySelectorAll('[data-leilao-row]').length > 0;
+                if (leilaoEmptyRow) {
+                    leilaoEmptyRow.classList.toggle('hidden', hasRows);
                 }
-                return;
-            }
+            };
 
-            createRow(inicio, fim);
-            closeModal();
-        });
+            const closeLeilaoModal = () => {
+                leilaoModal.classList.add('hidden');
+                leilaoModalForm.reset();
+                if (leilaoErrorMessage) {
+                    leilaoErrorMessage.classList.add('hidden');
+                    leilaoErrorMessage.textContent = '';
+                }
+            };
 
-        tableBody.addEventListener('click', (event) => {
-            const button = event.target.closest('[data-remove-periodo]');
-            if (! button) {
-                return;
-            }
+            const openLeilaoModal = () => {
+                leilaoModal.classList.remove('hidden');
+                leilaoInicioInput.focus();
+            };
 
-            const row = button.closest('[data-periodo-row]');
-            if (row) {
-                row.remove();
-                toggleEmptyState();
-            }
-        });
+            const hasOverlapWithPeriodos = (novoInicio, novoFim) => {
+                const periodoInputs = periodoTableBody?.querySelectorAll('[data-periodo-row]') ?? [];
+                for (const row of periodoInputs) {
+                    const pInicio = row.querySelector('input[name*=\"[inicio]\"]')?.value;
+                    const pFim = row.querySelector('input[name*=\"[fim]\"]')?.value;
+                    if (! pInicio || ! pFim) continue;
+                    if (novoInicio <= pFim && novoFim >= pInicio) {
+                        return { pInicio, pFim };
+                    }
+                }
+                return null;
+            };
 
-        toggleEmptyState();
+            const createLeilaoRow = (inicio, fim) => {
+                const row = document.createElement('tr');
+                row.className = 'border-b border-slate-100 bg-white';
+                row.setAttribute('data-leilao-row', '');
+                const formattedInicio = inicio || '—';
+                const formattedFim = fim || '—';
+
+                row.innerHTML = `
+                    <td class="px-4 py-3 text-sm text-slate-900">
+                        <div class="font-semibold">${formattedInicio}</div>
+                        <input type="hidden" name="leiloes[${nextLeilaoIndex}][inicio]" value="${inicio}">
+                    </td>
+                    <td class="px-4 py-3 text-sm text-slate-900">
+                        <div class="font-semibold">${formattedFim}</div>
+                        <input type="hidden" name="leiloes[${nextLeilaoIndex}][fim]" value="${fim}">
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <button
+                            type="button"
+                            data-remove-leilao
+                            class="rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50"
+                        >
+                            Excluir
+                        </button>
+                    </td>
+                `;
+
+                if (leilaoEmptyRow && leilaoEmptyRow.parentNode === leilaoTableBody) {
+                    leilaoTableBody.insertBefore(row, leilaoEmptyRow);
+                } else {
+                    leilaoTableBody.appendChild(row);
+                }
+
+                nextLeilaoIndex += 1;
+                leilaoTableBody.setAttribute('data-next-index', String(nextLeilaoIndex));
+                toggleLeilaoEmptyState();
+            };
+
+            leilaoAddButton.addEventListener('click', openLeilaoModal);
+
+            leilaoModal.addEventListener('click', (event) => {
+                if (event.target === leilaoModal) {
+                    closeLeilaoModal();
+                }
+            });
+
+            document.querySelectorAll('[data-close-leiloes-modal]').forEach((button) => {
+                button.addEventListener('click', closeLeilaoModal);
+            });
+
+            leilaoModalForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const inicio = leilaoInicioInput.value;
+                const fim = leilaoFimInput.value;
+
+                if (! inicio || ! fim) {
+                    return;
+                }
+
+                if (inicio > fim) {
+                    if (leilaoErrorMessage) {
+                        leilaoErrorMessage.textContent = 'A data de início precisa ser anterior ou igual à data de término.';
+                        leilaoErrorMessage.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                const overlapPeriodo = hasOverlapWithPeriodos(inicio, fim);
+                if (overlapPeriodo) {
+                    if (leilaoErrorMessage) {
+                        leilaoErrorMessage.textContent = `Conflito com período de partidas ${overlapPeriodo.pInicio} - ${overlapPeriodo.pFim}. Ajuste as datas.`;
+                        leilaoErrorMessage.classList.remove('hidden');
+                    }
+                    return;
+                }
+
+                createLeilaoRow(inicio, fim);
+                closeLeilaoModal();
+            });
+
+            leilaoTableBody.addEventListener('click', (event) => {
+                const button = event.target.closest('[data-remove-leilao]');
+                if (! button) {
+                    return;
+                }
+
+                const row = button.closest('[data-leilao-row]');
+                if (row) {
+                    row.remove();
+                    toggleLeilaoEmptyState();
+                }
+            });
+
+            toggleLeilaoEmptyState();
+        }
     });
 </script>
