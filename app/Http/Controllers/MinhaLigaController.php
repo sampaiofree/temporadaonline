@@ -11,6 +11,7 @@ use App\Models\LigaClubePatrocinio;
 use App\Models\LigaEscudo;
 use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
+use App\Models\Elencopadrao;
 use App\Models\PartidaFolhaPagamento;
 use App\Models\Partida;
 use App\Models\Conquista;
@@ -22,6 +23,7 @@ use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 use App\Http\Controllers\Concerns\ResolvesLiga;
@@ -1036,37 +1038,60 @@ class MinhaLigaController extends Controller
             'escudo_id' => ['nullable', 'integer', 'exists:escudos_clubes,id'],
         ]);
 
-        $escudoId = $validated['escudo_id'] ?? null;
-        if ($escudoId) {
-            $escudoInUse = LigaClube::query()
-                ->where('escudo_clube_id', $escudoId)
-                ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $liga->confederacao_id))
-                ->when($existingClub, fn ($query) => $query->where('id', '<>', $existingClub->id))
-                ->exists();
+        $result = DB::transaction(function () use ($validated, $existingClub, $liga, $request) {
+            $escudoId = $validated['escudo_id'] ?? null;
+            if ($escudoId) {
+                $escudoInUse = LigaClube::query()
+                    ->where('escudo_clube_id', $escudoId)
+                    ->whereHas('liga', fn ($query) => $query->where('confederacao_id', $liga->confederacao_id))
+                    ->when($existingClub, fn ($query) => $query->where('id', '<>', $existingClub->id))
+                    ->exists();
 
-            if ($escudoInUse) {
-                return response()->json([
-                    'message' => 'Este escudo já está em uso por outro clube nesta confederação.',
-                ], 422);
+                if ($escudoInUse) {
+                    return [
+                        'error' => 'Este escudo já está em uso por outro clube nesta confederação.',
+                    ];
+                }
             }
+
+            $escudo = $escudoId
+                ? EscudoClube::query()->find($escudoId)
+                : null;
+
+            $clube = LigaClube::updateOrCreate(
+                [
+                    'liga_id' => $liga->id,
+                    'user_id' => $request->user()->id,
+                ],
+                [
+                    'nome' => trim($validated['nome']),
+                    'escudo_clube_id' => $escudo?->id,
+                ],
+            );
+
+            $wallet = app(LeagueFinanceService::class)->initClubWallet($liga->id, $clube->id);
+
+            $initialAdded = 0;
+            if ($clube->wasRecentlyCreated) {
+                $initialAdded = $this->seedInitialRoster($liga, $clube);
+            }
+
+            return [
+                'clube' => $clube,
+                'wallet' => $wallet,
+                'initialAdded' => $initialAdded,
+            ];
+        });
+
+        if (isset($result['error'])) {
+            return response()->json([
+                'message' => $result['error'],
+            ], 422);
         }
 
-        $escudo = $escudoId
-            ? EscudoClube::query()->find($escudoId)
-            : null;
-
-        $clube = LigaClube::updateOrCreate(
-            [
-                'liga_id' => $liga->id,
-                'user_id' => $request->user()->id,
-            ],
-            [
-                'nome' => trim($validated['nome']),
-                'escudo_clube_id' => $escudo?->id,
-            ],
-        );
-
-        $wallet = app(LeagueFinanceService::class)->initClubWallet($liga->id, $clube->id);
+        $clube = $result['clube'];
+        $wallet = $result['wallet'];
+        $initialAdded = (int) ($result['initialAdded'] ?? 0);
 
         return response()->json([
             'message' => $clube->wasRecentlyCreated
@@ -1076,6 +1101,10 @@ class MinhaLigaController extends Controller
             'financeiro' => [
                 'saldo' => (int) $wallet->saldo,
             ],
+            'initial_roster_added' => $initialAdded > 0,
+            'initial_roster_message' => $initialAdded > 0 ? "{$initialAdded} jogadores iniciais adicionados automaticamente." : null,
+            'initial_roster_count' => $initialAdded > 0 ? $initialAdded : null,
+            'initial_roster_cta' => $initialAdded > 0 ? route('minha_liga.meu_elenco', ['liga_id' => $liga->id]) : null,
         ], 201);
     }
 
@@ -1112,6 +1141,116 @@ class MinhaLigaController extends Controller
 
             return response()->json(['message' => $message], $status);
         }
+    }
+
+    private function seedInitialRoster(Liga $liga, LigaClube $clube): int
+    {
+        $slots = [
+            'GK' => 1,
+            'RB' => 1,
+            'LB' => 1,
+            'CB' => 3,
+            'CDM' => 2,
+            'CM' => 2,
+            'CAM' => 2,
+            'ST' => 2,
+            'LW' => 1,
+            'RW' => 1,
+            'LM' => 1,
+            'RM' => 1,
+        ];
+
+        [$scopeColumn, $scopeValue] = $this->resolveRosterScope($liga);
+
+        $selected = [];
+        $added = 0;
+
+        foreach ($slots as $position => $quantity) {
+            for ($i = 0; $i < $quantity; $i++) {
+                $player = $this->findAvailablePlayer($liga, $position, $selected, $scopeColumn, $scopeValue, preferUnder80: true)
+                    ?? $this->findAvailablePlayer($liga, $position, $selected, $scopeColumn, $scopeValue, preferUnder80: false)
+                    ?? $this->findAnyAvailablePlayer($liga, $selected, $scopeColumn, $scopeValue);
+
+                if (! $player) {
+                    continue;
+                }
+
+                LigaClubeElenco::create([
+                    'confederacao_id' => $liga->confederacao_id,
+                    'liga_id' => $liga->id,
+                    'liga_clube_id' => $clube->id,
+                    'elencopadrao_id' => $player->id,
+                    'value_eur' => $player->value_eur,
+                    'wage_eur' => $player->wage_eur,
+                    'ativo' => true,
+                ]);
+
+                $selected[] = $player->id;
+                $added++;
+            }
+        }
+
+        return $added;
+    }
+
+    private function resolveRosterScope(Liga $liga): array
+    {
+        if ($liga->confederacao_id) {
+            return ['confederacao_id', $liga->confederacao_id];
+        }
+
+        return ['liga_id', $liga->id];
+    }
+
+    private function findAvailablePlayer(
+        Liga $liga,
+        string $position,
+        array $excludedIds,
+        string $scopeColumn,
+        int $scopeValue,
+        bool $preferUnder80 = true,
+    ): ?Elencopadrao {
+        $query = $this->availablePlayersBaseQuery($liga, $excludedIds, $scopeColumn, $scopeValue)
+            ->where('player_positions', 'ILIKE', '%' . $position . '%');
+
+        if ($preferUnder80) {
+            $query->where('overall', '<', 80)
+                ->orderByRaw('RANDOM()');
+        } else {
+            $query->orderBy('overall')->orderBy('id');
+        }
+
+        return $query->first();
+    }
+
+    private function findAnyAvailablePlayer(
+        Liga $liga,
+        array $excludedIds,
+        string $scopeColumn,
+        int $scopeValue
+    ): ?Elencopadrao {
+        return $this->availablePlayersBaseQuery($liga, $excludedIds, $scopeColumn, $scopeValue)
+            ->orderBy('overall')
+            ->orderBy('id')
+            ->first();
+    }
+
+    private function availablePlayersBaseQuery(
+        Liga $liga,
+        array $excludedIds,
+        string $scopeColumn,
+        int $scopeValue,
+    ) {
+        return Elencopadrao::query()
+            ->select(['id', 'value_eur', 'wage_eur'])
+            ->where('jogo_id', $liga->jogo_id)
+            ->when($excludedIds, fn ($query) => $query->whereNotIn('id', $excludedIds))
+            ->whereNotExists(function ($query) use ($scopeColumn, $scopeValue) {
+                $query->select(DB::raw(1))
+                    ->from('liga_clube_elencos as lce')
+                    ->whereColumn('lce.elencopadrao_id', 'elencopadrao.id')
+                    ->where($scopeColumn, $scopeValue);
+            });
     }
 
 }

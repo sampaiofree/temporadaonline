@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
+import Alert from '../components/app_publico/Alert';
 
 const getEditorData = () => window.__CLUBE_EDITOR__ ?? {};
 
@@ -124,6 +125,7 @@ export default function MinhaLigaClube() {
     const [errors, setErrors] = useState([]);
     const [saving, setSaving] = useState(false);
     const [feedback, setFeedback] = useState('');
+    const [feedbackCta, setFeedbackCta] = useState('');
     const [activeModal, setActiveModal] = useState(getModalFromUrl());
 
     useEffect(() => {
@@ -236,15 +238,22 @@ export default function MinhaLigaClube() {
                 }
                 : null;
 
+            const apiClub = response?.clube ?? {};
+            const initialCount = response?.initial_roster_count || 0;
+
             setClubSnapshot({
                 ...snapshot,
+                ...apiClub,
                 nome: trimmedName,
-                escudo_id: selectedEscudoId ? Number(selectedEscudoId) : null,
-                escudo: selectedPreview,
-                saldo: response?.financeiro?.saldo ?? snapshot.saldo,
-                elenco_count: snapshot.elenco_count ?? 0,
+                escudo_id: selectedEscudoId ? Number(selectedEscudoId) : apiClub?.escudo_id ?? null,
+                escudo: selectedPreview ?? apiClub?.escudo ?? null,
+                saldo: response?.financeiro?.saldo ?? apiClub?.saldo ?? snapshot.saldo,
+                elenco_count: initialCount || apiClub?.elenco_count || snapshot.elenco_count || 0,
             });
-            setFeedback(response?.message ?? 'Clube atualizado com sucesso.');
+            const baseMessage = response?.message ?? 'Clube atualizado com sucesso.';
+            const rosterMessage = response?.initial_roster_message ?? '';
+            setFeedback([baseMessage, rosterMessage].filter(Boolean).join(' '));
+            setFeedbackCta(response?.initial_roster_cta ?? '');
             closeModal();
         } catch (error) {
             const message =
@@ -443,7 +452,24 @@ export default function MinhaLigaClube() {
                 </a>
             </section>
 
-            {feedback && <p className="club-editor-feedback">{feedback}</p>}
+            {feedback && (
+                <Alert
+                    variant="success"
+                    description={feedback}
+                    floating
+                    onClose={() => {
+                        setFeedback('');
+                        setFeedbackCta('');
+                    }}
+                    actions={
+                        feedbackCta ? (
+                            <a className="btn-primary" href={feedbackCta}>
+                                Ver meu elenco
+                            </a>
+                        ) : null
+                    }
+                />
+            )}
 
             {activeModal === 'nome' && (
                 <div className="club-modal-overlay" role="dialog" aria-modal="true" aria-label="Editar nome do clube">
