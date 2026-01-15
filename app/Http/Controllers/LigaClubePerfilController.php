@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaClubeConquista;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -28,9 +30,37 @@ class LigaClubePerfilController extends Controller
 
         $clube->load([
             'user.profile',
+            'user.profile.plataformaRegistro',
             'escudo',
             'clubeElencos.elencopadrao',
         ]);
+
+        $valorElenco = (int) $clube->clubeElencos->sum(fn ($entry) => (int) ($entry->value_eur ?? 0));
+        $saldo = (int) (LigaClubeFinanceiro::query()
+            ->where('liga_id', $liga->id)
+            ->where('clube_id', $clube->id)
+            ->value('saldo') ?? 0);
+        $clubValue = $valorElenco + $saldo;
+        $fansTotal = $this->sumClaimedConquistaFans($liga, $clube);
+
+        $achievements = LigaClubeConquista::query()
+            ->with('conquista')
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->orderByDesc('claimed_at')
+            ->get()
+            ->map(function (LigaClubeConquista $registro) {
+                $conquista = $registro->conquista;
+                return [
+                    'id' => $registro->id,
+                    'nome' => $conquista?->nome,
+                    'image_url' => $this->resolveStorageUrl($conquista?->imagem),
+                ];
+            })
+            ->filter(fn ($item) => $item['image_url'])
+            ->values()
+            ->all();
 
         $players = $clube->clubeElencos->map(function ($entry) {
             $player = $entry->elencopadrao;
@@ -47,6 +77,7 @@ class LigaClubePerfilController extends Controller
 
         $owner = $clube->user;
         $profile = $owner?->profile;
+        $plataformaImagem = $profile?->plataformaRegistro?->imagem;
 
         return view('liga_clube_perfil', [
             'liga' => [
@@ -60,9 +91,15 @@ class LigaClubePerfilController extends Controller
                 'dono' => $owner?->name,
                 'plataforma' => $profile?->plataforma_nome,
                 'geracao' => $profile?->geracao_nome,
+                'plataforma_imagem' => $this->resolveStorageUrl($plataformaImagem),
                 'escudo_url' => $this->resolveEscudoUrl($clube->escudo?->clube_imagem),
                 'esquema_tatico_imagem_url' => $this->resolveStorageUrl($clube->esquema_tatico_imagem),
                 'players' => $players,
+                'valor_elenco' => $valorElenco,
+                'saldo' => $saldo,
+                'club_value' => $clubValue,
+                'achievement_images' => $achievements,
+                'fans_total' => $fansTotal,
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, $nav),
         ]);
@@ -100,5 +137,15 @@ class LigaClubePerfilController extends Controller
         }
 
         return \Storage::disk('public')->url($path);
+    }
+
+    private function sumClaimedConquistaFans(Liga $liga, LigaClube $clube): int
+    {
+        return (int) LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
+            ->sum('conquistas.fans');
     }
 }

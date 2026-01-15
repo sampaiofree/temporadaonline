@@ -7,6 +7,7 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\Partida;
 use App\Models\PartidaDesempenho;
+use App\Services\LeagueFinanceService;
 use App\Services\PartidaDesempenhoAiService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -16,8 +17,109 @@ use Illuminate\Support\Facades\Log;
 
 class PartidaDesempenhoController extends Controller
 {
-    public function __construct(private readonly PartidaDesempenhoAiService $aiService)
+    public function __construct(
+        private readonly PartidaDesempenhoAiService $aiService,
+        private readonly LeagueFinanceService $finance,
+    ) {
+    }
+
+    private const WINNER_PRIZE = 750_000;
+    private const LOSER_PRIZE = 50_000;
+    private const DRAW_PRIZE = 300_000;
+
+    public function confirm(Request $request, Partida $partida): JsonResponse
     {
+        $user = $request->user();
+        $this->assertParticipant($user->id, $partida);
+        $this->assertAllowedState($partida);
+
+        $data = $request->validate([
+            'mandante' => ['present', 'array'],
+            'mandante.*.elencopadrao_id' => ['required', 'integer'],
+            'mandante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
+            'mandante.*.gols' => ['required', 'integer', 'min:0'],
+            'mandante.*.assistencias' => ['required', 'integer', 'min:0'],
+            'visitante' => ['present', 'array'],
+            'visitante.*.elencopadrao_id' => ['required', 'integer'],
+            'visitante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
+            'visitante.*.gols' => ['required', 'integer', 'min:0'],
+            'visitante.*.assistencias' => ['required', 'integer', 'min:0'],
+            'placar_mandante' => ['required', 'integer', 'min:0'],
+            'placar_visitante' => ['required', 'integer', 'min:0'],
+        ]);
+
+        $partida->loadMissing(['mandante', 'visitante']);
+        $mandanteRosterIds = $this->loadRosterIds($partida->mandante);
+        $visitanteRosterIds = $this->loadRosterIds($partida->visitante);
+
+        $this->assertRosterMembership($data['mandante'], $mandanteRosterIds);
+        $this->assertRosterMembership($data['visitante'], $visitanteRosterIds);
+        $this->assertUniquePlayers($data['mandante'], $data['visitante']);
+
+        $placarMandante = (int) $data['placar_mandante'];
+        $placarVisitante = (int) $data['placar_visitante'];
+
+        DB::transaction(function () use ($partida, $user, $data, $placarMandante, $placarVisitante): void {
+            $partida->fill([
+                'placar_mandante' => $placarMandante,
+                'placar_visitante' => $placarVisitante,
+                'placar_registrado_por' => $user->id,
+                'placar_registrado_em' => Carbon::now('UTC'),
+                'estado' => 'placar_registrado',
+            ]);
+            $partida->save();
+
+            PartidaDesempenho::query()
+                ->where('partida_id', $partida->id)
+                ->delete();
+
+            $entries = array_merge(
+                $this->normalizeEntries($data['mandante'], $partida->id, $partida->mandante_id),
+                $this->normalizeEntries($data['visitante'], $partida->id, $partida->visitante_id),
+            );
+
+            foreach ($entries as $entry) {
+                PartidaDesempenho::create($entry);
+            }
+
+            $this->awardMatchBonus($partida, $placarMandante, $placarVisitante);
+        });
+
+        return response()->json([
+            'message' => 'Desempenho registrado.',
+            'placar_mandante' => $placarMandante,
+            'placar_visitante' => $placarVisitante,
+            'estado' => $partida->estado,
+        ]);
+    }
+
+    private function awardMatchBonus(Partida $partida, int $placarMandante, int $placarVisitante): void
+    {
+        $winnerClubId = null;
+        $loserClubId = null;
+        $prizeDescription = "Premiação da partida {$partida->id}";
+
+        if ($placarMandante === $placarVisitante) {
+            $this->finance->credit($partida->liga_id, $partida->mandante_id, self::DRAW_PRIZE, "{$prizeDescription} (empate)");
+            $this->finance->credit($partida->liga_id, $partida->visitante_id, self::DRAW_PRIZE, "{$prizeDescription} (empate)");
+            return;
+        }
+
+        if ($placarMandante > $placarVisitante) {
+            $winnerClubId = $partida->mandante_id;
+            $loserClubId = $partida->visitante_id;
+        } else {
+            $winnerClubId = $partida->visitante_id;
+            $loserClubId = $partida->mandante_id;
+        }
+
+        if ($winnerClubId) {
+            $this->finance->credit($partida->liga_id, $winnerClubId, self::WINNER_PRIZE, "{$prizeDescription} (vencedor)");
+        }
+
+        if ($loserClubId) {
+            $this->finance->credit($partida->liga_id, $loserClubId, self::LOSER_PRIZE, "{$prizeDescription} (derrotado)");
+        }
     }
 
     public function preview(Request $request, Partida $partida): JsonResponse

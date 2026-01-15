@@ -522,7 +522,7 @@ class TransferService
 
     private function assertRosterLimitForCount(Liga $liga, int $count): void
     {
-        $max = (int) ($liga->max_jogadores_por_clube ?? 18);
+        $max = (int) ($liga->max_jogadores_por_clube ?? 23);
 
         if ($count > $max) {
             throw new \DomainException("Elenco cheio ({$count}/{$max}).");
@@ -531,7 +531,7 @@ class TransferService
 
     private function assertRosterLimit(Liga $liga, int $clubeId): void
     {
-        $max = (int) ($liga->max_jogadores_por_clube ?? 18);
+        $max = (int) ($liga->max_jogadores_por_clube ?? 23);
 
         $count = LigaClubeElenco::query()
             ->where('liga_id', $liga->id)

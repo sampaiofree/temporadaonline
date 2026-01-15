@@ -1719,6 +1719,59 @@ a:focus-visible {
     color: #fff;
 }
 
+.clube-perfil-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+    padding: 10px;
+    background: rgba(17, 17, 17, 0.7);
+    border-radius: 16px;
+    border: 1px solid rgba(241, 196, 15, 0.15);
+}
+
+.clube-perfil-value-card,
+.clube-perfil-achievements-card,
+.clube-perfil-fans-card {
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.clube-perfil-stats-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.clube-perfil-stats-meta {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.clube-perfil-achievement-gallery {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.clube-perfil-achievement-gallery img {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    object-fit: cover;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.clube-perfil-achievement-empty {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 12px;
+}
 .clube-perfil-info {
     display: flex;
     flex-direction: column;
@@ -1739,6 +1792,88 @@ a:focus-visible {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+}
+
+.clube-perfil-top-line {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px;
+    background: transparent;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.clube-perfil-user-icon {
+    width: 45px;
+    height: 45px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #2a2a2a 0%, #111 100%);
+    border: 2px solid #f1c40f;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    font-weight: 900;
+    letter-spacing: 0.18em;
+    box-shadow: 0 0 10px rgba(241, 196, 15, 0.3);
+    font-family: 'Arial Black', sans-serif;
+}
+
+.clube-perfil-nickname {
+    color: #fff;
+    font-family: 'Arial Black', sans-serif;
+    font-size: 22px;
+    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: -1px;
+    margin-right: 5px;
+}
+
+.clube-perfil-platform {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background: transparent;
+    border: 1px solid rgba(241, 196, 15, 0.4);
+    color: #f1c40f;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    opacity: 0.9;
+}
+
+.clube-perfil-platform img {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+}
+
+.clube-perfil-platform.platform-pc {
+    background: rgba(15, 230, 240, 0.08);
+    border-color: rgba(15, 230, 240, 0.4);
+    color: #0ff;
+}
+
+.clube-perfil-platform.platform-ps {
+    background: rgba(79, 70, 229, 0.08);
+    border-color: rgba(79, 70, 229, 0.4);
+    color: #c4b5fd;
+}
+
+.clube-perfil-platform.platform-xbox {
+    background: rgba(16, 185, 129, 0.08);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+}
+
+.clube-perfil-platform.platform-default {
+    background: rgba(59, 130, 246, 0.08);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
 }
 
 .clube-perfil-chip {
@@ -2167,6 +2302,13 @@ a:focus-visible {
     font-family: var(--font-heading);
     letter-spacing: 0.08em;
     text-transform: uppercase;
+}
+
+.alert-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 6px;
 }
 
 .alert-close {
@@ -2648,6 +2790,11 @@ a:focus-visible {
     outline: 2px solid var(--gold);
     outline-offset: 2px;
     border-radius: 4px;
+}
+
+.mercado-player-value-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .mercado-player-salary {
@@ -3191,8 +3338,9 @@ a:focus-visible {
 
 .player-detail-playstyle-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 8px;
+    height: 20px;
 }
 
 .player-detail-playstyle {
@@ -3204,8 +3352,8 @@ a:focus-visible {
 }
 
 .player-detail-playstyle-image {
-    width: 22px;
-    height: 22px;
+    width: 50px;
+    height: 50px;
     object-fit: contain;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
@@ -3223,6 +3371,7 @@ a:focus-visible {
 .player-detail-performance {
     padding: 20px;
     background: #111;
+    margin-top: 20px;
 }
 
 .player-detail-performance h4 {
@@ -3818,6 +3967,26 @@ a:focus-visible {
     -webkit-overflow-scrolling: touch;
 }
 
+.club-modal-overlay {
+    padding: 0;
+    align-items: stretch;
+}
+
+.club-modal {
+    width: 100%;
+    height: 100%;
+    background: #0a0a0a;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+}
+
+.club-modal-header {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+}
+
 .ligas-modal {
     width: min(580px, 100%);
     background: rgba(18, 18, 18, 0.98);
@@ -4141,51 +4310,71 @@ a:focus-visible {
 
 /* Minha Liga – ações e modal */
 .league-actions{
-    width: min(520px, 100%);
+    width: min(960px, 100%);
     margin: var(--gap-lg) auto 0;
 }
 
-.league-actions-custom{
-    padding: 20px 0;
+.league-actions.league-actions-custom{
+    padding: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 14px;
+    /*background-color: #f4f4f4;*/
+    border-radius: 26px;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.1);
 }
 
-.control-card{
-    position: relative;
+.league-actions-custom .control-card{
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    border: none;
+    padding: 2px;
+    background: linear-gradient(135deg, #f1c40f 0%, #b8860b 100%);
+    clip-path: polygon(5% 0, 100% 0, 100% 70%, 95% 100%, 0 100%, 0 30%);
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform 0.2s ease, filter 0.2s ease;
+}
+
+.league-actions-custom .control-card .inner-content{
+    background-color: #24262b;
+    width: 100%;
+    height: 100%;
     display: flex;
     align-items: center;
-    height: 70px;
-    padding: 0 20px;
-    background: linear-gradient(90deg, #111 0%, #05070a 100%);
-    border-radius: 12px;
-    border: 1px solid #1a1a1a;
-    color: #fff;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 900;
-    text-decoration: none;
+    gap: 14px;
+    padding: 14px 26px;
+    clip-path: polygon(5% 0, 100% 0, 100% 70%, 95% 100%, 0 100%, 0 30%);
 }
 
-.control-card-icon{
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    color: #edff05;
-    margin-right: 12px;
+.league-actions-custom .control-card .card-icon{
+    width: 24px;
+    height: 24px;
     flex: 0 0 auto;
+    color: #f1c40f;
 }
 
-.control-card-icon svg{
-    width: 20px;
-    height: 20px;
+.league-actions-custom .control-card .card-icon svg{
+    width: 100%;
+    height: 100%;
 }
 
-.control-card-title{
-    z-index: 2;
-    font-size: 14px;
-    flex: none;
+.league-actions-custom .control-card .control-card-title{
+    font-size: 16px;
+    font-weight: 700;
+    color: #f1c40f;
+    letter-spacing: 0.01em;
+}
+
+.league-actions-custom .control-card:hover{
+    transform: scale(1.02);
+}
+
+.league-actions-custom .control-card.is-disabled,
+.league-actions-custom .control-card:disabled{
+    filter: grayscale(0.3) opacity(0.7);
+    cursor: not-allowed;
 }
 
 .control-card-ghost{
@@ -6798,4 +6987,385 @@ img.club-editor-card-image {
     .esquema-field {
         aspect-ratio: 3 / 4.2;
     }
+}
+
+.conquistas-screen .club-editor-hero {
+    padding-bottom: 0;
+}
+
+.conquista-hero-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    justify-content: space-between;
+}
+
+.conquista-stats {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    margin: 12px 16px 24px;
+}
+
+.conquista-stats article {
+    background: #0b122005;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px 14px;
+}
+
+.conquista-stats span {
+    display: block;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.conquista-stats strong {
+    display: block;
+    font-size: 18px;
+    margin-top: 2px;
+    color: #0f172a;
+}
+
+.conquista-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 14px;
+    padding: 0 16px 24px;
+}
+
+.conquista-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+}
+
+.conquista-card-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.conquista-thumb {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #fff7ed, #ffe4e6);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 1px solid #f1f5f9;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.conquista-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.conquista-name {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.conquista-meta {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 2px 0 0;
+}
+
+.conquista-description {
+    font-size: 13px;
+    color: #475569;
+    margin: 10px 0 12px;
+    line-height: 1.4;
+}
+
+.conquista-progress {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+.conquista-progress-bar {
+    height: 100%;
+    background: linear-gradient(120deg, #0ea5e9, #22c55e);
+    border-radius: 999px;
+    transition: width 150ms ease-in-out;
+}
+
+.conquista-progress-text {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 6px 0 0;
+}
+
+.conquista-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.conquista-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.conquista-badge.success {
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.conquista-badge.muted {
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+}
+
+.conquistas-hero {
+    text-align: center;
+}
+
+.conquista-gallery {
+    padding: 20px 10px;
+}
+
+.conquista-gallery-header {
+    margin-bottom: 20px;
+    border-left: 4px solid #f1c40f;
+    padding-left: 12px;
+}
+
+.conquista-gallery-header h2 {
+    font-size: 16px;
+    font-weight: 700;
+    color: #ffffff;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0;
+    line-height: 1;
+}
+
+.conquista-gallery-grid,
+.conquista-locked-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-start;
+}
+
+.conquista-gallery-grid {
+    border-radius: 18px;
+}
+
+.conquista-resgatada-card {
+    width: 110px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    flex: 0 1 calc(33.33% - 10px);
+    min-width: 110px;
+}
+
+.conquista-resgatada-tag {
+    position: relative;
+    z-index: 2;
+    background: #f1c40f;
+    color: #181818;
+    font-size: 8px;
+    font-weight: 900;
+    padding: 2px 6px;
+    clip-path: polygon(0 0, 100% 0, 85% 100%, 0% 100%);
+    text-transform: uppercase;
+    margin-bottom: -10px;
+}
+
+.conquista-resgatada-media {
+    width: 85px;
+    height: 85px;
+    border-radius: 4px;
+    border: 1px solid rgba(241, 196, 15, 0.2);
+    background: rgba(255, 255, 255, 0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.conquista-resgatada-media img {
+    width: 65px;
+    height: 65px;
+    object-fit: contain;
+    filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.5));
+}
+
+.conquista-resgatada-media span {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.conquista-resgatada-name {
+    font-size: 11px;
+    font-weight: 800;
+    color: #f1c40f;
+    text-transform: uppercase;
+    margin-top: 8px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.patrocinio-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: #111;
+    padding: 12px 20px;
+    border-left: 4px solid #f1c40f;
+    min-width: 220px;
+    flex: 0 1 calc(33.33% - 10px);
+    border-radius: 4px;
+}
+
+.patrocinio-thumb {
+    width: 50px;
+    height: 50px;
+    border-radius: 4px;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.patrocinio-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.patrocinio-thumb span {
+    font-weight: 700;
+    color: #000;
+}
+
+.patrocinio-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.patrocinio-name {
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin: 0;
+}
+
+.patrocinio-value {
+    color: #f1c40f;
+    font-size: 14px;
+    font-weight: 900;
+    margin: 2px 0 0;
+}
+
+.conquista-thumb-card {
+    background: #1a1a1a;
+    border-radius: 16px;
+    padding: 15px 5px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid #333;
+    flex: 0 1 calc(33.33% - 10px);
+    min-width: 100px;
+    clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.conquista-thumb-media {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+}
+
+.conquista-thumb-media img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(241, 196, 15, 0.6));
+}
+
+.conquista-thumb-media span {
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.conquista-thumb-name {
+    font-size: 10px;
+    font-weight: 800;
+    color: #f1c40f;
+    text-transform: uppercase;
+    margin: 0;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.conquista-locked-grid {
+    border-radius: 18px;
+}
+
+.conquista-locked-card {
+    background: #111827;
+    border-radius: 16px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    color: #e2e8f0;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    flex: 0 1 calc(33.33% - 10px);
+    min-width: 120px;
+    clip-path: polygon(15% 0, 100% 0, 100% 85%, 85% 100%, 0 100%, 0 15%);
+}
+
+.conquista-locked-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.conquista-progress-note {
+    font-size: 12px;
+    color: #a5b4fc;
+}
+
+.conquista-actions {
+    margin-top: 4px;
+}
+
+.conquista-locked-card .btn-primary {
+    width: 100%;
 }

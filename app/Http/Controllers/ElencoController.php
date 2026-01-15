@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LigaClubeElenco;
+use App\Models\LigaPeriodo;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,6 +13,23 @@ class ElencoController extends Controller
     public function venderMercado(Request $request, LigaClubeElenco $elenco, TransferService $transferService): JsonResponse
     {
         $this->authorizeOwnership($request, $elenco);
+
+        $elenco->loadMissing('liga');
+        $liga = $elenco->liga;
+
+        if ($liga && LigaPeriodo::activeRangeForLiga($liga)) {
+            $activeCount = LigaClubeElenco::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $elenco->liga_clube_id)
+                ->where('ativo', true)
+                ->count();
+
+            if ($activeCount <= 18) {
+                return response()->json([
+                    'message' => 'Mercado fechado. Seu elenco já está com 18 jogadores ativos. Vendas bloqueadas.',
+                ], 422);
+            }
+        }
 
         try {
             $result = $transferService->releaseToMarket($elenco);

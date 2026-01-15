@@ -36,7 +36,7 @@
                         <x-sidebar-group 
                             title="CADASTRO" 
                             icon="plus-circle" 
-                            :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*'])"
+                            :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*', 'admin.conquistas.*', 'admin.patrocinios.*', 'admin.premiacoes.*'])"
                         >
                             <div class="space-y-1 py-1">
                                 <x-nav-link href="{{ route('admin.jogos.index') }}" :active="request()->routeIs('admin.jogos.*')">Jogos</x-nav-link>
@@ -45,6 +45,9 @@
                                 <x-nav-link href="{{ route('admin.elenco-padrao.index') }}" :active="request()->routeIs('admin.elenco-padrao.*')">Elenco Padrão</x-nav-link>
                                 <x-nav-link href="{{ route('admin.confederacoes.index') }}" :active="request()->routeIs('admin.confederacoes.*')">Confederação</x-nav-link>
                                 <x-nav-link href="{{ route('admin.ligas.index') }}" :active="request()->routeIs('admin.ligas.*')">Liga</x-nav-link>
+                                <x-nav-link href="{{ route('admin.conquistas.index') }}" :active="request()->routeIs('admin.conquistas.*')">Conquistas</x-nav-link>
+                                <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patrocinios</x-nav-link>
+                                <x-nav-link href="{{ route('admin.premiacoes.index') }}" :active="request()->routeIs('admin.premiacoes.*')">Premiações</x-nav-link>
                             </div>
                         </x-sidebar-group>
 

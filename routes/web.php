@@ -17,6 +17,9 @@ use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeControll
 use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
 use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
 use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
+use App\Http\Controllers\Admin\ConquistaController as AdminConquistaController;
+use App\Http\Controllers\Admin\PatrocinioController as AdminPatrocinioController;
+use App\Http\Controllers\Admin\PremiacaoController as AdminPremiacaoController;
 use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WhatsappConnectionController as AdminWhatsappConnectionController;
@@ -47,6 +50,11 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('paises/bulk-destroy', [AdminPaisController::class, 'bulkDestroy'])->name('paises.bulk-destroy');
     Route::resource('playstyles', AdminPlaystyleController::class)->only(['index', 'store', 'destroy']);
     Route::delete('playstyles/bulk-destroy', [AdminPlaystyleController::class, 'bulkDestroy'])->name('playstyles.bulk-destroy');
+    Route::resource('conquistas', AdminConquistaController::class)->except(['show']);
+    Route::resource('patrocinios', AdminPatrocinioController::class)->except(['show']);
+    Route::resource('premiacoes', AdminPremiacaoController::class, [
+        'parameters' => ['premiacoes' => 'premiacao'],
+    ])->except(['show']);
     Route::resource('clubes', AdminClubeController::class)
         ->only(['index', 'edit', 'update', 'destroy']);
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
@@ -86,7 +94,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         ->name('elenco-padrao.jogadores.destroy');
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'roster.limit'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ligas', [LigaController::class, 'index'])->name('ligas');
     Route::post('/ligas/{liga}/entrar', [LigaController::class, 'join'])->name('ligas.join');
@@ -98,6 +106,15 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy']);
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
     Route::get('/minha_liga/clube', [MinhaLigaController::class, 'clube'])->name('minha_liga.clube');
+    Route::get('/minha_liga/clube/conquistas', [MinhaLigaController::class, 'conquistas'])->name('minha_liga.conquistas');
+    Route::post('/minha_liga/clube/conquistas/{conquista}/claim', [MinhaLigaController::class, 'claimConquista'])
+        ->name('minha_liga.conquistas.claim');
+    Route::get('/minha_liga/clube/patrocinio', [MinhaLigaController::class, 'patrocinios'])->name('minha_liga.patrocinio');
+    Route::post('/minha_liga/clube/patrocinio/{patrocinio}/claim', [MinhaLigaController::class, 'claimPatrocinio'])
+        ->name('minha_liga.patrocinio.claim');
+    Route::get('/minha_liga/clube/conquistas', [MinhaLigaController::class, 'conquistas'])->name('minha_liga.conquistas');
+    Route::post('/minha_liga/clube/conquistas/{conquista}/claim', [MinhaLigaController::class, 'claimConquista'])
+        ->name('minha_liga.conquistas.claim');
     Route::get('/minha_liga/meu-elenco', [MinhaLigaController::class, 'meuElenco'])->name('minha_liga.meu_elenco');
     Route::get('/minha_liga/esquema-tatico', [MinhaLigaController::class, 'esquemaTatico'])
         ->name('minha_liga.esquema_tatico');

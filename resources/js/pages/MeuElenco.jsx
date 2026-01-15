@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Alert from '../components/app_publico/Alert';
 import Navbar from '../components/app_publico/Navbar';
 import PlayerDetailModal from '../components/app_publico/PlayerDetailModal';
 
@@ -29,7 +30,10 @@ const getMeuElencoFromWindow = () =>
     window.__MEU_ELENCO__ ?? {
         players: [],
         player_count: 0,
+        active_count: 0,
         max_players: 0,
+        market_closed: false,
+        closed_limit: 18,
         salary_per_round: 0,
     };
 
@@ -94,6 +98,17 @@ export default function MeuElenco() {
     const clube = getClubeFromWindow();
     const meuElenco = getMeuElencoFromWindow();
     const [players, setPlayers] = useState(Array.isArray(meuElenco.players) ? meuElenco.players : []);
+    const closedLimit = Number(meuElenco.closed_limit ?? 18);
+    const marketClosed = Boolean(meuElenco.market_closed);
+    const activeCount = useMemo(
+        () => players.filter((entry) => entry?.ativo).length,
+        [players],
+    );
+    const rosterLimit = marketClosed ? closedLimit : Number(meuElenco.max_players ?? 0);
+    const rosterCount = marketClosed ? activeCount : players.length;
+    const rosterLock = marketClosed && activeCount > closedLimit;
+    const canSell = !marketClosed || activeCount > closedLimit;
+    const canEditValues = !rosterLock;
 
     // Busca + filtros
     const [q, setQ] = useState('');
@@ -109,6 +124,7 @@ export default function MeuElenco() {
     const [modalError, setModalError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [modalSaleCompleted, setModalSaleCompleted] = useState(false);
     const [valueModalPlayer, setValueModalPlayer] = useState(null);
     const [valueModalValue, setValueModalValue] = useState('');
     const [valueModalWage, setValueModalWage] = useState('');
@@ -216,6 +232,7 @@ export default function MeuElenco() {
         setModalMessage('');
         setModalError('');
         setIsModalOpen(true);
+        setModalSaleCompleted(false);
     };
 
     const closeModal = () => {
@@ -224,6 +241,7 @@ export default function MeuElenco() {
         setModalError('');
         setModalMessage('');
         setIsSubmitting(false);
+        setModalSaleCompleted(false);
     };
 
     const handleModalSubmit = async () => {
@@ -241,6 +259,7 @@ export default function MeuElenco() {
             setModalMessage(
                 data?.message ?? `Jogador devolvido ao mercado. Crédito de ${formatCurrency(credit)} aplicado.`,
             );
+            setModalSaleCompleted(true);
         } catch (error) {
             setModalError(
                 error.response?.data?.message ?? 'Não foi possível completar a operação. Tente novamente.',
@@ -420,6 +439,13 @@ export default function MeuElenco() {
 
     return (
         <main className="meu-elenco-screen">
+            {rosterLock && (
+                <Alert
+                    variant="warning"
+                    title="Mercado fechado"
+                    description={`Seu clube tem ${activeCount} jogadores ativos. Venda até ficar com ${closedLimit}.`}
+                />
+            )}
             <section className="meu-elenco-hero">
                 <p className="meu-elenco-eyebrow">MEU</p>
                 <h1 className="meu-elenco-title">{title}</h1>
@@ -427,7 +453,7 @@ export default function MeuElenco() {
                     <div>
                         <span>Jogadores</span>
                         <strong>
-                            {players.length} / {meuElenco.max_players}
+                            {rosterCount} / {rosterLimit}
                         </strong>
                     </div>
                     <div>
@@ -436,9 +462,15 @@ export default function MeuElenco() {
                     </div>
                 </div>
                 <div className="meu-elenco-actions">
-                    <a className="btn-primary" href={esquemaHref}>
-                        Esquema tático
-                    </a>
+                    {rosterLock ? (
+                        <span className="btn-primary disabled" aria-disabled="true">
+                            Esquema tático
+                        </span>
+                    ) : (
+                        <a className="btn-primary" href={esquemaHref}>
+                            Esquema tático
+                        </a>
+                    )}
                 </div>
                 {esquemaPreviewUrl && (
                     <div className="meu-elenco-esquema-preview">
@@ -610,8 +642,9 @@ export default function MeuElenco() {
                                         <div className="mercado-player-values">
                                             <button
                                                 type="button"
-                                                className="mercado-player-value-button"
+                                                className={`mercado-player-value-button${canEditValues ? '' : ' disabled'}`}
                                                 onClick={() => openValueModal(entry)}
+                                                disabled={!canEditValues}
                                                 aria-label={`Editar valor de ${name}`}
                                             >
                                                 {formatCurrency(entry.value_eur)}
@@ -623,8 +656,9 @@ export default function MeuElenco() {
                                         <div className="mercado-player-action">
                                             <button
                                                 type="button"
-                                                className="table-action-badge outline"
+                                                className={`table-action-badge outline${canSell ? '' : ' disabled'}`}
                                                 onClick={() => openModal(entry)}
+                                                disabled={!canSell}
                                             >
                                                 Vender
                                             </button>
@@ -664,19 +698,27 @@ export default function MeuElenco() {
                         </div>
                         {modalError && <p className="modal-error">{modalError}</p>}
                         {modalMessage && <p className="modal-success">{modalMessage}</p>}
-                        <div className="meu-elenco-modal-actions">
-                            <button type="button" className="btn-outline" onClick={closeModal} disabled={isSubmitting}>
-                                Cancelar
+                    <div className="meu-elenco-modal-actions">
+                        {modalSaleCompleted ? (
+                            <button type="button" className="btn-primary" onClick={closeModal}>
+                                Fechar
                             </button>
-                            <button
-                                type="button"
-                                className="btn-primary"
-                                onClick={handleModalSubmit}
-                                disabled={isSubmitting}
-                            >
-                                {isSubmitting ? 'Enviando...' : 'Confirmar'}
-                            </button>
-                        </div>
+                        ) : (
+                            <>
+                                <button type="button" className="btn-outline" onClick={closeModal} disabled={isSubmitting}>
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="button"
+                                    className="btn-primary"
+                                    onClick={handleModalSubmit}
+                                    disabled={isSubmitting}
+                                >
+                                    {isSubmitting ? 'Enviando...' : 'Confirmar'}
+                                </button>
+                            </>
+                        )}
+                    </div>
                     </div>
                 </div>
             )}

@@ -44,6 +44,11 @@ class LigaClube extends Model
         return $this->hasMany(LigaClubeElenco::class);
     }
 
+    public function conquistas(): HasMany
+    {
+        return $this->hasMany(LigaClubeConquista::class, 'liga_clube_id');
+    }
+
     public function financeiro(): HasOne
     {
         return $this->hasOne(LigaClubeFinanceiro::class, 'clube_id');

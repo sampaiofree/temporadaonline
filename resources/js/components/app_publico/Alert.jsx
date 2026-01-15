@@ -12,7 +12,7 @@ const VARIANT_ICON = {
     danger: '✕',
 };
 
-export default function Alert({ variant = 'info', title, description, children, onClose, floating = false }) {
+export default function Alert({ variant = 'info', title, description, children, onClose, floating = false, actions }) {
     const tone = VARIANT_CLASS[variant] ?? VARIANT_CLASS.info;
     const icon = VARIANT_ICON[variant] ?? VARIANT_ICON.info;
     const content = description || children;
@@ -26,6 +26,7 @@ export default function Alert({ variant = 'info', title, description, children, 
             <div className="alert-body">
                 {title && <strong>{title}</strong>}
                 {content && <p>{content}</p>}
+                {actions && <div className="alert-actions">{actions}</div>}
             </div>
             {onClose && (
                 <button type="button" className="alert-close" onClick={onClose} aria-label="Fechar aviso">

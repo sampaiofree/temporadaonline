@@ -4,12 +4,18 @@ namespace App\Http\Controllers;
 
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaClubeConquista;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaClubePatrocinio;
 use App\Models\LigaEscudo;
 use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
 use App\Models\PartidaFolhaPagamento;
+use App\Models\Partida;
+use App\Models\Conquista;
+use App\Models\PartidaDesempenho;
+use App\Models\Patrocinio;
 use App\Models\EscudoClube;
 use App\Models\Pais;
 use App\Services\LeagueFinanceService;
@@ -112,6 +118,7 @@ class MinhaLigaController extends Controller
         $salarioPorRodada = 0;
         $rodadasRestantes = null;
         $movimentos = [];
+        $patrocinioResgatados = [];
 
         if ($userClub) {
             $walletSaldo = LigaClubeFinanceiro::query()
@@ -209,6 +216,27 @@ class MinhaLigaController extends Controller
                 ->take(5)
                 ->values()
                 ->all();
+
+            $patrocinioResgatados = LigaClubePatrocinio::query()
+                ->with('patrocinio')
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->whereNotNull('claimed_at')
+                ->orderByDesc('claimed_at')
+                ->get()
+                ->map(function (LigaClubePatrocinio $registro) {
+                    $patrocinio = $registro->patrocinio;
+                    return [
+                        'id' => 'patrocinio-'.$registro->id,
+                        'tipo' => 'patrocinio',
+                        'patrocinio_id' => $registro->patrocinio_id,
+                        'valor' => (int) ($patrocinio->valor ?? 0),
+                        'observacao' => $patrocinio ? "Patrocínio {$patrocinio->nome}" : 'Patrocínio resgatado',
+                        'created_at' => $registro->claimed_at,
+                    ];
+                })
+                ->values()
+                ->all();
         }
 
         return view('minha_liga_financeiro', [
@@ -227,6 +255,7 @@ class MinhaLigaController extends Controller
                 'salarioPorRodada' => $salarioPorRodada,
                 'rodadasRestantes' => $rodadasRestantes,
                 'movimentos' => $movimentos,
+                'patrocinios' => $patrocinioResgatados,
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
         ]);
@@ -239,6 +268,12 @@ class MinhaLigaController extends Controller
             ->where('liga_id', $liga->id)
             ->with('escudo')
             ->first();
+        $elencoCount = null;
+        $saldo = null;
+        $partidasJogadas = 0;
+        $golsMarcados = 0;
+        $vitorias = 0;
+        $fans = 0;
 
         $filters = [
             'search' => $request->query('search', ''),
@@ -246,6 +281,49 @@ class MinhaLigaController extends Controller
             'escudo_liga_id' => $request->query('escudo_liga_id', ''),
             'only_available' => $request->boolean('only_available'),
         ];
+
+        if ($userClub) {
+            $elencoCount = LigaClubeElenco::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->count();
+
+            $walletSaldo = LigaClubeFinanceiro::query()
+                ->where('liga_id', $liga->id)
+                ->where('clube_id', $userClub->id)
+                ->value('saldo');
+
+            $saldo = $walletSaldo !== null ? (int) $walletSaldo : (int) ($liga->saldo_inicial ?? 0);
+
+            $matches = Partida::query()
+                ->where('liga_id', $liga->id)
+                ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
+                ->where(function ($query) use ($userClub) {
+                    $query->where('mandante_id', $userClub->id)->orWhere('visitante_id', $userClub->id);
+                })
+                ->get(['mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante', 'estado']);
+
+            $partidasJogadas = $matches->count();
+
+            foreach ($matches as $partida) {
+                $isMandante = (int) $partida->mandante_id === (int) $userClub->id;
+                $gm = (int) ($partida->placar_mandante ?? 0);
+                $gv = (int) ($partida->placar_visitante ?? 0);
+
+                if ($partida->estado !== 'wo') {
+                    $golsMarcados += $isMandante ? $gm : $gv;
+
+                    if ($gm !== $gv) {
+                        $isWin = $isMandante ? ($gm > $gv) : ($gv > $gm);
+                        if ($isWin) {
+                            $vitorias++;
+                        }
+                    }
+                }
+            }
+
+            $fans = $this->sumClaimedConquistaFans($liga, $userClub);
+        }
 
         $usedEscudos = LigaClube::query()
             ->whereNotNull('escudo_clube_id')
@@ -308,12 +386,254 @@ class MinhaLigaController extends Controller
                         'clube_imagem' => $userClub->escudo->clube_imagem,
                     ]
                     : null,
+                'elenco_count' => $elencoCount ?? 0,
+                'saldo' => $saldo,
+                'partidas_jogadas' => $partidasJogadas,
+                'gols_marcados' => $golsMarcados,
+                'vitorias' => $vitorias,
+                'fans' => $fans,
             ] : null,
             'escudos' => $escudos,
             'paises' => $paises,
             'ligasEscudos' => $ligasEscudos,
             'usedEscudos' => $usedEscudos,
             'filters' => $filters,
+        ]);
+    }
+
+    public function patrocinios(Request $request): View
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        $fans = $this->sumClaimedConquistaFans($liga, $userClub);
+
+        $claimed = collect();
+        if ($userClub) {
+            $claimed = LigaClubePatrocinio::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->get()
+                ->keyBy('patrocinio_id');
+        }
+
+        $patrocinios = Patrocinio::query()
+            ->orderBy('nome')
+            ->get()
+            ->map(function (Patrocinio $patrocinio) use ($fans, $claimed) {
+                $claimedAt = $claimed->get($patrocinio->id)?->claimed_at;
+                $canClaim = $claimedAt ? false : $fans >= (int) $patrocinio->fans;
+                $percent = (int) round(($fans / max(1, (int) $patrocinio->fans)) * 100);
+
+                return [
+                    'id' => $patrocinio->id,
+                    'nome' => $patrocinio->nome,
+                    'descricao' => $patrocinio->descricao,
+                    'imagem_url' => $patrocinio->imagem ? Storage::disk('public')->url($patrocinio->imagem) : null,
+                    'valor' => (int) $patrocinio->valor,
+                    'fans' => (int) $patrocinio->fans,
+                    'current_fans' => $fans,
+                    'progress' => [
+                        'value' => min($fans, (int) $patrocinio->fans),
+                        'required' => (int) $patrocinio->fans,
+                        'percent' => min(100, max(0, $percent)),
+                    ],
+                    'claimed_at' => $claimedAt,
+                    'can_claim' => $canClaim,
+                    'status' => $claimedAt ? 'claimed' : ($canClaim ? 'available' : 'locked'),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return view('minha_liga_patrocinio', [
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'imagem' => $liga->imagem,
+            ],
+            'clube' => $userClub ? [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+            ] : null,
+            'patrocinios' => $patrocinios,
+            'fans' => $fans,
+        ]);
+    }
+
+    public function claimPatrocinio(Request $request, Patrocinio $patrocinio): JsonResponse
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        if (! $userClub) {
+            return response()->json([
+                'message' => 'Clube não encontrado para esta liga.',
+            ], 404);
+        }
+
+        $fans = $this->sumClaimedConquistaFans($liga, $userClub);
+
+        if ($fans < (int) $patrocinio->fans) {
+            return response()->json([
+                'message' => 'Ainda não atingiu os fãs necessários para este patrocínio.',
+            ], 422);
+        }
+
+        $existing = LigaClubePatrocinio::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $userClub->id)
+            ->where('patrocinio_id', $patrocinio->id)
+            ->first();
+
+        if ($existing && $existing->claimed_at) {
+            return response()->json([
+                'message' => 'Patrocínio já foi resgatado.',
+                'claimed_at' => $existing->claimed_at,
+            ], 409);
+        }
+
+        $finance = app(LeagueFinanceService::class);
+        $novoSaldo = $finance->credit($liga->id, $userClub->id, (int) $patrocinio->valor);
+
+        $record = $existing ?? new LigaClubePatrocinio();
+        $record->fill([
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $userClub->id,
+            'patrocinio_id' => $patrocinio->id,
+        ]);
+        $record->claimed_at = now();
+        $record->save();
+
+        $movement = [
+            'id' => 'patrocinio-'.$record->id,
+            'tipo' => 'patrocinio',
+            'patrocinio_id' => $patrocinio->id,
+            'valor' => (int) $patrocinio->valor,
+            'observacao' => "Patrocínio {$patrocinio->nome}",
+            'created_at' => $record->claimed_at,
+        ];
+
+        return response()->json([
+            'message' => 'Patrocínio resgatado com sucesso.',
+            'patrocinio_id' => $patrocinio->id,
+            'claimed_at' => $record->claimed_at,
+            'saldo' => $novoSaldo,
+            'movement' => $movement,
+        ]);
+    }
+
+    public function conquistas(Request $request): View
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        $progress = $this->computeConquistaProgress($liga, $userClub);
+
+        $claimed = collect();
+        if ($userClub) {
+            $claimed = LigaClubeConquista::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $userClub->id)
+                ->get()
+                ->keyBy('conquista_id');
+        }
+
+        $conquistas = Conquista::query()
+            ->orderBy('nome')
+            ->get()
+            ->map(function (Conquista $conquista) use ($progress, $claimed) {
+                $current = $progress[$conquista->tipo] ?? 0;
+                $claimedAt = $claimed->get($conquista->id)?->claimed_at;
+                $canClaim = $current >= (int) $conquista->quantidade && ! $claimedAt;
+                $percent = (int) round(($current / max(1, (int) $conquista->quantidade)) * 100);
+
+                return [
+                    'id' => $conquista->id,
+                    'nome' => $conquista->nome,
+                    'descricao' => $conquista->descricao,
+                    'imagem_url' => $conquista->imagem ? Storage::disk('public')->url($conquista->imagem) : null,
+                    'tipo' => $conquista->tipo,
+                    'tipo_label' => Conquista::TIPOS[$conquista->tipo] ?? $conquista->tipo,
+                    'quantidade' => (int) $conquista->quantidade,
+                    'fans' => (int) $conquista->fans,
+                    'current' => $current,
+                    'progress' => [
+                        'value' => $current,
+                        'required' => (int) $conquista->quantidade,
+                        'percent' => min(100, max(0, $percent)),
+                    ],
+                    'claimed_at' => $claimedAt,
+                    'can_claim' => $canClaim,
+                    'status' => $claimedAt ? 'claimed' : ($canClaim ? 'available' : 'locked'),
+                ];
+            })
+            ->values()
+            ->all();
+
+        return view('minha_liga_conquistas', [
+            'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'imagem' => $liga->imagem,
+            ],
+            'clube' => $userClub ? [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+            ] : null,
+            'conquistas' => $conquistas,
+            'progress' => $progress,
+        ]);
+    }
+
+    public function claimConquista(Request $request, Conquista $conquista): JsonResponse
+    {
+        $liga = $this->resolveUserLiga($request);
+        $userClub = $request->user()->clubesLiga()->where('liga_id', $liga->id)->first();
+
+        if (! $userClub) {
+            return response()->json([
+                'message' => 'Clube não encontrado para esta liga.',
+            ], 404);
+        }
+
+        $progress = $this->computeConquistaProgress($liga, $userClub);
+        $current = $progress[$conquista->tipo] ?? 0;
+
+        if ($current < (int) $conquista->quantidade) {
+            return response()->json([
+                'message' => 'Requisitos da conquista ainda não foram atingidos.',
+            ], 422);
+        }
+
+        $existing = LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $userClub->id)
+            ->where('conquista_id', $conquista->id)
+            ->first();
+
+        if ($existing && $existing->claimed_at) {
+            return response()->json([
+                'message' => 'Conquista já foi resgatada.',
+                'claimed_at' => $existing->claimed_at,
+            ], 409);
+        }
+
+        $record = $existing ?? new LigaClubeConquista();
+        $record->fill([
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $userClub->id,
+            'conquista_id' => $conquista->id,
+        ]);
+        $record->claimed_at = now();
+        $record->save();
+
+        return response()->json([
+            'message' => 'Conquista resgatada com sucesso.',
+            'conquista_id' => $conquista->id,
+            'claimed_at' => $record->claimed_at,
         ]);
     }
 
@@ -324,6 +644,9 @@ class MinhaLigaController extends Controller
 
         $entries = [];
         $salaryPerRound = 0;
+        $activeCount = 0;
+        $marketClosed = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $closedLimit = 18;
 
         if ($userClub) {
             $elenco = LigaClubeElenco::with('elencopadrao')
@@ -332,6 +655,7 @@ class MinhaLigaController extends Controller
                 ->get();
 
             $salaryPerRound = (int) $elenco->sum('wage_eur');
+            $activeCount = $elenco->where('ativo', true)->count();
 
             $entries = $elenco->map(function (LigaClubeElenco $entry) {
                 $player = $entry->elencopadrao;
@@ -373,7 +697,10 @@ class MinhaLigaController extends Controller
             'elenco' => [
                 'players' => $entries,
                 'player_count' => count($entries),
-                'max_players' => (int) ($liga->max_jogadores_por_clube ?? 18),
+                'active_count' => $activeCount,
+                'max_players' => (int) ($liga->max_jogadores_por_clube ?? 23),
+                'market_closed' => $marketClosed,
+                'closed_limit' => $closedLimit,
                 'salary_per_round' => $salaryPerRound,
             ],
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
@@ -525,6 +852,56 @@ class MinhaLigaController extends Controller
             'message' => 'Esquema tático salvo com sucesso.',
             'image_url' => $this->resolveStorageUrl($path),
         ]);
+    }
+
+    private function computeConquistaProgress(?Liga $liga, ?LigaClube $clube): array
+    {
+        if (! $liga || ! $clube) {
+            return [
+                'gols' => 0,
+                'assistencias' => 0,
+                'quantidade_jogos' => 0,
+            ];
+        }
+
+        $states = ['placar_registrado', 'placar_confirmado', 'wo'];
+
+        $partidasJogadas = Partida::query()
+            ->where('liga_id', $liga->id)
+            ->whereIn('estado', $states)
+            ->where(function ($query) use ($clube) {
+                $query->where('mandante_id', $clube->id)
+                    ->orWhere('visitante_id', $clube->id);
+            })
+            ->count();
+
+        $desempenhos = PartidaDesempenho::query()
+            ->selectRaw('COALESCE(SUM(gols), 0) as total_gols, COALESCE(SUM(assistencias), 0) as total_assistencias')
+            ->where('liga_clube_id', $clube->id)
+            ->whereHas('partida', function ($query) use ($liga, $states) {
+                $query->where('liga_id', $liga->id)->whereIn('estado', $states);
+            })
+            ->first();
+
+        return [
+            'gols' => (int) ($desempenhos->total_gols ?? 0),
+            'assistencias' => (int) ($desempenhos->total_assistencias ?? 0),
+            'quantidade_jogos' => $partidasJogadas,
+        ];
+    }
+
+    private function sumClaimedConquistaFans(?Liga $liga, ?LigaClube $clube): int
+    {
+        if (! $liga || ! $clube) {
+            return 0;
+        }
+
+        return (int) LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
+            ->sum('conquistas.fans');
     }
 
     private function resolveStorageUrl(?string $path): ?string

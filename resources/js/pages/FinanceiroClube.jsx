@@ -36,6 +36,9 @@ export default function FinanceiroClube() {
     const clube = getClubeFromWindow();
     const financeiro = getFinanceiroFromWindow();
     const movimentos = Array.isArray(financeiro.movimentos) ? financeiro.movimentos : [];
+    const patrocinioMovimentos = Array.isArray(financeiro.patrocinios)
+        ? financeiro.patrocinios
+        : [];
 
     const saldo = financeiro.saldo;
     const salario = financeiro.salarioPorRodada ?? 0;
@@ -136,6 +139,44 @@ export default function FinanceiroClube() {
                             </article>
                         </div>
                     </section>
+
+                    {patrocinioMovimentos.length > 0 && (
+                        <section className="wallet-card patrocinio-card">
+                            <div className="financeiro-movimentos-header">
+                                <h2>Patrocínios resgatados</h2>
+                                <span className="financeiro-movimentos-count">
+                                    {patrocinioMovimentos.length}
+                                </span>
+                            </div>
+                            <div className="financeiro-movimento-list">
+                                {patrocinioMovimentos.map((patrocinio) => {
+                                    const dateLabel = formatShortDate(patrocinio.created_at);
+
+                                    return (
+                                        <article
+                                            key={patrocinio.id}
+                                            className="financeiro-movimento is-in"
+                                        >
+                                            <div className="financeiro-movimento-icon">
+                                                ★
+                                            </div>
+                                            <div className="financeiro-movimento-body">
+                                                <span className="financeiro-movimento-title">
+                                                    {patrocinio.observacao}
+                                                </span>
+                                                <span className="financeiro-movimento-subtitle">
+                                                    {dateLabel}
+                                                </span>
+                                            </div>
+                                            <span className="financeiro-movimento-amount is-in">
+                                                {formatCurrency(Math.abs(patrocinio.valor))}
+                                            </span>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
 
                     <section className="wallet-card financeiro-movimentos">
                         <div className="financeiro-movimentos-header">
