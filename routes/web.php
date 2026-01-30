@@ -18,8 +18,11 @@ use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
 use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
 use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
 use App\Http\Controllers\Admin\ConquistaController as AdminConquistaController;
+use App\Http\Controllers\Admin\ConquistaImagemController as AdminConquistaImagemController;
 use App\Http\Controllers\Admin\PatrocinioController as AdminPatrocinioController;
+use App\Http\Controllers\Admin\PatrocinioImagemController as AdminPatrocinioImagemController;
 use App\Http\Controllers\Admin\PremiacaoController as AdminPremiacaoController;
+use App\Http\Controllers\Admin\PremiacaoImagemController as AdminPremiacaoImagemController;
 use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WhatsappConnectionController as AdminWhatsappConnectionController;
@@ -51,10 +54,19 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('playstyles', AdminPlaystyleController::class)->only(['index', 'store', 'destroy']);
     Route::delete('playstyles/bulk-destroy', [AdminPlaystyleController::class, 'bulkDestroy'])->name('playstyles.bulk-destroy');
     Route::resource('conquistas', AdminConquistaController::class)->except(['show']);
+    Route::resource('conquistas-imagens', AdminConquistaImagemController::class, [
+        'parameters' => ['conquistas-imagens' => 'conquista_imagem'],
+    ])->except(['show', 'create']);
     Route::resource('patrocinios', AdminPatrocinioController::class)->except(['show']);
+    Route::resource('patrocinios-imagens', AdminPatrocinioImagemController::class, [
+        'parameters' => ['patrocinios-imagens' => 'patrocinio_imagem'],
+    ])->except(['show', 'create']);
     Route::resource('premiacoes', AdminPremiacaoController::class, [
         'parameters' => ['premiacoes' => 'premiacao'],
     ])->except(['show']);
+    Route::resource('premiacoes-imagens', AdminPremiacaoImagemController::class, [
+        'parameters' => ['premiacoes-imagens' => 'premiacao_imagem'],
+    ])->except(['show', 'create']);
     Route::resource('clubes', AdminClubeController::class)
         ->only(['index', 'edit', 'update', 'destroy']);
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
