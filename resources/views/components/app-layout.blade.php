@@ -112,7 +112,7 @@
                 </main>
             </div>
         </div>
-        <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/lucide.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
         <script>window.addEventListener('DOMContentLoaded', () => { if (window.lucide) { lucide.createIcons(); } });</script>
     </body>
 </html>

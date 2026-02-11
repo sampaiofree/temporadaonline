@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\PremiacaoImagemController as AdminPremiacaoImagem
 use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponibilidadeController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WhatsappConnectionController as AdminWhatsappConnectionController;
+use App\Http\Controllers\Admin\TemporadaController as AdminTemporadaController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
 use App\Http\Controllers\LigaElencoController;
@@ -72,6 +73,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [
         'parameters' => ['ligas-usuarios' => 'liga_jogador'],
     ])->only(['index', 'destroy']);
+    Route::get('temporada', [AdminTemporadaController::class, 'index'])->name('temporadas.index');
+    Route::post('temporada', [AdminTemporadaController::class, 'store'])->name('temporadas.store');
+    Route::patch('temporada/{temporada}', [AdminTemporadaController::class, 'update'])->name('temporadas.update');
     Route::get('app-assets', [AdminAppAssetController::class, 'edit'])->name('app-assets.edit');
     Route::put('app-assets', [AdminAppAssetController::class, 'update'])->name('app-assets.update');
     Route::get('whatsapp', [AdminWhatsappConnectionController::class, 'index'])->name('whatsapp.index');

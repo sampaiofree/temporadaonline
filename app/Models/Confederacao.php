@@ -24,6 +24,11 @@ class Confederacao extends Model
         return $this->hasMany(Liga::class);
     }
 
+    public function temporadas(): HasMany
+    {
+        return $this->hasMany(Temporada::class);
+    }
+
     public function jogo(): BelongsTo
     {
         return $this->belongsTo(Jogo::class);

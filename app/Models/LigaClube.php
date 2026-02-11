@@ -13,6 +13,7 @@ class LigaClube extends Model
 
     protected $fillable = [
         'liga_id',
+        'confederacao_id',
         'user_id',
         'nome',
         'escudo_clube_id',
@@ -27,6 +28,11 @@ class LigaClube extends Model
     public function liga(): BelongsTo
     {
         return $this->belongsTo(Liga::class);
+    }
+
+    public function confederacao(): BelongsTo
+    {
+        return $this->belongsTo(Confederacao::class);
     }
 
     public function user(): BelongsTo
