@@ -14,6 +14,7 @@ export default defineConfig({
                 'resources/js/perfil.jsx',
                 'resources/js/minha_liga.jsx',
                 'resources/js/minha_liga_clube.jsx',
+                'resources/js/minha_liga_onboarding_clube.jsx',
                 'resources/js/minha_liga_financeiro.jsx',
                 'resources/js/minha_liga_meu_elenco.jsx',
                 'resources/js/minha_liga_esquema_tatico.jsx',

@@ -5188,6 +5188,679 @@ img.club-editor-card-image {
     color: #00ff88;
 }
 
+/* Onboarding clube (protótipo isolado) */
+.club-onboarding-screen {
+    position: relative;
+    gap: 16px;
+    padding: 16px 16px 180px;
+    background: radial-gradient(circle at 20% 10%, rgba(237, 255, 5, 0.1), transparent 40%), #090909;
+}
+
+.club-onboarding-bg-pattern {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+        45deg,
+        rgba(237, 255, 5, 0.03) 0,
+        rgba(237, 255, 5, 0.03) 1px,
+        transparent 0,
+        transparent 14px
+    );
+    z-index: 0;
+}
+
+.club-onboarding-bg-glow {
+    position: absolute;
+    top: -120px;
+    right: -80px;
+    width: 320px;
+    height: 320px;
+    pointer-events: none;
+    z-index: 0;
+    background: radial-gradient(circle, rgba(237, 255, 5, 0.2), transparent 70%);
+    filter: blur(30px);
+}
+
+.club-onboarding-shell {
+    width: min(640px, 100%);
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    position: relative;
+    z-index: 1;
+}
+
+.club-onboarding-header {
+    background: linear-gradient(180deg, #181818 0%, #0e0e0e 100%);
+    border: 1px solid #2b2b2b;
+    border-left: 4px solid #edff05;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 16px) 100%, 0 100%, 0 12px);
+}
+
+.club-onboarding-eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.34em;
+    text-transform: uppercase;
+    color: #edff05;
+    font-weight: 800;
+}
+
+.club-onboarding-title {
+    font-family: var(--font-heading);
+    font-size: clamp(20px, 4.8vw, 30px);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-style: italic;
+}
+
+.club-onboarding-subtitle {
+    font-size: 12px;
+    color: #bfbfbf;
+    line-height: 1.5;
+}
+
+.club-onboarding-progress-track {
+    width: 100%;
+    height: 6px;
+    border-radius: 999px;
+    background: #212121;
+    overflow: hidden;
+    margin-top: 2px;
+}
+
+.club-onboarding-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #edff05, #ffe45f);
+    box-shadow: 0 0 12px rgba(237, 255, 5, 0.4);
+    transition: width 240ms ease;
+}
+
+.club-onboarding-step-label {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #9a9a9a;
+}
+
+.club-onboarding-card {
+    background: linear-gradient(170deg, #141414 0%, #0f0f0f 100%);
+    border: 1px solid #272727;
+    border-right: 3px solid #edff05;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    animation: club-onboarding-enter 220ms ease;
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+}
+
+.club-onboarding-card-title {
+    font-size: 20px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-family: var(--font-heading);
+    font-style: italic;
+}
+
+.club-onboarding-card-subtitle {
+    margin-top: -8px;
+    font-size: 12px;
+    color: #b5b5b5;
+    line-height: 1.45;
+}
+
+.club-onboarding-highlight {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #121212;
+    border: 1px solid #2f2f2f;
+    padding: 12px;
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.club-onboarding-badge {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    border: 2px solid #edff05;
+    background: #0f0f0f;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: #edff05;
+    font-size: 24px;
+    font-weight: 900;
+}
+
+.club-onboarding-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.club-onboarding-highlight-body {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.club-onboarding-highlight-label {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    color: #9a9a9a;
+}
+
+.club-onboarding-highlight-body strong {
+    font-size: 16px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.club-onboarding-highlight-body span {
+    font-size: 11px;
+    color: #b5b5b5;
+    line-height: 1.45;
+}
+
+.club-onboarding-highlight-confed {
+    border-left: 3px solid #edff05;
+}
+
+.club-onboarding-confed-icon {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: rgba(237, 255, 5, 0.14);
+    border: 1px solid rgba(237, 255, 5, 0.4);
+    display: grid;
+    place-items: center;
+    color: #edff05;
+    font-weight: 900;
+}
+
+.club-onboarding-meta-grid,
+.club-onboarding-review-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.club-onboarding-meta-grid > div,
+.club-onboarding-review-grid > div {
+    background: #111;
+    border: 1px solid #242424;
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.club-onboarding-meta-grid span,
+.club-onboarding-review-grid span {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #9d9d9d;
+}
+
+.club-onboarding-meta-grid strong,
+.club-onboarding-review-grid strong {
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.club-onboarding-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.club-onboarding-actions .btn-outline,
+.club-onboarding-actions .btn-primary {
+    flex: 1;
+    text-align: center;
+}
+
+.club-onboarding-selected {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    background: #101010;
+    border: 1px solid #242424;
+    border-left: 3px solid #edff05;
+    padding: 10px;
+}
+
+.club-onboarding-selected-preview {
+    width: 56px;
+    height: 56px;
+    border-radius: 10px;
+    border: 1px solid #3a3a3a;
+    background: #1a1a1a;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    color: #edff05;
+    font-size: 18px;
+    font-weight: 900;
+}
+
+.club-onboarding-selected-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.club-onboarding-selected-body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.club-onboarding-selected-body span {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: #9b9b9b;
+}
+
+.club-onboarding-selected-body strong {
+    font-size: 14px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+.club-onboarding-filters {
+    background: transparent;
+}
+
+.club-onboarding-filter-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.club-onboarding-search-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.club-onboarding-search-row input,
+.club-onboarding-filter-form select {
+    width: 100%;
+    background: #191919;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+}
+
+.club-onboarding-search-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+.club-onboarding-filter-toggle {
+    background: #111;
+    border: 1px solid #333;
+    color: #fff;
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 800;
+}
+
+.club-onboarding-filters-panel {
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.club-onboarding-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.club-onboarding-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #bfbfbf;
+}
+
+.club-onboarding-toggle input {
+    accent-color: #edff05;
+    width: 16px;
+    height: 16px;
+}
+
+.club-onboarding-filter-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.club-onboarding-filter-actions .btn-outline,
+.club-onboarding-filter-actions .btn-primary {
+    flex: 1;
+}
+
+.club-onboarding-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.club-onboarding-card-option {
+    background: #1a1a1a;
+    border: 1px solid #343434;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    cursor: pointer;
+    position: relative;
+    aspect-ratio: 1 / 1;
+}
+
+.club-onboarding-card-option.is-selected {
+    border: 2px solid #edff05;
+    background: rgba(237, 255, 5, 0.08);
+}
+
+.club-onboarding-card-option.is-disabled {
+    opacity: 0.42;
+    cursor: not-allowed;
+}
+
+.club-onboarding-card-image {
+    width: 100%;
+    height: 100%;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+img.club-onboarding-card-image {
+    display: block;
+}
+
+.club-onboarding-card-image:not(img) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 800;
+    color: #edff05;
+}
+
+.club-onboarding-card-none {
+    flex-direction: column;
+    gap: 6px;
+}
+
+.club-onboarding-card-name {
+    text-align: center;
+    font-size: 9px;
+    color: #edff05;
+    line-height: 1.2;
+    font-weight: 800;
+}
+
+.club-onboarding-card-none .club-onboarding-card-image {
+    width: 34px;
+    height: 34px;
+}
+
+.club-onboarding-card-status {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 8px;
+    color: #fff;
+    background: #ff4d4d;
+    padding: 2px 4px;
+    border-radius: 4px;
+    letter-spacing: 0.12em;
+    font-weight: 900;
+}
+
+.club-onboarding-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #d0d0d0;
+}
+
+.club-onboarding-pagination {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #101010;
+    border: 1px solid #212121;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.club-onboarding-pagination-count {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #b9b9b9;
+}
+
+.club-onboarding-pagination-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.club-onboarding-pagination-button {
+    min-width: 110px;
+    flex: 0;
+}
+
+.club-onboarding-pagination-label {
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.club-onboarding-pagination-label span {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #9b9b9b;
+}
+
+.club-onboarding-pagination-progress {
+    width: 100%;
+    height: 4px;
+    border-radius: 999px;
+    background: #1f1f1f;
+    overflow: hidden;
+}
+
+.club-onboarding-pagination-progress-bar {
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #edff05, #ffe45f);
+    transition: width 220ms ease;
+}
+
+.club-onboarding-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.club-onboarding-profile {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 14px;
+}
+
+.club-onboarding-preview {
+    width: 70px;
+    height: 70px;
+    background: #222;
+    border-radius: 12px;
+    border: 2px solid #edff05;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #edff05;
+    font-weight: 900;
+    font-size: 20px;
+    text-transform: uppercase;
+    box-shadow: 0 0 15px rgba(237, 255, 5, 0.15);
+    overflow: hidden;
+}
+
+.club-onboarding-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.club-onboarding-input {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.club-onboarding-input label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: #888;
+    font-weight: 800;
+}
+
+.club-onboarding-input input {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #333;
+    color: #fff;
+    padding: 6px 0;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.club-onboarding-errors {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #ff5c5c;
+}
+
+.club-onboarding-success {
+    border: 1px solid rgba(0, 255, 136, 0.4);
+    background: rgba(0, 255, 136, 0.08);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.club-onboarding-success h3 {
+    font-size: 15px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.club-onboarding-success p {
+    font-size: 12px;
+    color: #d9ffec;
+}
+
+@media (max-width: 520px) {
+    .club-onboarding-meta-grid,
+    .club-onboarding-review-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .club-onboarding-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .club-onboarding-pagination-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .club-onboarding-pagination-button {
+        width: 100%;
+    }
+
+    .club-onboarding-profile {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .club-onboarding-preview {
+        margin: 0 auto;
+    }
+
+    .club-onboarding-actions {
+        flex-direction: column;
+    }
+}
+
+@keyframes club-onboarding-enter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Liga Dashboard */
 .liga-dashboard-stats,
 .meu-elenco-stats {

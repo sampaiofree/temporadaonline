@@ -337,7 +337,19 @@ class MinhaLigaController extends Controller
 
     public function clube(Request $request): View
     {
+        return view('minha_liga_clube', $this->buildClubEditorData($request));
+    }
+
+    public function onboardingClube(Request $request): View
+    {
+        return view('minha_liga_onboarding_clube', $this->buildClubEditorData($request));
+    }
+
+    private function buildClubEditorData(Request $request): array
+    {
         $liga = $this->resolveUserLiga($request);
+        $liga->loadMissing('confederacao');
+
         $userClub = $request->user()->clubesLiga()
             ->where('liga_id', $liga->id)
             ->with('escudo')
@@ -442,13 +454,18 @@ class MinhaLigaController extends Controller
         $paises = Pais::orderBy('nome')->get(['id', 'nome']);
         $ligasEscudos = LigaEscudo::orderBy('liga_nome')->get(['id', 'liga_nome']);
 
-        return view('minha_liga_clube', [
+        return [
             'appContext' => $this->makeAppContext($liga, $userClub, 'clube'),
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
                 'imagem' => $liga->imagem,
+                'jogo' => $liga->jogo?->nome,
+                'geracao' => $liga->geracao?->nome,
+                'plataforma' => $liga->plataforma?->nome,
+                'confederacao_nome' => $liga->confederacao?->nome,
             ],
+            'confederacao_nome' => $liga->confederacao?->nome,
             'clube' => $userClub ? [
                 'id' => $userClub->id,
                 'nome' => $userClub->nome,
@@ -472,7 +489,7 @@ class MinhaLigaController extends Controller
             'ligasEscudos' => $ligasEscudos,
             'usedEscudos' => $usedEscudos,
             'filters' => $filters,
-        ]);
+        ];
     }
 
     public function patrocinios(Request $request): View
@@ -1210,8 +1227,13 @@ class MinhaLigaController extends Controller
         int $scopeValue,
         bool $preferUnder80 = true,
     ): ?Elencopadrao {
-        $query = $this->availablePlayersBaseQuery($liga, $excludedIds, $scopeColumn, $scopeValue)
-            ->where('player_positions', 'ILIKE', '%' . $position . '%');
+        $query = $this->availablePlayersBaseQuery($liga, $excludedIds, $scopeColumn, $scopeValue);
+
+        if (DB::connection()->getDriverName() === 'pgsql') {
+            $query->where('player_positions', 'ILIKE', '%'.$position.'%');
+        } else {
+            $query->whereRaw('LOWER(player_positions) LIKE ?', ['%'.Str::lower($position).'%']);
+        }
 
         if ($preferUnder80) {
             $query->where('overall', '<', 80)

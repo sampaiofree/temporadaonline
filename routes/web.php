@@ -122,6 +122,8 @@ Route::middleware(['auth', 'roster.limit'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy']);
     Route::get('/minha_liga', [MinhaLigaController::class, 'show'])->name('minha_liga');
     Route::get('/minha_liga/clube', [MinhaLigaController::class, 'clube'])->name('minha_liga.clube');
+    Route::get('/minha_liga/onboarding-clube', [MinhaLigaController::class, 'onboardingClube'])
+        ->name('minha_liga.onboarding_clube');
     Route::get('/minha_liga/clube/conquistas', [MinhaLigaController::class, 'conquistas'])->name('minha_liga.conquistas');
     Route::post('/minha_liga/clube/conquistas/{conquista}/claim', [MinhaLigaController::class, 'claimConquista'])
         ->name('minha_liga.conquistas.claim');
