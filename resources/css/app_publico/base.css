@@ -5782,6 +5782,21 @@ img.club-onboarding-card-image {
     letter-spacing: 0.04em;
 }
 
+.club-onboarding-input select {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid #333;
+    color: #fff;
+    padding: 6px 0;
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.club-onboarding-input select option {
+    color: #111;
+}
+
 .club-onboarding-errors {
     list-style: none;
     padding-left: 0;

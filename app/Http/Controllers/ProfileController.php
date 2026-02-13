@@ -16,7 +16,9 @@ use Inertia\Response;
 use App\Models\Plataforma;
 use App\Models\Jogo;
 use App\Models\Geracao;
+use App\Models\Idioma;
 use App\Models\Profile;
+use App\Models\Regiao;
 
 class ProfileController extends Controller
 {
@@ -30,6 +32,8 @@ class ProfileController extends Controller
             'plataformas' => Plataforma::orderBy('nome')->get(['id', 'nome']),
             'jogos' => Jogo::orderBy('nome')->get(['id', 'nome']),
             'geracoes' => Geracao::orderBy('nome')->get(['id', 'nome']),
+            'regioes' => Regiao::orderBy('nome')->get(['id', 'nome']),
+            'idiomas' => Idioma::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -53,18 +57,6 @@ class ProfileController extends Controller
         $payload = $request->validated();
         $originalEmail = $user?->email;
 
-        if (array_key_exists('plataforma_id', $payload) && $payload['plataforma_id']) {
-            $payload['plataforma'] = Plataforma::find($payload['plataforma_id'])?->nome;
-        }
-
-        if (array_key_exists('jogo_id', $payload) && $payload['jogo_id']) {
-            $payload['jogo'] = Jogo::find($payload['jogo_id'])?->nome;
-        }
-
-        if (array_key_exists('geracao_id', $payload) && $payload['geracao_id']) {
-            $payload['geracao'] = Geracao::find($payload['geracao_id'])?->nome;
-        }
-
         $user->fill([
             'name' => $payload['nome'] ?? $payload['name'] ?? $user->name,
             'email' => $payload['email'] ?? $user->email,
@@ -86,11 +78,22 @@ class ProfileController extends Controller
             'plataforma_id' => $payload['plataforma_id'] ?? $profile->plataforma_id,
             'jogo_id' => $payload['jogo_id'] ?? $profile->jogo_id,
             'geracao_id' => $payload['geracao_id'] ?? $profile->geracao_id,
-            'plataforma' => $payload['plataforma'] ?? $profile->plataforma,
-            'jogo' => $payload['jogo'] ?? $profile->jogo,
-            'geracao' => $payload['geracao'] ?? $profile->geracao,
             'whatsapp' => $payload['whatsapp'] ?? $profile->whatsapp,
+            'regiao_id' => $payload['regiao_id'] ?? $profile->regiao_id,
+            'idioma_id' => $payload['idioma_id'] ?? $profile->idioma_id,
         ]);
+
+        if (array_key_exists('regiao_id', $payload)) {
+            $profile->regiao = $payload['regiao_id']
+                ? Regiao::query()->find($payload['regiao_id'])?->nome
+                : null;
+        }
+
+        if (array_key_exists('idioma_id', $payload)) {
+            $profile->idioma = $payload['idioma_id']
+                ? Idioma::query()->find($payload['idioma_id'])?->nome
+                : null;
+        }
 
         $profile->save();
 
@@ -146,8 +149,10 @@ class ProfileController extends Controller
             'geracao_id' => $profile?->geracao_id,
             'jogo' => $profile?->jogo_nome,
             'jogo_id' => $profile?->jogo_id,
-            'regiao' => $profile?->regiao,
-            'idioma' => $profile?->idioma,
+            'regiao' => $profile?->regiao_nome,
+            'regiao_id' => $profile?->regiao_id,
+            'idioma' => $profile?->idioma_nome,
+            'idioma_id' => $profile?->idioma_id,
             'reputacao_score' => $profile?->reputacao_score,
             'nivel' => $profile?->nivel,
             'avatar' => $profile?->avatar,

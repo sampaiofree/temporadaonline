@@ -4,6 +4,90 @@ import ReactDOM from 'react-dom/client';
 const LEGACY_CONFIG = (window as any).__LEGACY_CONFIG__ || {};
 const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
 
+const getLegacyConfederacoes = () => {
+  const raw = Array.isArray(LEGACY_CONFIG?.confederacoes) ? LEGACY_CONFIG.confederacoes : [];
+  const normalized = raw
+    .map((confed: any) => ({
+      id: String(confed?.id ?? ''),
+      name: String(confed?.name ?? '').trim(),
+    }))
+    .filter((confed: any) => confed.id !== '' && confed.name !== '');
+
+  return normalized;
+};
+const LEGACY_ONBOARDING_CLUBE_URL = String(LEGACY_CONFIG?.onboardingClubeUrl || '/legacy/onboarding-clube');
+
+const navigateTo = (url: string) => {
+  const navigateWithLoader = (window as any).navigateWithLoader;
+  if (typeof navigateWithLoader === 'function') {
+    navigateWithLoader(url);
+    return;
+  }
+
+  window.location.assign(url);
+};
+
+type LegacyMarketSubMode = 'menu' | 'list' | 'watchlist';
+
+type LegacyRouteState = {
+  view: string;
+  marketSubMode: LegacyMarketSubMode;
+};
+
+const LEGACY_ALLOWED_VIEWS = new Set<string>([
+  'hub-global',
+  'public-club-profile',
+  'season-stats',
+  'leaderboard',
+  'inbox',
+  'match-center',
+  'schedule-matches',
+  'report-match',
+  'confirm-match',
+  'market',
+  'my-club',
+  'squad',
+  'achievements',
+  'finance',
+  'trophies',
+  'tournaments',
+  'league-table',
+  'cup-detail',
+  'continental-detail',
+  'profile',
+]);
+
+const LEGACY_ALLOWED_MARKET_SUBMODES = new Set<LegacyMarketSubMode>(['menu', 'list', 'watchlist']);
+
+const getLegacyRouteStateFromUrl = (): LegacyRouteState => {
+  const params = new URLSearchParams(window.location.search);
+  const rawView = params.get('view') || 'hub-global';
+  const view = LEGACY_ALLOWED_VIEWS.has(rawView) ? rawView : 'hub-global';
+  const rawSubMode = (params.get('subMode') || params.get('submode') || 'menu') as LegacyMarketSubMode;
+  const marketSubMode = LEGACY_ALLOWED_MARKET_SUBMODES.has(rawSubMode) ? rawSubMode : 'menu';
+
+  return {
+    view,
+    marketSubMode: view === 'market' ? marketSubMode : 'menu',
+  };
+};
+
+const syncLegacyRouteInUrl = (view: string, marketSubMode: LegacyMarketSubMode) => {
+  const params = new URLSearchParams(window.location.search);
+  params.set('view', view);
+
+  if (view === 'market') {
+    params.set('subMode', marketSubMode);
+  } else {
+    params.delete('subMode');
+    params.delete('submode');
+  }
+
+  const query = params.toString();
+  const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+  window.history.replaceState(null, '', nextUrl);
+};
+
 const DAY_LABEL_TO_INDEX: Record<string, number> = {
   DOM: 0,
   SEG: 1,
@@ -306,6 +390,7 @@ const MCOBottomNav = ({ activeView, onViewChange }: { activeView: string, onView
 
 const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, skillRating = 88 }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÇÃO';
   
   const renderStars = (score: number) => {
     const stars = [];
@@ -325,9 +410,9 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, sk
           className="flex items-center gap-2 bg-[#121212] px-3 py-2 border-r-[2px] border-[#FFD700]"
           style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
         >
-          <i className="fas fa-briefcase text-[#FFD700] text-xs"></i>
+          <i className="fas fa-earth-americas text-[#FFD700] text-xs"></i>
           <span className="text-[9px] font-black italic uppercase text-white truncate max-w-[80px]">
-            {currentCareer.name}
+            {currentCareerName}
           </span>
           <i className={`fas fa-caret-down text-[8px] text-[#FFD700] transition-transform ${isOpen ? 'rotate-180' : ''}`}></i>
         </button>
@@ -337,13 +422,20 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, sk
               <button 
                 key={c.id} 
                 onClick={() => { onCareerChange(c.id); setIsOpen(false); }}
-                className={`w-full text-left p-4 text-[10px] font-black italic uppercase border-b border-white/5 last:border-0 hover:bg-[#FFD700] hover:text-[#121212] transition-colors ${currentCareer.id === c.id ? 'bg-[#FFD700]/10 text-[#FFD700]' : 'text-white'}`}
+                className={`w-full text-left p-4 text-[10px] font-black italic uppercase border-b border-white/5 last:border-0 hover:bg-[#FFD700] hover:text-[#121212] transition-colors ${currentCareer?.id === c.id ? 'bg-[#FFD700]/10 text-[#FFD700]' : 'text-white'}`}
               >
                 {c.name}
               </button>
             ))}
-            <button className="w-full text-left p-4 text-[10px] font-black italic uppercase text-[#FFD700]/40 hover:text-[#FFD700] transition-colors bg-[#121212]/50">
-              <i className="fas fa-plus mr-2"></i> NOVA GESTÃO
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                navigateTo(LEGACY_ONBOARDING_CLUBE_URL);
+              }}
+              className="w-full text-left p-4 text-[10px] font-black italic uppercase text-[#FFD700]/70 hover:text-[#FFD700] transition-colors bg-[#121212]/50 border-t border-white/10"
+            >
+              <i className="fas fa-plus mr-2"></i> NOVA
             </button>
           </div>
         )}
@@ -1982,8 +2074,16 @@ const TournamentsView = ({ onBack, onSelectTournament }: any) => {
   );
 };
 
-const MarketView = ({ onBack, userStats, careers, currentCareer, onCareerChange }: any) => {
-  const [subMode, setSubMode] = useState<'menu' | 'list' | 'watchlist'>('menu');
+const MarketView = ({
+  onBack,
+  userStats,
+  careers,
+  currentCareer,
+  onCareerChange,
+  initialSubMode = 'menu',
+  onSubModeChange,
+}: any) => {
+  const [subMode, setSubMode] = useState<LegacyMarketSubMode>(initialSubMode);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showDetailed, setShowDetailed] = useState(false);
   
@@ -1993,6 +2093,16 @@ const MarketView = ({ onBack, userStats, careers, currentCareer, onCareerChange 
   const [filterValMin, setFilterValMin] = useState('');
   const [filterValMax, setFilterValMax] = useState('');
   const [sortBy, setSortBy] = useState('OVR_DESC');
+
+  useEffect(() => {
+    setSubMode(initialSubMode);
+  }, [initialSubMode]);
+
+  useEffect(() => {
+    if (typeof onSubModeChange === 'function') {
+      onSubModeChange(subMode);
+    }
+  }, [subMode, onSubModeChange]);
 
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
 
@@ -2212,17 +2322,29 @@ const MarketView = ({ onBack, userStats, careers, currentCareer, onCareerChange 
 };
 
 const App = () => {
-  const [view, setView] = useState('hub-global');
+  const [view, setView] = useState(() => getLegacyRouteStateFromUrl().view);
+  const [marketSubMode, setMarketSubMode] = useState<LegacyMarketSubMode>(() => getLegacyRouteStateFromUrl().marketSubMode);
   const [selectedPendingMatch, setSelectedPendingMatch] = useState<any>(null);
   const [clubProfileToView, setClubProfileToView] = useState<any>(null);
-  
-  const [careers] = useState([
-    { id: 'main', name: 'CARREIRA PRINCIPAL' },
-    { id: 'draft', name: 'DRAFT LEGACY' },
-    { id: 'meta', name: 'META SQUAD XI' }
-  ]);
-  const [currentCareerId, setCurrentCareerId] = useState('main');
-  const currentCareer = careers.find(c => c.id === currentCareerId) || careers[0];
+
+  const [careers] = useState(getLegacyConfederacoes);
+  const [currentCareerId, setCurrentCareerId] = useState(careers[0]?.id ?? 'none');
+  const currentCareer = careers.find(c => c.id === currentCareerId) || null;
+
+  useEffect(() => {
+    syncLegacyRouteInUrl(view, marketSubMode);
+  }, [view, marketSubMode]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const nextState = getLegacyRouteStateFromUrl();
+      setView(nextState.view);
+      setMarketSubMode(nextState.marketSubMode);
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const [userStats] = useState({ 
     clubName: 'CRUZEIRO EC', 
@@ -2281,7 +2403,7 @@ const App = () => {
       case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} match={selectedPendingMatch} />;
-      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} />;
+      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} />;
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} userStats={userStats} />;
       case 'squad': return <SquadView onBack={() => setView('my-club')} />;
       case 'achievements': return <AchievementsView onBack={() => setView('my-club')} userStats={userStats} />;
@@ -2301,7 +2423,3 @@ const App = () => {
 
 const rootElement = document.getElementById('legacy-app');
 if (rootElement) ReactDOM.createRoot(rootElement).render(<React.StrictMode><App /></React.StrictMode>);
-
-
-
-

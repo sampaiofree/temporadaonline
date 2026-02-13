@@ -12,10 +12,12 @@ trait ChecksProfileCompletion
             return false;
         }
 
-        return filled($profile->plataforma)
-            && filled($profile->jogo)
+        return filled($profile->regiao_id)
+            && filled($profile->idioma_id)
+            && filled($profile->plataforma_id)
+            && filled($profile->jogo_id)
             && filled($profile->nickname)
-            && filled($profile->geracao)
+            && filled($profile->geracao_id)
             && filled($profile->whatsapp);
     }
 }

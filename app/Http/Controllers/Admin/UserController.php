@@ -105,12 +105,6 @@ class UserController extends Controller
             'plataforma_id' => $request->input('plataforma_id') ?: null,
         ]);
 
-        if ($profile->plataforma_id) {
-            $profile->plataforma = Plataforma::find($profile->plataforma_id)?->nome;
-        } else {
-            $profile->plataforma = null;
-        }
-
         $profile->save();
     }
 

@@ -6,6 +6,8 @@ use App\Models\Liga;
 use App\Models\Plataforma;
 use App\Models\Jogo;
 use App\Models\Geracao;
+use App\Models\Idioma;
+use App\Models\Regiao;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -19,6 +21,11 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call([
+            RegiaoSeeder::class,
+            IdiomaSeeder::class,
+        ]);
+
         $platforms = [
             ['nome' => 'PlayStation 5', 'slug' => 'playstation-5'],
             ['nome' => 'PC', 'slug' => 'pc'],
@@ -66,15 +73,18 @@ class DatabaseSeeder extends Seeder
         $plataforma = Plataforma::firstWhere('slug', 'playstation-5');
         $jogo = Jogo::firstWhere('slug', 'fc26');
         $geracao = Geracao::firstWhere('slug', 'nova');
+        $regiao = Regiao::firstWhere('slug', 'brasil');
+        $idioma = Idioma::firstWhere('slug', 'pt-br');
 
         if ($user && $user->profile) {
             $user->profile->fill([
                 'plataforma_id' => $plataforma?->id,
-                'plataforma' => $plataforma?->nome,
                 'jogo_id' => $jogo?->id,
-                'jogo' => $jogo?->nome,
                 'geracao_id' => $geracao?->id,
-                'geracao' => $geracao?->nome,
+                'regiao_id' => $regiao?->id,
+                'idioma_id' => $idioma?->id,
+                'regiao' => $regiao?->nome,
+                'idioma' => $idioma?->nome,
             ]);
             $user->profile->save();
         }

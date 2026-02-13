@@ -112,21 +112,11 @@ class LigaController extends Controller
     {
         $mismatches = [];
 
-        if (! $this->matchesProfileAttribute(
-            $profile->jogo_id,
-            $liga->jogo_id,
-            $profile->jogo,
-            $liga->jogo?->nome,
-        )) {
+        if ((int) $profile->jogo_id !== (int) $liga->jogo_id) {
             $mismatches[] = 'jogo';
         }
 
-        if (! $this->matchesProfileAttribute(
-            $profile->geracao_id,
-            $liga->geracao_id,
-            $profile->geracao,
-            $liga->geracao?->nome,
-        )) {
+        if ((int) $profile->geracao_id !== (int) $liga->geracao_id) {
             $mismatches[] = 'geracao';
         }
 
@@ -139,26 +129,9 @@ class LigaController extends Controller
             return false;
         }
 
-        return filled($profile->jogo)
-            && filled($profile->geracao)
+        return filled($profile->jogo_id)
+            && filled($profile->geracao_id)
             && filled($profile->nickname)
             && filled($profile->whatsapp);
-    }
-
-    private function matchesProfileAttribute(
-        ?int $profileId,
-        ?int $ligaId,
-        ?string $profileValue,
-        ?string $ligaValue,
-    ): bool {
-        if ($profileId && $ligaId) {
-            return $profileId === $ligaId;
-        }
-
-        if (filled($profileValue) && filled($ligaValue)) {
-            return $profileValue === $ligaValue;
-        }
-
-        return false;
     }
 }

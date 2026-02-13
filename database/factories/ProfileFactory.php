@@ -21,9 +21,6 @@ class ProfileFactory extends Factory
             'nickname' => Str::slug(fake()->unique()->userName()),
             'avatar' => null,
             'whatsapp' => fake()->optional()->numerify('55#########'),
-            'plataforma' => null,
-            'geracao' => null,
-            'jogo' => null,
             'regiao' => 'Brasil',
             'idioma' => 'Português do Brasil',
             'reputacao_score' => 99,
@@ -31,7 +28,8 @@ class ProfileFactory extends Factory
             'plataforma_id' => null,
             'jogo_id' => null,
             'geracao_id' => null,
+            'regiao_id' => null,
+            'idioma_id' => null,
         ];
     }
 }
-

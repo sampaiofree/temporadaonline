@@ -45,6 +45,8 @@ class ProfileUpdateRequest extends FormRequest
             'plataforma_id' => ['nullable', 'integer', 'exists:plataformas,id'],
             'jogo_id' => ['nullable', 'integer', 'exists:jogos,id'],
             'geracao_id' => ['nullable', 'integer', 'exists:geracoes,id'],
+            'regiao_id' => ['nullable', 'integer', 'exists:regioes,id'],
+            'idioma_id' => ['nullable', 'integer', 'exists:idiomas,id'],
             'whatsapp' => ['nullable', 'digits_between:10,15'],
         ];
     }

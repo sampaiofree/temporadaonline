@@ -21,6 +21,7 @@ use App\Models\EscudoClube;
 use App\Models\Pais;
 use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -340,8 +341,14 @@ class MinhaLigaController extends Controller
         return view('minha_liga_clube', $this->buildClubEditorData($request));
     }
 
-    public function onboardingClube(Request $request): View
+    public function onboardingClube(Request $request): View|RedirectResponse
     {
+        $ligaId = $request->query('liga_id') ?? $request->input('liga_id');
+
+        if (! $ligaId) {
+            return redirect()->route('legacy.onboarding_clube');
+        }
+
         return view('minha_liga_onboarding_clube', $this->buildClubEditorData($request));
     }
 

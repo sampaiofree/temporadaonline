@@ -17,9 +17,6 @@ class Profile extends Model
         'nickname',
         'avatar',
         'whatsapp',
-        'plataforma',
-        'geracao',
-        'jogo',
         'regiao',
         'idioma',
         'reputacao_score',
@@ -27,6 +24,8 @@ class Profile extends Model
         'plataforma_id',
         'jogo_id',
         'geracao_id',
+        'regiao_id',
+        'idioma_id',
     ];
 
     protected $casts = [
@@ -54,6 +53,16 @@ class Profile extends Model
         return $this->belongsTo(Geracao::class, 'geracao_id');
     }
 
+    public function regiaoRegistro(): BelongsTo
+    {
+        return $this->belongsTo(Regiao::class, 'regiao_id');
+    }
+
+    public function idiomaRegistro(): BelongsTo
+    {
+        return $this->belongsTo(Idioma::class, 'idioma_id');
+    }
+
     public function getPlataformaNomeAttribute(): ?string
     {
         return $this->plataformaRegistro?->nome ?? $this->attributes['plataforma'] ?? null;
@@ -67,5 +76,15 @@ class Profile extends Model
     public function getGeracaoNomeAttribute(): ?string
     {
         return $this->geracaoRegistro?->nome ?? $this->attributes['geracao'] ?? null;
+    }
+
+    public function getRegiaoNomeAttribute(): ?string
+    {
+        return $this->regiaoRegistro?->nome ?? $this->attributes['regiao'] ?? null;
+    }
+
+    public function getIdiomaNomeAttribute(): ?string
+    {
+        return $this->idiomaRegistro?->nome ?? $this->attributes['idioma'] ?? null;
     }
 }
