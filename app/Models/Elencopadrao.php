@@ -123,8 +123,8 @@ class Elencopadrao extends Model
     protected $casts = [
         'overall' => 'integer',
         'potential' => 'integer',
-        'value_eur' => 'integer',
-        'wage_eur' => 'integer',
+        'value_eur' => 'integer',  //valoro de mercado do jogador
+        'wage_eur' => 'integer', //valor do salário do jogador
         'age' => 'integer',
         'dob' => 'date',
         'height_cm' => 'integer',

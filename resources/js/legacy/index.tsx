@@ -1932,7 +1932,6 @@ const FanProgressWidget = ({ fans }: { fans: number }) => {
 
 const LegacyUTCard = ({ player }: { player: any }) => {
   const statsEntries = Object.entries(player.stats || {});
-  const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyleBadges, player?.playstyles || []);
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
       <div className="absolute inset-0 bg-[#FFD700] opacity-10 blur-3xl animate-pulse"></div>
@@ -1962,17 +1961,6 @@ const LegacyUTCard = ({ player }: { player: any }) => {
               <div key={stat} className="flex items-center gap-3"><span className="text-lg font-black italic font-heading text-white">{val as number}</span><span className="text-[10px] font-black italic uppercase text-white/30 tracking-widest">{stat}</span></div>
             ))}
           </div>
-        </div>
-        <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-2 px-6">
-          {playstyleBadges.slice(0, 4).map((badge: any, idx: number) => (
-             <div key={`${badge?.name || idx}`} className="w-5 h-5 bg-[#FFD700]/5 border border-[#FFD700]/10 flex items-center justify-center transform rotate-45 overflow-hidden">
-               {badge?.imageUrl ? (
-                 <img src={badge.imageUrl} alt={badge.name || 'Playstyle'} className="w-4 h-4 object-contain transform -rotate-45" />
-               ) : (
-                 <i className="fas fa-bolt text-[8px] text-[#FFD700] transform -rotate-45"></i>
-               )}
-             </div>
-          ))}
         </div>
       </div>
     </div>
