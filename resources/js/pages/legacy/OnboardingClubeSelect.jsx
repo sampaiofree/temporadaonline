@@ -1,9 +1,56 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 const DATA = window.__LEGACY_ONBOARDING_SELECTOR__ ?? {};
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 const AGGRESSIVE_CLIP = 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)';
 const TOTAL_STEPS = 2;
+const SELECTOR_STAGE_CONFEDERACAO = 'confederacao';
+const SELECTOR_STAGE_LIGA = 'liga';
+
+const normalizeImageUrl = (imagePath) => {
+    if (!imagePath || typeof imagePath !== 'string') {
+        return null;
+    }
+
+    if (/^https?:\/\//i.test(imagePath) || imagePath.startsWith('/')) {
+        return imagePath;
+    }
+
+    return `/storage/${imagePath.replace(/^\/+/, '')}`;
+};
+
+const getInitials = (label) => {
+    if (!label || typeof label !== 'string') {
+        return 'LX';
+    }
+
+    return label
+        .split(' ')
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase() || '')
+        .join('') || 'LX';
+};
+
+const LegacyBadgeImage = ({ src, alt, label, className = '' }) => (
+    src ? (
+        <img
+            src={src}
+            alt={alt}
+            className={`w-14 h-14 object-cover border border-[#FFD700]/45 bg-[#121212] ${className}`.trim()}
+            style={{ clipPath: AGGRESSIVE_CLIP }}
+            loading="lazy"
+        />
+    ) : (
+        <div
+            className={`w-14 h-14 border border-[#FFD700]/45 bg-[#121212] text-[#FFD700] text-[12px] font-black italic uppercase flex items-center justify-center ${className}`.trim()}
+            style={{ clipPath: AGGRESSIVE_CLIP }}
+            aria-hidden="true"
+        >
+            {getInitials(label)}
+        </div>
+    )
+);
 
 const requestJson = async (url, options = {}) => {
     const response = await fetch(url, {
@@ -30,6 +77,42 @@ const requestJson = async (url, options = {}) => {
     return payload;
 };
 
+const getSelectorStateFromUrl = (confederacoes) => {
+    const params = new URLSearchParams(window.location.search);
+    const confederacaoIds = new Set(confederacoes.map((confed) => String(confed.id)));
+    const selectedFromUrl = params.get('confederacao_id');
+    const selectedConfederacaoId = selectedFromUrl && confederacaoIds.has(selectedFromUrl)
+        ? selectedFromUrl
+        : (confederacoes[0]?.id ? String(confederacoes[0].id) : null);
+
+    const stage = params.get('stage');
+    const step = stage === SELECTOR_STAGE_LIGA && selectedConfederacaoId ? 2 : 1;
+    const selectedLigaId = step === 2 ? params.get('liga_id') : null;
+
+    return { step, selectedConfederacaoId, selectedLigaId };
+};
+
+const syncSelectorUrlState = ({ step, selectedConfederacaoId, selectedLigaId }) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set('stage', step === 2 ? SELECTOR_STAGE_LIGA : SELECTOR_STAGE_CONFEDERACAO);
+
+    if (selectedConfederacaoId) {
+        params.set('confederacao_id', String(selectedConfederacaoId));
+    } else {
+        params.delete('confederacao_id');
+    }
+
+    if (step === 2 && selectedLigaId) {
+        params.set('liga_id', String(selectedLigaId));
+    } else {
+        params.delete('liga_id');
+    }
+
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    window.history.replaceState(null, '', nextUrl);
+};
+
 const LegacyButton = ({ children, onClick, disabled = false, variant = 'primary', className = '', type = 'button' }) => {
     const base = 'px-5 py-3 text-[10px] font-black uppercase italic tracking-[0.2em] transition-all active:translate-y-[1px] disabled:opacity-40 disabled:cursor-not-allowed';
     const variantClass = variant === 'outline'
@@ -52,19 +135,24 @@ const LegacyButton = ({ children, onClick, disabled = false, variant = 'primary'
 export default function OnboardingClubeSelect() {
     const confederacoes = DATA.confederacoes ?? [];
     const endpoints = DATA.endpoints ?? {};
+    const initialState = getSelectorStateFromUrl(confederacoes);
 
-    const [step, setStep] = useState(1);
-    const [selectedConfederacaoId, setSelectedConfederacaoId] = useState(confederacoes[0]?.id ?? null);
-    const [selectedLigaId, setSelectedLigaId] = useState(null);
+    const [step, setStep] = useState(initialState.step);
+    const [selectedConfederacaoId, setSelectedConfederacaoId] = useState(initialState.selectedConfederacaoId);
+    const [selectedLigaId, setSelectedLigaId] = useState(initialState.selectedLigaId);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
 
     const selectedConfederacao = useMemo(
-        () => confederacoes.find((confed) => confed.id === selectedConfederacaoId) ?? null,
+        () => confederacoes.find((confed) => String(confed.id) === String(selectedConfederacaoId)) ?? null,
         [confederacoes, selectedConfederacaoId],
     );
     const ligas = selectedConfederacao?.ligas ?? [];
     const progress = (step / TOTAL_STEPS) * 100;
+
+    useEffect(() => {
+        syncSelectorUrlState(initialState);
+    }, []);
 
     const selectLiga = async () => {
         if (!selectedConfederacaoId || !selectedLigaId) {
@@ -110,6 +198,7 @@ export default function OnboardingClubeSelect() {
 
         setError('');
         setStep(2);
+        syncSelectorUrlState({ step: 2, selectedConfederacaoId, selectedLigaId: null });
     };
 
     const renderConfederacaoStep = () => (
@@ -123,7 +212,7 @@ export default function OnboardingClubeSelect() {
 
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {confederacoes.map((confed) => {
-                    const active = confed.id === selectedConfederacaoId;
+                    const active = String(confed.id) === String(selectedConfederacaoId);
 
                     return (
                         <button
@@ -133,14 +222,24 @@ export default function OnboardingClubeSelect() {
                                 setSelectedConfederacaoId(confed.id);
                                 setSelectedLigaId(null);
                                 setError('');
+                                syncSelectorUrlState({ step: 1, selectedConfederacaoId: confed.id, selectedLigaId: null });
                             }}
                             className={`text-left p-4 border transition-all ${active ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]' : 'bg-[#121212] text-white border-white/15 hover:border-[#FFD700]/50'}`}
                             style={{ clipPath: AGGRESSIVE_CLIP }}
                         >
-                            <p className="text-[12px] font-black uppercase italic tracking-[0.15em]">{confed.nome}</p>
-                            <p className={`text-[10px] font-bold uppercase italic mt-1 ${active ? 'text-[#121212]/75' : 'text-white/45'}`}>
-                                {confed.descricao || 'Confederação sem descrição'}
-                            </p>
+                            <div className="flex items-center gap-3">
+                                <LegacyBadgeImage
+                                    src={normalizeImageUrl(confed.imagem)}
+                                    alt={`Imagem da confederação ${confed.nome}`}
+                                    label={confed.nome}
+                                />
+                                <div className="min-w-0">
+                                    <p className="text-[12px] font-black uppercase italic tracking-[0.15em] truncate">{confed.nome}</p>
+                                    <p className={`text-[10px] font-bold uppercase italic mt-1 ${active ? 'text-[#121212]/75' : 'text-white/45'}`}>
+                                        {confed.descricao || 'Confederação sem descrição'}
+                                    </p>
+                                </div>
+                            </div>
                         </button>
                     );
                 })}
@@ -180,11 +279,20 @@ export default function OnboardingClubeSelect() {
 
             {selectedConfederacao ? (
                 <article className="bg-[#121212] p-4 border border-[#FFD700]/35" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Confederação selecionada</p>
-                    <strong className="block text-[14px] font-black uppercase italic mt-2">{selectedConfederacao.nome}</strong>
-                    <span className="block text-[10px] text-white/45 font-bold uppercase italic mt-1">
-                        {selectedConfederacao.descricao || 'Sem descrição'}
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <LegacyBadgeImage
+                            src={normalizeImageUrl(selectedConfederacao.imagem)}
+                            alt={`Imagem da confederação ${selectedConfederacao.nome}`}
+                            label={selectedConfederacao.nome}
+                        />
+                        <div className="min-w-0">
+                            <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Confederação selecionada</p>
+                            <strong className="block text-[14px] font-black uppercase italic mt-2 truncate">{selectedConfederacao.nome}</strong>
+                            <span className="block text-[10px] text-white/45 font-bold uppercase italic mt-1">
+                                {selectedConfederacao.descricao || 'Sem descrição'}
+                            </span>
+                        </div>
+                    </div>
                 </article>
             ) : null}
 
@@ -193,7 +301,7 @@ export default function OnboardingClubeSelect() {
             ) : (
                 <div className="space-y-2">
                     {ligas.map((liga) => {
-                        const active = liga.id === selectedLigaId;
+                        const active = String(liga.id) === String(selectedLigaId);
 
                         return (
                             <button
@@ -202,14 +310,22 @@ export default function OnboardingClubeSelect() {
                                 onClick={() => {
                                     setSelectedLigaId(liga.id);
                                     setError('');
+                                    syncSelectorUrlState({ step: 2, selectedConfederacaoId, selectedLigaId: liga.id });
                                 }}
-                                className={`w-full text-left p-4 border transition-all ${active ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]' : 'bg-[#121212] text-white border-white/15 hover:border-[#FFD700]/50'}`}
+                            className={`w-full text-left p-4 border transition-all ${active ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]' : 'bg-[#121212] text-white border-white/15 hover:border-[#FFD700]/50'}`}
                                 style={{ clipPath: AGGRESSIVE_CLIP }}
                             >
-                                <div className="flex items-center justify-between gap-2">
-                                    <p className="text-[12px] font-black uppercase italic tracking-[0.13em]">{liga.nome}</p>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <LegacyBadgeImage
+                                            src={normalizeImageUrl(liga.imagem)}
+                                            alt={`Imagem da liga ${liga.nome}`}
+                                            label={liga.nome}
+                                        />
+                                        <p className="text-[12px] font-black uppercase italic tracking-[0.13em] truncate">{liga.nome}</p>
+                                    </div>
                                     {liga.registered ? (
-                                        <span className="text-[8px] font-black uppercase italic px-2 py-1 bg-[#008000] text-white" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                        <span className="text-[8px] font-black uppercase italic px-2 py-1 bg-[#008000] text-white shrink-0" style={{ clipPath: AGGRESSIVE_CLIP }}>
                                             Já inscrito
                                         </span>
                                     ) : null}
@@ -230,6 +346,7 @@ export default function OnboardingClubeSelect() {
                     onClick={() => {
                         setError('');
                         setStep(1);
+                        syncSelectorUrlState({ step: 1, selectedConfederacaoId, selectedLigaId: null });
                     }}
                 >
                     Voltar

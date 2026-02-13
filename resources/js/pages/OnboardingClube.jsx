@@ -6,13 +6,31 @@ const AGGRESSIVE_CLIP = 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(10
 
 const getOnboardingData = () => window.__CLUBE_ONBOARDING__ ?? {};
 
-const getStepFromUrl = (totalSteps) => {
-    const value = Number(new URLSearchParams(window.location.search).get('step'));
+const getStepFromUrl = (totalSteps, options = {}) => {
+    const params = new URLSearchParams(window.location.search);
+    const value = Number(params.get('step'));
     if (Number.isInteger(value) && value >= 1 && value <= totalSteps) {
         return value;
     }
 
+    if (options.isClubOnlyMode) {
+        const clubStep = params.get('club_step');
+        if (clubStep === 'escudo' || clubStep === 'revisao') {
+            return options.escudoStep;
+        }
+
+        return options.nameStep;
+    }
+
     return 1;
+};
+
+const getClubStepSlug = (step, options = {}) => {
+    if (!options.isClubOnlyMode) {
+        return null;
+    }
+
+    return step === options.escudoStep ? 'escudo' : 'nome';
 };
 
 const getPickedEscudoFromUrl = () => {
@@ -97,13 +115,16 @@ export default function OnboardingClube() {
     const stepMode = routes.step_mode === 'club_only' ? 'club_only' : 'full';
     const isClubOnlyMode = stepMode === 'club_only';
     const totalSteps = isClubOnlyMode ? 2 : 4;
+    const nomeStep = 1;
     const confederacaoStep = 2;
-    const escudoStep = isClubOnlyMode ? 1 : 3;
-    const reviewStep = isClubOnlyMode ? 2 : 4;
+    const escudoStep = isClubOnlyMode ? 2 : 3;
+    const reviewStep = isClubOnlyMode ? escudoStep : 4;
     const selectUniverseUrl = routes.select_universe_url || onboardingBasePath;
     const showNavbar = routes.show_navbar !== false;
 
-    const [step, setStep] = useState(getStepFromUrl(totalSteps));
+    const [step, setStep] = useState(
+        getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep }),
+    );
     const [clubSnapshot, setClubSnapshot] = useState(clube);
     const [clubName, setClubName] = useState(clube?.nome ?? '');
     const [selectedEscudoId, setSelectedEscudoId] = useState(
@@ -151,7 +172,7 @@ export default function OnboardingClube() {
 
     useEffect(() => {
         const onPopState = () => {
-            setStep(getStepFromUrl(totalSteps));
+            setStep(getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep }));
             const nextEscudoId = getPickedEscudoFromUrl();
             if (nextEscudoId !== null) {
                 setSelectedEscudoId(nextEscudoId);
@@ -160,7 +181,19 @@ export default function OnboardingClube() {
 
         window.addEventListener('popstate', onPopState);
         return () => window.removeEventListener('popstate', onPopState);
-    }, [totalSteps]);
+    }, [totalSteps, isClubOnlyMode, nomeStep, escudoStep]);
+
+    useEffect(() => {
+        if (!isClubOnlyMode || !liga) {
+            return;
+        }
+
+        updateUrlState({
+            stage: 'clube',
+            club_step: getClubStepSlug(step, { isClubOnlyMode, escudoStep }),
+            step,
+        });
+    }, [isClubOnlyMode, liga, escudoStep, step]);
 
     if (!liga) {
         return (
@@ -195,16 +228,36 @@ export default function OnboardingClube() {
     const goToStep = (nextStep) => {
         const normalized = Math.max(1, Math.min(totalSteps, nextStep));
         setStep(normalized);
-        updateUrlState({ step: normalized }, false);
+        updateUrlState({
+            step: normalized,
+            stage: isClubOnlyMode ? 'clube' : null,
+            club_step: getClubStepSlug(normalized, { isClubOnlyMode, escudoStep }),
+        }, false);
     };
 
     const handleEscudoSelection = (value) => {
         setSelectedEscudoId(value);
-        updateUrlState({ pick_escudo_id: value || null });
+        updateUrlState({
+            pick_escudo_id: value || null,
+            stage: isClubOnlyMode ? 'clube' : null,
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : null,
+        });
     };
 
     const isEscudoDisabled = (escudoId) =>
         usedEscudos.has(Number(escudoId)) && String(escudoId) !== String(selectedEscudoId);
+
+    const handleNomeContinue = () => {
+        const trimmedName = clubName.trim();
+        if (!trimmedName) {
+            setErrors(['Informe um nome para o clube antes de continuar.']);
+            return;
+        }
+
+        setErrors([]);
+        setClubName(trimmedName);
+        goToStep(escudoStep);
+    };
 
     const applyFilters = (event) => {
         if (event) event.preventDefault();
@@ -216,6 +269,8 @@ export default function OnboardingClube() {
             only_available: filters.only_available ? '1' : '',
             step: escudoStep,
             pick_escudo_id: selectedEscudoId || '',
+            stage: isClubOnlyMode ? 'clube' : '',
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : '',
         }, onboardingBasePath);
 
         window.navigateWithLoader(url);
@@ -226,6 +281,8 @@ export default function OnboardingClube() {
         const url = buildOnboardingUrl(liga.id, {
             step: escudoStep,
             pick_escudo_id: selectedEscudoId || '',
+            stage: isClubOnlyMode ? 'clube' : '',
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : '',
         }, onboardingBasePath);
         window.navigateWithLoader(url);
     };
@@ -234,6 +291,10 @@ export default function OnboardingClube() {
         if (!url) return;
         const target = new URL(url, window.location.origin);
         target.searchParams.set('step', String(escudoStep));
+        if (isClubOnlyMode) {
+            target.searchParams.set('stage', 'clube');
+            target.searchParams.set('club_step', getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }));
+        }
         if (selectedEscudoId) {
             target.searchParams.set('pick_escudo_id', selectedEscudoId);
         }
@@ -296,7 +357,7 @@ export default function OnboardingClube() {
             setFeedback([baseMessage, rosterMessage].filter(Boolean).join(' '));
             setFeedbackCta(response?.initial_roster_cta ?? '');
             setCompleted(true);
-            goToStep(reviewStep);
+            goToStep(isClubOnlyMode ? escudoStep : reviewStep);
         } catch (error) {
             const message =
                 error.response?.data?.message ??
@@ -313,7 +374,7 @@ export default function OnboardingClube() {
     const selectedEscudoImage = selectedEscudoPreview?.clube_imagem
         ? `/storage/${selectedEscudoPreview.clube_imagem}`
         : null;
-    const clubeNomeAtual = currentClub?.nome ?? 'Ainda não criado';
+    const clubeNomeAtual = clubName.trim() || currentClub?.nome || 'Ainda não criado';
     const buildLigaUrlFromTemplate = (template, fallback) => {
         if (!template) {
             return fallback;
@@ -329,7 +390,7 @@ export default function OnboardingClube() {
     const minhaLigaHref = buildLigaUrlFromTemplate(routes.home_url, `/minha_liga?liga_id=${liga.id}`);
     const progress = (step / totalSteps) * 100;
     const introSubtitle = isClubOnlyMode
-        ? 'Universo definido (confederação e liga). Agora escolha escudo e nome do clube.'
+        ? 'Universo definido. Primeiro informe o nome do clube, depois escolha o escudo.'
         : 'Fluxo guiado com dados reais. Liga e confederação são informativas para este contexto.';
 
     if (isClubOnlyMode) {
@@ -348,7 +409,7 @@ export default function OnboardingClube() {
                             Configure seu clube
                         </h1>
                         <p className="text-[10px] text-white/40 font-bold uppercase italic tracking-[0.14em]">
-                            Etapa {step} de {totalSteps}: {step === escudoStep ? 'escudo' : 'nome e revisão'}
+                            Etapa {step} de {totalSteps}: {step === nomeStep ? 'nome do clube' : 'escudo do clube'}
                         </p>
                     </header>
 
@@ -367,12 +428,71 @@ export default function OnboardingClube() {
                         </div>
                     ) : null}
 
+                    {errors.length > 0 ? (
+                        <div className="bg-[#B22222]/25 border border-[#B22222] p-3 text-[10px] font-black uppercase italic tracking-[0.13em]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                            {errors.join(' ')}
+                        </div>
+                    ) : null}
+
+                    {step === nomeStep && (
+                        <section className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">1. Nome do clube</h2>
+                                <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
+                                    Liga: {liga.nome} • Confederação: {confederacaoNome || 'Não definida'}
+                                </p>
+                            </div>
+
+                            <div className="bg-[#121212] p-4 border border-[#FFD700]/25" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                <label htmlFor="club-onboarding-name-legacy" className="block text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em] mb-2">
+                                    Nome do clube
+                                </label>
+                                <input
+                                    id="club-onboarding-name-legacy"
+                                    type="text"
+                                    value={clubName}
+                                    onChange={(event) => {
+                                        setClubName(event.target.value);
+                                        if (errors.length > 0) {
+                                            setErrors([]);
+                                        }
+                                    }}
+                                    placeholder="Ex.: Furia FC"
+                                    maxLength={150}
+                                    className="w-full bg-[#1E1E1E] border border-white/15 text-white p-3 text-[11px] font-black italic uppercase outline-none"
+                                    style={{ clipPath: AGGRESSIVE_CLIP }}
+                                />
+                            </div>
+
+                            <article className="bg-[#121212] p-4 border border-[#FFD700]/25 flex items-center gap-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                <div className="w-14 h-14 bg-[#1E1E1E] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden text-[#FFD700] font-black italic">
+                                    {getLeagueInitials(clubeNomeAtual)}
+                                </div>
+                                <div>
+                                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Prévia do nome</p>
+                                    <strong className="block text-[13px] text-white font-black uppercase italic mt-1">
+                                        {clubeNomeAtual}
+                                    </strong>
+                                </div>
+                            </article>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <LegacyButton type="button" variant="outline" className="w-full" onClick={() => window.navigateWithLoader(selectUniverseUrl)}>
+                                    Voltar para ligas
+                                </LegacyButton>
+                                <LegacyButton type="button" className="w-full" onClick={handleNomeContinue}>
+                                    Continuar para escudo
+                                </LegacyButton>
+                            </div>
+                        </section>
+                    )}
+
                     {step === escudoStep && (
                         <section className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
                             <div className="space-y-2">
-                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">1. Escudo do clube</h2>
+                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">2. Escudo do clube</h2>
                                 <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
-                                    Liga: {liga.nome} • Confederação: {confederacaoNome || 'Não definida'}
+                                    Nome: {clubeNomeAtual}
                                 </p>
                             </div>
 
@@ -395,50 +515,65 @@ export default function OnboardingClube() {
                             </article>
 
                             <form onSubmit={applyFilters} className="space-y-3">
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                <div className="flex items-center gap-3">
                                     <input
                                         type="search"
                                         value={filters.search}
                                         placeholder="Buscar escudos..."
                                         onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
-                                        className="md:col-span-2 bg-[#121212] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
+                                        className="flex-1 bg-[#121212] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
                                         style={{ clipPath: AGGRESSIVE_CLIP }}
                                     />
-                                    <select
-                                        value={filters.escudo_pais_id}
-                                        onChange={(event) => setFilters((prev) => ({ ...prev, escudo_pais_id: event.target.value }))}
-                                        className="bg-[#121212] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
-                                        style={{ clipPath: AGGRESSIVE_CLIP }}
+                                    <LegacyButton
+                                        type="button"
+                                        variant="outline"
+                                        className="shrink-0 !px-4"
+                                        onClick={() => setFiltersOpen((open) => !open)}
                                     >
-                                        <option value="">País</option>
-                                        {paises.map((pais) => (
-                                            <option key={pais.id} value={pais.id}>{pais.nome}</option>
-                                        ))}
-                                    </select>
-                                    <select
-                                        value={filters.escudo_liga_id}
-                                        onChange={(event) => setFilters((prev) => ({ ...prev, escudo_liga_id: event.target.value }))}
-                                        className="bg-[#121212] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
-                                        style={{ clipPath: AGGRESSIVE_CLIP }}
-                                    >
-                                        <option value="">Liga de origem</option>
-                                        {ligasEscudos.map((ligaEscudo) => (
-                                            <option key={ligaEscudo.id} value={ligaEscudo.id}>{ligaEscudo.liga_nome}</option>
-                                        ))}
-                                    </select>
+                                        {filtersOpen ? 'Ocultar filtros' : 'Filtros'}
+                                    </LegacyButton>
                                 </div>
-                                <label className="flex items-center gap-2 text-[10px] font-black uppercase italic text-white/70">
-                                    <input
-                                        type="checkbox"
-                                        checked={filters.only_available}
-                                        onChange={(event) => setFilters((prev) => ({ ...prev, only_available: event.target.checked }))}
-                                    />
-                                    Somente disponíveis
-                                </label>
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                    <LegacyButton type="button" variant="outline" className="w-full" onClick={clearFilters}>Limpar</LegacyButton>
-                                    <LegacyButton type="submit" className="w-full">Aplicar filtros</LegacyButton>
-                                </div>
+
+                                {filtersOpen && (
+                                    <div className="bg-[#121212] border border-[#FFD700]/25 p-3 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <select
+                                                value={filters.escudo_pais_id}
+                                                onChange={(event) => setFilters((prev) => ({ ...prev, escudo_pais_id: event.target.value }))}
+                                                className="bg-[#1E1E1E] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
+                                                style={{ clipPath: AGGRESSIVE_CLIP }}
+                                            >
+                                                <option value="">País</option>
+                                                {paises.map((pais) => (
+                                                    <option key={pais.id} value={pais.id}>{pais.nome}</option>
+                                                ))}
+                                            </select>
+                                            <select
+                                                value={filters.escudo_liga_id}
+                                                onChange={(event) => setFilters((prev) => ({ ...prev, escudo_liga_id: event.target.value }))}
+                                                className="bg-[#1E1E1E] border border-[#FFD700]/25 text-white p-3 text-[10px] font-black italic uppercase outline-none"
+                                                style={{ clipPath: AGGRESSIVE_CLIP }}
+                                            >
+                                                <option value="">Liga de origem</option>
+                                                {ligasEscudos.map((ligaEscudo) => (
+                                                    <option key={ligaEscudo.id} value={ligaEscudo.id}>{ligaEscudo.liga_nome}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <label className="flex items-center gap-2 text-[10px] font-black uppercase italic text-white/70">
+                                            <input
+                                                type="checkbox"
+                                                checked={filters.only_available}
+                                                onChange={(event) => setFilters((prev) => ({ ...prev, only_available: event.target.checked }))}
+                                            />
+                                            Somente disponíveis
+                                        </label>
+                                        <div className="flex flex-col sm:flex-row gap-3">
+                                            <LegacyButton type="button" variant="outline" className="w-full" onClick={clearFilters}>Limpar</LegacyButton>
+                                            <LegacyButton type="submit" className="w-full">Aplicar filtros</LegacyButton>
+                                        </div>
+                                    </div>
+                                )}
                             </form>
 
                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -491,59 +626,8 @@ export default function OnboardingClube() {
                             </div>
 
                             <div className="flex flex-col sm:flex-row gap-3">
-                                <LegacyButton type="button" variant="outline" className="w-full" onClick={() => window.navigateWithLoader(selectUniverseUrl)}>
-                                    Voltar para ligas
-                                </LegacyButton>
-                                <LegacyButton type="button" className="w-full" onClick={() => goToStep(reviewStep)}>
-                                    Revisar nome
-                                </LegacyButton>
-                            </div>
-                        </section>
-                    )}
-
-                    {step === reviewStep && (
-                        <section className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                            <div className="space-y-2">
-                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">2. Nome e revisão</h2>
-                                <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
-                                    Confirme os dados antes de salvar.
-                                </p>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="bg-[#121212] p-4 border border-[#FFD700]/25" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                                    <label htmlFor="club-onboarding-name-legacy" className="block text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em] mb-2">
-                                        Nome do clube
-                                    </label>
-                                    <input
-                                        id="club-onboarding-name-legacy"
-                                        type="text"
-                                        value={clubName}
-                                        onChange={(event) => setClubName(event.target.value)}
-                                        placeholder="Ex.: Furia FC"
-                                        maxLength={150}
-                                        className="w-full bg-[#1E1E1E] border border-white/15 text-white p-3 text-[11px] font-black italic uppercase outline-none"
-                                        style={{ clipPath: AGGRESSIVE_CLIP }}
-                                    />
-                                </div>
-                                <div className="bg-[#121212] p-4 border border-[#FFD700]/25 space-y-2" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Resumo</p>
-                                    <p className="text-[10px] text-white/70 uppercase italic"><strong className="text-white">Liga:</strong> {liga.nome}</p>
-                                    <p className="text-[10px] text-white/70 uppercase italic"><strong className="text-white">Confederação:</strong> {confederacaoNome || 'Não definida'}</p>
-                                    <p className="text-[10px] text-white/70 uppercase italic"><strong className="text-white">Escudo:</strong> {selectedEscudoPreview?.clube_nome || savedEscudoPreview?.clube_nome || 'Nenhum'}</p>
-                                    <p className="text-[10px] text-white/70 uppercase italic"><strong className="text-white">Saldo:</strong> {formatCurrency(currentClub?.saldo)}</p>
-                                </div>
-                            </div>
-
-                            {errors.length > 0 ? (
-                                <div className="bg-[#B22222]/25 border border-[#B22222] p-3 text-[10px] font-black uppercase italic tracking-[0.13em]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                                    {errors.join(' ')}
-                                </div>
-                            ) : null}
-
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <LegacyButton type="button" variant="outline" className="w-full" onClick={() => goToStep(escudoStep)}>
-                                    Voltar para escudo
+                                <LegacyButton type="button" variant="outline" className="w-full" onClick={() => goToStep(nomeStep)}>
+                                    Voltar para nome
                                 </LegacyButton>
                                 <LegacyButton type="button" className="w-full" onClick={handleSubmit} disabled={saving || completed}>
                                     {saving ? 'Salvando...' : 'Salvar clube'}

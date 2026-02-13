@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
         $this->call([
             RegiaoSeeder::class,
             IdiomaSeeder::class,
+            PaisSeeder::class,
+            EscudoClubeSeeder::class,
         ]);
 
         $platforms = [
@@ -55,6 +57,10 @@ class DatabaseSeeder extends Seeder
         foreach ($geracoes as $geracao) {
             Geracao::firstOrCreate(['slug' => $geracao['slug']], $geracao);
         }
+
+        $this->call([
+            ElencopadraoSeeder::class,
+        ]);
 
         $this->call([
             LigaSeeder::class,

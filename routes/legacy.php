@@ -37,6 +37,22 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('onboarding_clube.select_liga');
         Route::post('/onboarding-clube/clubes', [LegacyOnboardingClubeController::class, 'storeClube'])
             ->name('onboarding_clube.store');
+        Route::get('/market-data', [LegacyController::class, 'marketData'])
+            ->name('market.data');
+        Route::get('/my-club-data', [LegacyController::class, 'myClubData'])
+            ->name('my_club.data');
+        Route::get('/squad-data', [LegacyController::class, 'squadData'])
+            ->name('squad.data');
+        Route::get('/match-center-data', [LegacyController::class, 'matchCenterData'])
+            ->name('match_center.data');
+        Route::get('/finance-data', [LegacyController::class, 'financeData'])
+            ->name('finance.data');
+        Route::get('/public-club-profile-data', [LegacyController::class, 'publicClubProfileData'])
+            ->name('public_club_profile.data');
+        Route::get('/esquema-tatico-data', [LegacyController::class, 'esquemaTaticoData'])
+            ->name('esquema_tatico.data');
+        Route::post('/esquema-tatico', [LegacyController::class, 'salvarEsquemaTatico'])
+            ->name('esquema_tatico.save');
 
         Route::get('/profile/settings', [LegacyProfileController::class, 'show'])->name('profile.settings');
         Route::put('/profile', [LegacyProfileController::class, 'update'])->name('profile.update');

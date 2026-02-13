@@ -13,9 +13,11 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaEscudo;
+use App\Models\Partida;
 use App\Models\Pais;
 use App\Models\User;
 use App\Services\LeagueFinanceService;
+use App\Services\PartidaSchedulerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -85,7 +87,12 @@ class LegacyOnboardingClubeController extends Controller
 
         return response()->json([
             'message' => 'Liga selecionada com sucesso.',
-            'redirect' => route('legacy.onboarding_clube', ['liga_id' => $liga->id]),
+            'redirect' => route('legacy.onboarding_clube', [
+                'liga_id' => $liga->id,
+                'stage' => 'clube',
+                'club_step' => 'nome',
+                'step' => 1,
+            ]),
         ]);
     }
 
@@ -132,14 +139,36 @@ class LegacyOnboardingClubeController extends Controller
             $wallet = app(LeagueFinanceService::class)->initClubWallet($liga->id, $clube->id);
 
             $initialAdded = 0;
+            $generatedMatches = 0;
             if ($clube->wasRecentlyCreated) {
                 $initialAdded = $this->seedInitialRoster($liga, $clube);
+
+                $matchesBefore = Partida::query()
+                    ->where('liga_id', $liga->id)
+                    ->where(function ($query) use ($clube) {
+                        $query->where('mandante_id', $clube->id)
+                            ->orWhere('visitante_id', $clube->id);
+                    })
+                    ->count();
+
+                app(PartidaSchedulerService::class)->generateMatchesForNewClub($clube);
+
+                $matchesAfter = Partida::query()
+                    ->where('liga_id', $liga->id)
+                    ->where(function ($query) use ($clube) {
+                        $query->where('mandante_id', $clube->id)
+                            ->orWhere('visitante_id', $clube->id);
+                    })
+                    ->count();
+
+                $generatedMatches = max(0, $matchesAfter - $matchesBefore);
             }
 
             return [
                 'clube' => $clube,
                 'wallet' => $wallet,
                 'initialAdded' => $initialAdded,
+                'generatedMatches' => $generatedMatches,
             ];
         });
 
@@ -152,6 +181,7 @@ class LegacyOnboardingClubeController extends Controller
         $clube = $result['clube'];
         $wallet = $result['wallet'];
         $initialAdded = (int) ($result['initialAdded'] ?? 0);
+        $generatedMatches = (int) ($result['generatedMatches'] ?? 0);
 
         return response()->json([
             'message' => $clube->wasRecentlyCreated
@@ -165,6 +195,8 @@ class LegacyOnboardingClubeController extends Controller
             'initial_roster_message' => $initialAdded > 0 ? "{$initialAdded} jogadores iniciais adicionados automaticamente." : null,
             'initial_roster_count' => $initialAdded > 0 ? $initialAdded : null,
             'initial_roster_cta' => route('legacy.index'),
+            'matches_generated' => $generatedMatches > 0,
+            'matches_generated_count' => $generatedMatches > 0 ? $generatedMatches : null,
         ], 201);
     }
 
@@ -189,6 +221,7 @@ class LegacyOnboardingClubeController extends Controller
                         return [
                             'id' => $liga->id,
                             'nome' => $liga->nome,
+                            'imagem' => $liga->imagem,
                             'status' => $liga->status,
                             'tipo' => $liga->tipo,
                             'jogo' => $liga->jogo?->nome,
