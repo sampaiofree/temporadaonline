@@ -79,11 +79,20 @@ class Liga extends Model
 
     public function periodos(): HasMany
     {
-        return $this->hasMany(LigaPeriodo::class);
+        return $this->hasMany(LigaPeriodo::class, 'confederacao_id', 'confederacao_id');
     }
 
     public function leiloes(): HasMany
     {
-        return $this->hasMany(LigaLeilao::class);
+        return $this->hasMany(LigaLeilao::class, 'confederacao_id', 'confederacao_id');
+    }
+
+    public function resolveTimezone(): string
+    {
+        $this->loadMissing('confederacao');
+
+        return $this->confederacao?->timezone
+            ?? $this->timezone
+            ?? 'America/Sao_Paulo';
     }
 }

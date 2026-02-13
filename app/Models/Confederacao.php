@@ -14,6 +14,7 @@ class Confederacao extends Model
         'nome',
         'descricao',
         'imagem',
+        'timezone',
         'jogo_id',
         'geracao_id',
         'plataforma_id',
@@ -27,6 +28,16 @@ class Confederacao extends Model
     public function temporadas(): HasMany
     {
         return $this->hasMany(Temporada::class);
+    }
+
+    public function periodos(): HasMany
+    {
+        return $this->hasMany(LigaPeriodo::class, 'confederacao_id');
+    }
+
+    public function leiloes(): HasMany
+    {
+        return $this->hasMany(LigaLeilao::class, 'confederacao_id');
     }
 
     public function jogo(): BelongsTo

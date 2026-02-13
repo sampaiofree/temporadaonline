@@ -26,8 +26,8 @@ class PartidaScheduleController extends Controller
         $this->assertParticipante($user->id, $partida);
         $this->assertAgendamentoPermitido($partida);
 
-        $partida->loadMissing('liga');
-        $tz = $partida->liga->timezone ?? 'UTC';
+        $partida->loadMissing('liga.confederacao');
+        $tz = $partida->liga?->resolveTimezone() ?? 'America/Sao_Paulo';
 
         $slots = $this->scheduler->availableOpponentSlots($partida, $user->id);
 
@@ -71,8 +71,8 @@ class PartidaScheduleController extends Controller
             'datetime' => ['required', 'date'],
         ]);
 
-        $partida->loadMissing('liga');
-        $tz = $partida->liga->timezone ?? 'UTC';
+        $partida->loadMissing('liga.confederacao');
+        $tz = $partida->liga?->resolveTimezone() ?? 'America/Sao_Paulo';
         $slot = Carbon::parse($data['datetime'], 'UTC')->setTimezone('UTC')->second(0);
         $validSlots = $this->scheduler->availableOpponentSlots($partida, $user->id);
 

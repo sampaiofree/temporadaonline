@@ -5,10 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Confederacao;
 use App\Models\Liga;
-use App\Models\LigaLeilao;
 use App\Models\WhatsappConnection;
 use App\Services\EvolutionService;
-use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -58,12 +56,6 @@ class LigaController extends Controller
             'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
-            'periodos' => 'array',
-            'periodos.*.inicio' => 'nullable|date',
-            'periodos.*.fim' => 'nullable|date',
-            'leiloes' => 'array',
-            'leiloes.*.inicio' => 'nullable|date',
-            'leiloes.*.fim' => 'nullable|date',
         ]);
 
         $confederacao = Confederacao::with(['jogo', 'geracao', 'plataforma'])
@@ -82,8 +74,6 @@ class LigaController extends Controller
             'plataforma_id' => $confederacao->plataforma_id,
         ]);
 
-        unset($data['periodos'], $data['leiloes']);
-
         if (! empty($data['whatsapp_grupo_jid'])) {
             $data['whatsapp_grupo_link'] = $this->resolveWhatsappInviteLink(
                 $data['whatsapp_grupo_jid'],
@@ -93,20 +83,11 @@ class LigaController extends Controller
             $data['whatsapp_grupo_link'] = null;
         }
 
-        $periodos = $this->normalizePeriodos($request->input('periodos', []));
-        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        $this->assertLeilaoNaoConflitaComPeriodos($periodos, $leiloes);
         if ($request->hasFile('imagem')) {
             $data['imagem'] = $request->file('imagem')->store('ligas', 'public');
         }
 
-        $liga = Liga::create($data);
-        if ($periodos) {
-            $liga->periodos()->createMany($periodos);
-        }
-        if ($leiloes) {
-            $liga->leiloes()->createMany($leiloes);
-        }
+        Liga::create($data);
 
         return redirect()->route('admin.ligas.index')->with('success', 'Liga criada com sucesso.');
     }
@@ -114,7 +95,14 @@ class LigaController extends Controller
     public function edit(Liga $liga, EvolutionService $evolutionService): View
     {
         return view('admin.ligas.edit', [
-            'liga' => $liga->loadMissing(['jogo', 'geracao', 'plataforma', 'confederacao.jogo', 'confederacao.geracao', 'confederacao.plataforma', 'periodos', 'leiloes']),
+            'liga' => $liga->loadMissing([
+                'jogo',
+                'geracao',
+                'plataforma',
+                'confederacao.jogo',
+                'confederacao.geracao',
+                'confederacao.plataforma',
+            ]),
             'statusOptions' => self::STATUS_OPTIONS,
             'hasClubes' => $liga->clubes()->exists(),
             'hasUsers' => $liga->users()->exists(),
@@ -124,7 +112,7 @@ class LigaController extends Controller
 
     public function update(Request $request, Liga $liga, EvolutionService $evolutionService): RedirectResponse
     {
-        $rules = [
+        $data = $request->validate([
             'nome' => 'required|string|max:255',
             'max_times' => 'required|integer|min:1',
             'saldo_inicial' => 'required|integer|min:0',
@@ -135,15 +123,7 @@ class LigaController extends Controller
             'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
-            'periodos' => 'array',
-            'periodos.*.inicio' => 'nullable|date',
-            'periodos.*.fim' => 'nullable|date',
-            'leiloes' => 'array',
-            'leiloes.*.inicio' => 'nullable|date',
-            'leiloes.*.fim' => 'nullable|date',
-        ];
-
-        $data = $request->validate($rules);
+        ]);
 
         if (! empty($data['whatsapp_grupo_jid'])) {
             $currentJid = $liga->whatsapp_grupo_jid;
@@ -168,12 +148,6 @@ class LigaController extends Controller
             }
         }
 
-        unset($data['periodos'], $data['leiloes']);
-
-        $periodos = $this->normalizePeriodos($request->input('periodos', []));
-        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        $this->assertLeilaoNaoConflitaComPeriodos($periodos, $leiloes);
-
         $liga->loadMissing('confederacao');
         if (! $liga->confederacao) {
             throw ValidationException::withMessages([
@@ -186,87 +160,8 @@ class LigaController extends Controller
         $data['plataforma_id'] = $liga->confederacao->plataforma_id;
 
         $liga->update($data);
-        $liga->periodos()->delete();
-        if ($periodos) {
-            $liga->periodos()->createMany($periodos);
-        }
-        $liga->leiloes()->delete();
-        if ($leiloes) {
-            $liga->leiloes()->createMany($leiloes);
-        }
 
         return redirect()->route('admin.ligas.index')->with('success', 'Liga atualizada com sucesso.');
-    }
-
-    private function normalizePeriodos(array $periodos, string $field = 'periodos'): array
-    {
-        $normalized = [];
-
-        foreach ($periodos as $index => $periodo) {
-            $inicio = $periodo['inicio'] ?? null;
-            $fim = $periodo['fim'] ?? null;
-
-            if (! $inicio && ! $fim) {
-                continue;
-            }
-
-            if (! $inicio || ! $fim) {
-                throw ValidationException::withMessages([
-                    $field => ['Informe data inicial e final para todos os registros.'],
-                ]);
-            }
-
-            $inicioDate = Carbon::parse($inicio)->startOfDay();
-            $fimDate = Carbon::parse($fim)->startOfDay();
-
-            if ($inicioDate->gt($fimDate)) {
-                throw ValidationException::withMessages([
-                    $field => ['A data inicial precisa ser menor ou igual a data final.'],
-                ]);
-            }
-
-            $normalized[] = [
-                'inicio' => $inicioDate->toDateString(),
-                'fim' => $fimDate->toDateString(),
-            ];
-        }
-
-        usort($normalized, fn ($a, $b) => strcmp($a['inicio'], $b['inicio']));
-
-        for ($i = 1; $i < count($normalized); $i++) {
-            $prev = $normalized[$i - 1];
-            $current = $normalized[$i];
-
-            if ($current['inicio'] <= $prev['fim']) {
-                throw ValidationException::withMessages([
-                    $field => ['Existe sobreposicao entre registros cadastrados.'],
-                ]);
-            }
-        }
-
-        return $normalized;
-    }
-
-    private function assertLeilaoNaoConflitaComPeriodos(array $periodos, array $leiloes): void
-    {
-        foreach ($leiloes as $leilao) {
-            $leilaoInicio = Carbon::parse($leilao['inicio'])->startOfDay();
-            $leilaoFim = Carbon::parse($leilao['fim'])->startOfDay();
-
-            foreach ($periodos as $periodo) {
-                $periodoInicio = Carbon::parse($periodo['inicio'])->startOfDay();
-                $periodoFim = Carbon::parse($periodo['fim'])->startOfDay();
-
-                $overlap = $leilaoInicio->lessThanOrEqualTo($periodoFim)
-                    && $leilaoFim->greaterThanOrEqualTo($periodoInicio);
-
-                if ($overlap) {
-                    throw ValidationException::withMessages([
-                        'leiloes' => ["Período de leilão {$leilaoInicio->toDateString()} - {$leilaoFim->toDateString()} conflita com período de partidas {$periodoInicio->toDateString()} - {$periodoFim->toDateString()}."],
-                    ]);
-                }
-            }
-        }
     }
 
     private function resolveWhatsappGroups(EvolutionService $evolutionService): array

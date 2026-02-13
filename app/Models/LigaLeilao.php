@@ -10,7 +10,7 @@ class LigaLeilao extends Model
     protected $table = 'liga_leiloes';
 
     protected $fillable = [
-        'liga_id',
+        'confederacao_id',
         'inicio',
         'fim',
     ];
@@ -20,8 +20,8 @@ class LigaLeilao extends Model
         'fim' => 'date',
     ];
 
-    public function liga(): BelongsTo
+    public function confederacao(): BelongsTo
     {
-        return $this->belongsTo(Liga::class);
+        return $this->belongsTo(Confederacao::class, 'confederacao_id');
     }
 }

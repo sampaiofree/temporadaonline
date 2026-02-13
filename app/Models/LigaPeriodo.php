@@ -11,7 +11,7 @@ class LigaPeriodo extends Model
     protected $table = 'liga_periodos';
 
     protected $fillable = [
-        'liga_id',
+        'confederacao_id',
         'inicio',
         'fim',
     ];
@@ -21,18 +21,22 @@ class LigaPeriodo extends Model
         'fim' => 'date',
     ];
 
-    public function liga(): BelongsTo
+    public function confederacao(): BelongsTo
     {
-        return $this->belongsTo(Liga::class);
+        return $this->belongsTo(Confederacao::class, 'confederacao_id');
     }
 
     public static function activeRangeForLiga(Liga $liga): ?array
     {
-        $tz = $liga->timezone ?? 'America/Sao_Paulo';
+        if (! $liga->confederacao_id) {
+            return null;
+        }
+
+        $tz = $liga->resolveTimezone();
         $today = Carbon::now($tz)->toDateString();
 
         $periods = self::query()
-            ->where('liga_id', $liga->id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->whereDate('inicio', '<=', $today)
             ->whereDate('fim', '>=', $today)
             ->get(['inicio', 'fim']);
