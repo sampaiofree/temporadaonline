@@ -58,7 +58,7 @@ class PremiacaoImagemController extends Controller
         }
 
         $message = $created
-            ? "{$created} imagens de premiaÃ§Ãµes importadas com sucesso."
+            ? "{$created} imagens de premiações importadas com sucesso."
             : 'Nenhuma imagem importada.';
 
         $request->session()->flash('success', $message);

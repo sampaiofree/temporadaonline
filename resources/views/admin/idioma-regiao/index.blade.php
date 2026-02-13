@@ -60,7 +60,7 @@
                                         'nome' => $idioma->nome,
                                     ];
                                 @endphp
-                                <tr class="hover:bg-slate-50 transition-colors">
+                                <tr class="transition-colors hover:bg-slate-50">
                                     <td class="px-4 py-4 font-semibold text-slate-900">{{ $idioma->nome }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $idioma->slug }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $idioma->profiles_count }}</td>
@@ -136,7 +136,7 @@
                                         'nome' => $regiao->nome,
                                     ];
                                 @endphp
-                                <tr class="hover:bg-slate-50 transition-colors">
+                                <tr class="transition-colors hover:bg-slate-50">
                                     <td class="px-4 py-4 font-semibold text-slate-900">{{ $regiao->nome }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $regiao->slug }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $regiao->profiles_count }}</td>
@@ -188,7 +188,7 @@
         aria-labelledby="idioma-modal-title"
         data-store-action="{{ route('admin.idioma-regiao.idiomas.store') }}"
         data-update-url-template="{{ route('admin.idioma-regiao.idiomas.update', ['idioma' => 'ENTITY_ID']) }}"
-        class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-black/40 p-4"
+        class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-black/40 p-4"
     >
         <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
             <div class="flex items-center justify-between gap-4">
@@ -250,7 +250,7 @@
         aria-labelledby="regiao-modal-title"
         data-store-action="{{ route('admin.idioma-regiao.regioes.store') }}"
         data-update-url-template="{{ route('admin.idioma-regiao.regioes.update', ['regiao' => 'ENTITY_ID']) }}"
-        class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-black/40 p-4"
+        class="fixed inset-0 z-50 hidden flex items-center justify-center overflow-y-auto bg-black/40 p-4"
     >
         <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
             <div class="flex items-center justify-between gap-4">
@@ -306,104 +306,190 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const setupEntityModal = (entity) => {
-                const modal = document.getElementById(`${entity}-modal`);
+        (function () {
+            function parsePayload(rawValue) {
+                if (!rawValue) {
+                    return {};
+                }
+
+                try {
+                    return JSON.parse(rawValue);
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            function setModalVisibility(modal, isVisible) {
                 if (!modal) {
                     return;
                 }
 
-                const form = document.getElementById(`${entity}-form`);
-                const methodInput = document.getElementById(`${entity}-form-method`);
-                const idInput = document.getElementById(`${entity}-entity-id`);
-                const nomeInput = document.getElementById(`${entity}-nome`);
-                const title = document.getElementById(`${entity}-modal-title`);
+                if (isVisible) {
+                    modal.classList.remove('hidden');
+                } else {
+                    modal.classList.add('hidden');
+                }
+            }
 
-                const storeAction = modal.dataset.storeAction;
-                const updateUrlTemplate = modal.dataset.updateUrlTemplate;
-                const openButtons = document.querySelectorAll(`[data-open-modal="${entity}"]`);
-                const closeButtons = modal.querySelectorAll(`[data-close-modal="${entity}"]`);
-                const editButtons = document.querySelectorAll(`[data-edit-entity="${entity}"]`);
+            function setupEntityModal(entity, singularLabel) {
+                var modal = document.getElementById(entity + '-modal');
+                if (!modal) {
+                    return null;
+                }
 
-                const openModal = () => modal.classList.remove('hidden');
-                const closeModal = () => modal.classList.add('hidden');
+                var form = document.getElementById(entity + '-form');
+                var methodInput = document.getElementById(entity + '-form-method');
+                var entityIdInput = document.getElementById(entity + '-entity-id');
+                var nomeInput = document.getElementById(entity + '-nome');
+                var title = document.getElementById(entity + '-modal-title');
 
-                const prepareCreate = () => {
+                if (!form || !methodInput || !entityIdInput || !nomeInput) {
+                    return null;
+                }
+
+                var storeAction = modal.getAttribute('data-store-action') || '';
+                var updateUrlTemplate = modal.getAttribute('data-update-url-template') || '';
+                var openButtons = document.querySelectorAll('[data-open-modal="' + entity + '"]');
+                var editButtons = document.querySelectorAll('[data-edit-entity="' + entity + '"]');
+                var closeButtons = modal.querySelectorAll('[data-close-modal="' + entity + '"]');
+
+                function resolveUpdateAction(id, actionFromButton) {
+                    if (actionFromButton) {
+                        return actionFromButton;
+                    }
+
+                    if (updateUrlTemplate && id !== '') {
+                        return updateUrlTemplate.replace('ENTITY_ID', id);
+                    }
+
+                    return storeAction;
+                }
+
+                function openCreate() {
+                    form.reset();
                     form.action = storeAction;
                     methodInput.value = 'POST';
-                    idInput.value = '';
-                    form.reset();
+                    entityIdInput.value = '';
                     if (title) {
-                        title.textContent = entity === 'idioma' ? 'Criar idioma' : 'Criar região';
+                        title.textContent = 'Criar ' + singularLabel;
                     }
-                    openModal();
-                };
+                    setModalVisibility(modal, true);
+                }
 
-                const prepareEdit = (data, action) => {
-                    form.action = action || (updateUrlTemplate ? updateUrlTemplate.replace('ENTITY_ID', data.id ?? '') : storeAction);
+                function openEdit(payload, actionFromButton) {
+                    var id = '';
+                    if (payload && payload.id !== undefined && payload.id !== null) {
+                        id = String(payload.id);
+                    }
+
+                    form.action = resolveUpdateAction(id, actionFromButton || '');
                     methodInput.value = 'PATCH';
-                    idInput.value = data.id ?? '';
-                    nomeInput.value = data.nome ?? '';
+                    entityIdInput.value = id;
+                    nomeInput.value = payload && payload.nome ? payload.nome : '';
                     if (title) {
-                        title.textContent = entity === 'idioma' ? 'Editar idioma' : 'Editar região';
+                        title.textContent = 'Editar ' + singularLabel;
                     }
-                    openModal();
-                };
+                    setModalVisibility(modal, true);
+                }
 
-                openButtons.forEach((button) => {
-                    button.addEventListener('click', prepareCreate);
-                });
+                function close() {
+                    setModalVisibility(modal, false);
+                }
 
-                editButtons.forEach((button) => {
-                    button.addEventListener('click', () => {
-                        let payload = {};
-                        try {
-                            payload = button.dataset.payload ? JSON.parse(button.dataset.payload) : {};
-                        } catch (error) {
-                            console.error(`Erro ao ler payload de ${entity}:`, error);
-                        }
-                        prepareEdit(payload, button.dataset.updateAction);
+                openButtons.forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        openCreate();
                     });
                 });
 
-                closeButtons.forEach((button) => {
-                    button.addEventListener('click', closeModal);
+                editButtons.forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        var payload = parsePayload(button.getAttribute('data-payload'));
+
+                        if (payload.id === undefined || payload.id === null || payload.id === '') {
+                            var fallbackId = button.getAttribute('data-entity-id');
+                            if (fallbackId) {
+                                payload.id = fallbackId;
+                            }
+                        }
+
+                        openEdit(payload, button.getAttribute('data-update-action') || '');
+                    });
                 });
 
-                modal.addEventListener('click', (event) => {
+                closeButtons.forEach(function (button) {
+                    button.addEventListener('click', function () {
+                        close();
+                    });
+                });
+
+                modal.addEventListener('click', function (event) {
                     if (event.target === modal) {
-                        closeModal();
+                        close();
                     }
                 });
 
-                const shouldReopen = {{ $errors->any() ? 'true' : 'false' }};
-                const context = {{ json_encode(old('form_context', '')) }};
-                const editingId = {{ json_encode(old('entity_id', '')) }};
-                if (!shouldReopen || context !== entity) {
+                document.addEventListener('keydown', function (event) {
+                    if (event.key === 'Escape' && !modal.classList.contains('hidden')) {
+                        close();
+                    }
+                });
+
+                return {
+                    openCreate: openCreate,
+                    openEdit: openEdit,
+                };
+            }
+
+            function init() {
+                var handlers = {
+                    idioma: setupEntityModal('idioma', 'idioma'),
+                    regiao: setupEntityModal('regiao', 'região'),
+                };
+
+                var shouldReopen = {{ $errors->any() ? 'true' : 'false' }};
+                var context = @json(old('form_context', ''));
+                var editingId = @json(old('entity_id', ''));
+                var oldNome = @json(old('nome', ''));
+
+                if (!shouldReopen || !handlers[context]) {
                     return;
                 }
 
                 if (editingId) {
-                    const match = Array.from(editButtons).find((button) => button.dataset.entityId === editingId);
-                    let payload = { id: editingId, nome: {{ json_encode(old('nome', '')) }} };
-                    if (match?.dataset.payload) {
-                        try {
-                            payload = JSON.parse(match.dataset.payload);
-                        } catch (error) {
-                            console.error(`Erro ao recuperar registro ${entity}:`, error);
+                    var selector = '[data-edit-entity="' + context + '"][data-entity-id="' + String(editingId) + '"]';
+                    var editButton = document.querySelector(selector);
+                    var payload = { id: editingId, nome: oldNome };
+
+                    if (editButton) {
+                        var buttonPayload = parsePayload(editButton.getAttribute('data-payload'));
+                        if (buttonPayload && typeof buttonPayload === 'object') {
+                            if (buttonPayload.id !== undefined && buttonPayload.id !== null && buttonPayload.id !== '') {
+                                payload.id = buttonPayload.id;
+                            }
+                            if (buttonPayload.nome !== undefined && buttonPayload.nome !== null) {
+                                payload.nome = buttonPayload.nome;
+                            }
                         }
                     }
-                    payload.nome = {{ json_encode(old('nome', '')) }};
-                    prepareEdit(payload, match?.dataset.updateAction);
+
+                    payload.nome = oldNome;
+                    handlers[context].openEdit(payload, editButton ? (editButton.getAttribute('data-update-action') || '') : '');
                     return;
                 }
 
-                prepareCreate();
-                nomeInput.value = {{ json_encode(old('nome', '')) }};
-            };
+                handlers[context].openCreate();
+                var nomeInput = document.getElementById(context + '-nome');
+                if (nomeInput) {
+                    nomeInput.value = oldNome;
+                }
+            }
 
-            setupEntityModal('idioma');
-            setupEntityModal('regiao');
-        });
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                init();
+            }
+        })();
     </script>
 </x-app-layout>

@@ -27,7 +27,14 @@ class LegacyProfileController extends Controller
             ->where('user_id', $user->id)
             ->orderBy('dia_semana')
             ->orderBy('hora_inicio')
-            ->get(['id', 'dia_semana', 'hora_inicio', 'hora_fim']);
+            ->get(['id', 'dia_semana', 'hora_inicio', 'hora_fim'])
+            ->map(fn (UserDisponibilidade $item): array => [
+                'id' => $item->id,
+                'dia_semana' => $item->dia_semana,
+                'hora_inicio' => $this->normalizeTimeToHi((string) $item->hora_inicio),
+                'hora_fim' => $this->normalizeTimeToHi((string) $item->hora_fim),
+            ])
+            ->values();
 
         return response()->json([
             'profile' => [
@@ -102,6 +109,23 @@ class LegacyProfileController extends Controller
     public function syncDisponibilidades(Request $request): JsonResponse
     {
         $user = $request->user();
+
+        $normalizedEntries = collect($request->input('entries', []))
+            ->map(function ($entry): array {
+                $entry = is_array($entry) ? $entry : [];
+
+                return [
+                    'dia_semana' => $entry['dia_semana'] ?? null,
+                    'hora_inicio' => $this->normalizeTimeToHi((string) ($entry['hora_inicio'] ?? '')),
+                    'hora_fim' => $this->normalizeTimeToHi((string) ($entry['hora_fim'] ?? '')),
+                ];
+            })
+            ->values();
+
+        $request->merge([
+            'entries' => $normalizedEntries->all(),
+        ]);
+
         $data = $request->validate([
             'entries' => ['nullable', 'array'],
             'entries.*.dia_semana' => ['required', 'integer', 'min:0', 'max:6'],
@@ -157,5 +181,16 @@ class LegacyProfileController extends Controller
             'message' => 'Disponibilidades atualizadas com sucesso.',
             'count' => $entries->count(),
         ]);
+    }
+
+    private function normalizeTimeToHi(string $value): string
+    {
+        $value = trim($value);
+
+        if (preg_match('/^\d{2}:\d{2}:\d{2}$/', $value) === 1) {
+            return substr($value, 0, 5);
+        }
+
+        return $value;
     }
 }

@@ -16,6 +16,8 @@
                 'method' => 'PUT',
                 'user' => $user,
                 'plataformas' => $plataformas,
+                'regioes' => $regioes,
+                'idiomas' => $idiomas,
                 'submitLabel' => 'Salvar usuário',
                 'isEdit' => true,
             ])

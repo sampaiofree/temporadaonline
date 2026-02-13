@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Idioma;
 use App\Models\Plataforma;
 use App\Models\Profile;
+use App\Models\Regiao;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -39,6 +41,8 @@ class UserController extends Controller
     {
         return view('admin.users.create', [
             'plataformas' => Plataforma::orderBy('nome')->get(['id', 'nome']),
+            'regioes' => Regiao::orderBy('nome')->get(['id', 'nome']),
+            'idiomas' => Idioma::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -48,6 +52,11 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email',
             'password' => 'required|string|min:6',
+            'nickname' => 'nullable|string|max:255',
+            'whatsapp' => 'nullable|string|max:255',
+            'plataforma_id' => 'nullable|integer|exists:plataformas,id',
+            'regiao_id' => 'nullable|integer|exists:regioes,id',
+            'idioma_id' => 'nullable|integer|exists:idiomas,id',
         ]);
 
         $user = User::create([
@@ -67,6 +76,8 @@ class UserController extends Controller
         return view('admin.users.edit', [
             'user' => $user,
             'plataformas' => Plataforma::orderBy('nome')->get(['id', 'nome']),
+            'regioes' => Regiao::orderBy('nome')->get(['id', 'nome']),
+            'idiomas' => Idioma::orderBy('nome')->get(['id', 'nome']),
         ]);
     }
 
@@ -76,6 +87,11 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:6',
+            'nickname' => 'nullable|string|max:255',
+            'whatsapp' => 'nullable|string|max:255',
+            'plataforma_id' => 'nullable|integer|exists:plataformas,id',
+            'regiao_id' => 'nullable|integer|exists:regioes,id',
+            'idioma_id' => 'nullable|integer|exists:idiomas,id',
         ]);
 
         $user->fill([
@@ -98,11 +114,17 @@ class UserController extends Controller
     private function syncProfile(User $user, Request $request): void
     {
         $profile = $user->profile ?? new Profile(['user_id' => $user->id]);
+        $regiaoId = $request->input('regiao_id') ?: null;
+        $idiomaId = $request->input('idioma_id') ?: null;
 
         $profile->fill([
             'nickname' => $this->normalizeNullable($request, 'nickname', $profile->nickname),
             'whatsapp' => $this->normalizeNullable($request, 'whatsapp', $profile->whatsapp),
             'plataforma_id' => $request->input('plataforma_id') ?: null,
+            'regiao_id' => $regiaoId,
+            'idioma_id' => $idiomaId,
+            'regiao' => $regiaoId ? Regiao::query()->find($regiaoId)?->nome : null,
+            'idioma' => $idiomaId ? Idioma::query()->find($idiomaId)?->nome : null,
         ]);
 
         $profile->save();

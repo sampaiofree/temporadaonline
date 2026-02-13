@@ -3,6 +3,8 @@
     'method' => 'POST',
     'user' => null,
     'plataformas',
+    'regioes',
+    'idiomas',
     'submitLabel' => 'Salvar usuário',
     'isEdit' => false,
 ])
@@ -14,6 +16,8 @@
     $currentWhatsapp = old('whatsapp', $profile?->whatsapp ?? '');
     $currentNickname = old('nickname', $profile?->nickname ?? '');
     $currentPlataforma = old('plataforma_id', $profile?->plataforma_id ?? '');
+    $currentRegiao = old('regiao_id', $profile?->regiao_id ?? '');
+    $currentIdioma = old('idioma_id', $profile?->idioma_id ?? '');
     $isAdmin = old('is_admin', $user?->is_admin ?? false);
 @endphp
 
@@ -86,7 +90,7 @@
         </div>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-3">
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
         <div>
             <label for="whatsapp" class="block text-sm font-semibold text-slate-700">WhatsApp</label>
             <input
@@ -111,6 +115,40 @@
                 class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
             @error('nickname')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label for="regiao_id" class="block text-sm font-semibold text-slate-700">Região</label>
+            <select
+                id="regiao_id"
+                name="regiao_id"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+                <option value="">Sem região</option>
+                @foreach($regioes as $regiao)
+                    <option value="{{ $regiao->id }}" @selected((string) $currentRegiao === (string) $regiao->id)>{{ $regiao->nome }}</option>
+                @endforeach
+            </select>
+            @error('regiao_id')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label for="idioma_id" class="block text-sm font-semibold text-slate-700">Idioma</label>
+            <select
+                id="idioma_id"
+                name="idioma_id"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+                <option value="">Sem idioma</option>
+                @foreach($idiomas as $idioma)
+                    <option value="{{ $idioma->id }}" @selected((string) $currentIdioma === (string) $idioma->id)>{{ $idioma->nome }}</option>
+                @endforeach
+            </select>
+            @error('idioma_id')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
         </div>

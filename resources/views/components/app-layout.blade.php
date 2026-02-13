@@ -27,15 +27,15 @@
                     </div>
 
                     <nav class="flex-1 space-y-4 px-3 py-4">
-                        <a href="{{ route('admin.dashboard') }}" 
+                        <a href="{{ route('admin.dashboard') }}"
                         class="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium {{ request()->routeIs('admin.dashboard') ? 'bg-blue-50 text-blue-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900' }}">
                             <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
                             Dashboard
                         </a>
 
-                        <x-sidebar-group 
-                            title="CADASTRO" 
-                            icon="plus-circle" 
+                        <x-sidebar-group
+                            title="CADASTRO"
+                            icon="plus-circle"
                             :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*', 'admin.conquistas.*', 'admin.patrocinios.*', 'admin.premiacoes.*', 'admin.idioma-regiao.*'])"
                         >
                             <div class="space-y-1 py-1">
@@ -46,15 +46,15 @@
                                 <x-nav-link href="{{ route('admin.confederacoes.index') }}" :active="request()->routeIs('admin.confederacoes.*')">Confederação</x-nav-link>
                                 <x-nav-link href="{{ route('admin.ligas.index') }}" :active="request()->routeIs('admin.ligas.*')">Liga</x-nav-link>
                                 <x-nav-link href="{{ route('admin.conquistas.index') }}" :active="request()->routeIs('admin.conquistas.*')">Conquistas</x-nav-link>
-                                <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patrocinios</x-nav-link>
+                                <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patrocínios</x-nav-link>
                                 <x-nav-link href="{{ route('admin.premiacoes.index') }}" :active="request()->routeIs('admin.premiacoes.*')">Premiações</x-nav-link>
                                 <x-nav-link href="{{ route('admin.idioma-regiao.index') }}" :active="request()->routeIs('admin.idioma-regiao.*')">Idiomas e Regiões</x-nav-link>
                             </div>
                         </x-sidebar-group>
 
-                        <x-sidebar-group 
-                            title="ADMINISTRAÇÃO" 
-                            icon="shield-check" 
+                        <x-sidebar-group
+                            title="ADMINISTRAÇÃO"
+                            icon="shield-check"
                             :active="request()->routeIs(['admin.clubes.*', 'admin.ligas-usuarios.*', 'admin.users.*', 'admin.partidas-denuncias.*', 'admin.whatsapp.*'])"
                         >
                             <div class="space-y-1 py-1">
@@ -66,9 +66,9 @@
                             </div>
                         </x-sidebar-group>
 
-                        <x-sidebar-group 
-                            title="UPLOAD IMAGENS" 
-                            icon="image-plus" 
+                        <x-sidebar-group
+                            title="UPLOAD IMAGENS"
+                            icon="image-plus"
                             :active="request()->routeIs(['admin.paises.*', 'admin.ligas-escudos.*', 'admin.escudos-clubes.*', 'admin.playstyles.*', 'admin.app-assets.*'])"
                         >
                             <div class="space-y-1 py-1">
