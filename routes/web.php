@@ -164,3 +164,4 @@ Route::middleware(['auth', 'roster.limit'])->group(function () {
 });
 
 require __DIR__.'/auth.php';
+require __DIR__.'/legacy.php';

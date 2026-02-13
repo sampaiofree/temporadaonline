@@ -27,6 +27,7 @@ export default defineConfig({
                 'resources/js/liga_clube_perfil.jsx',
                 'resources/js/register.jsx',
                 'resources/js/login.jsx',
+                'resources/js/legacy/index.tsx',
             ],
             refresh: true,
         }),
