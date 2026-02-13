@@ -378,9 +378,15 @@ const MCOButton = ({ children, onClick, variant = 'primary', className = '', dis
     danger: "bg-[#B22222] text-white",
     success: "bg-[#008000] text-white"
   };
+  const shouldApplyClip = variant !== 'ghost';
   
   return (
-    <button onClick={onClick} disabled={disabled} className={`${baseStyles} ${variants[variant] || ''} ${className}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseStyles} ${variants[variant] || ''} ${className}`}
+      style={shouldApplyClip ? { clipPath: AGGRESSIVE_CLIP } : undefined}
+    >
       <span className="relative z-10">{children}</span>
     </button>
   );
@@ -2849,7 +2855,7 @@ const ProfileView = ({ onBack }: any) => {
     <div className="min-h-screen bg-[#121212] p-6 pb-40 overflow-y-auto">
       <header className="mb-8">
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONFIGURAÇÕES</h2>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PERFIL</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">GERENCIAMENTO DE CONTA</p>
       </header>
       <div className="flex gap-2 mb-10 bg-[#1E1E1E] p-1" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
