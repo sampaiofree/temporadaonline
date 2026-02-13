@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Jogo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -31,9 +32,14 @@ class JogoController extends Controller
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
+            'imagem' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
         ]);
 
         $data['slug'] = $this->generateSlug($data['nome']);
+
+        if ($request->hasFile('imagem')) {
+            $data['imagem'] = $request->file('imagem')->store('jogos', 'public');
+        }
 
         Jogo::create($data);
 
@@ -53,9 +59,18 @@ class JogoController extends Controller
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
+            'imagem' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
         ]);
 
         $data['slug'] = $this->generateSlug($data['nome'], $jogo->id);
+
+        if ($request->hasFile('imagem')) {
+            $path = $request->file('imagem')->store('jogos', 'public');
+            if ($jogo->imagem) {
+                Storage::disk('public')->delete($jogo->imagem);
+            }
+            $data['imagem'] = $path;
+        }
 
         $jogo->update($data);
 
@@ -66,6 +81,10 @@ class JogoController extends Controller
     {
         if ($jogo->ligas()->exists()) {
             abort(403);
+        }
+
+        if ($jogo->imagem) {
+            Storage::disk('public')->delete($jogo->imagem);
         }
 
         $jogo->delete();

@@ -95,7 +95,7 @@ class PartidaSchedulerService
     {
         $partida->loadMissing(['liga.periodos', 'mandante.user', 'visitante.user']);
         $liga = $partida->liga;
-        $tz = $liga->timezone ?? 'UTC';
+        $tz = $liga->resolveTimezone();
         $nowLocal = Carbon::now($tz);
         $periodos = ($liga->periodos ?? collect())->sortBy('inicio')->values();
 

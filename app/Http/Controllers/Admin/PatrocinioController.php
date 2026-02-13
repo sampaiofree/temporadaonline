@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Patrocinio;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -49,6 +50,57 @@ class PatrocinioController extends Controller
         return redirect()
             ->route('admin.patrocinios.index')
             ->with('success', 'Patrocinio criado com sucesso.');
+    }
+
+    public function bulkStore(Request $request): RedirectResponse|JsonResponse
+    {
+        $validated = $request->validate([
+            'uploads' => 'required|array|min:1',
+            'uploads.*.nome' => 'required|string|max:150',
+            'uploads.*.descricao' => 'nullable|string',
+            'uploads.*.valor' => 'required|integer|min:1',
+            'uploads.*.fans' => 'required|integer|min:1',
+            'uploads.*.imagem' => 'required|image|mimes:jpg,jpeg,png,webp|max:4096',
+        ]);
+
+        $created = 0;
+
+        foreach ($validated['uploads'] as $index => $upload) {
+            $file = $request->file("uploads.{$index}.imagem");
+
+            if (! $file) {
+                continue;
+            }
+
+            $nome = trim($upload['nome']);
+            if ($nome === '' || Patrocinio::query()->where('nome', $nome)->exists()) {
+                continue;
+            }
+
+            $path = $file->store('patrocinios', 'public');
+
+            Patrocinio::create([
+                'nome' => $nome,
+                'descricao' => filled($upload['descricao'] ?? null) ? trim($upload['descricao']) : null,
+                'imagem' => $path,
+                'valor' => (int) $upload['valor'],
+                'fans' => (int) $upload['fans'],
+            ]);
+
+            $created++;
+        }
+
+        $message = $created
+            ? "{$created} patrocinios importados com sucesso."
+            : 'Nenhum patrocinio importado.';
+
+        $request->session()->flash('success', $message);
+
+        if ($request->wantsJson()) {
+            return response()->json(['created' => $created], 201);
+        }
+
+        return redirect()->route('admin.patrocinios.index');
     }
 
     public function edit(Patrocinio $patrocinio): View

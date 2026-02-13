@@ -17,6 +17,7 @@ use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeControll
 use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
 use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
 use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
+use App\Http\Controllers\Admin\IdiomaRegiaoController as AdminIdiomaRegiaoController;
 use App\Http\Controllers\Admin\ConquistaController as AdminConquistaController;
 use App\Http\Controllers\Admin\ConquistaImagemController as AdminConquistaImagemController;
 use App\Http\Controllers\Admin\PatrocinioController as AdminPatrocinioController;
@@ -54,20 +55,30 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::delete('paises/bulk-destroy', [AdminPaisController::class, 'bulkDestroy'])->name('paises.bulk-destroy');
     Route::resource('playstyles', AdminPlaystyleController::class)->only(['index', 'store', 'destroy']);
     Route::delete('playstyles/bulk-destroy', [AdminPlaystyleController::class, 'bulkDestroy'])->name('playstyles.bulk-destroy');
+    Route::post('conquistas/upload-massa', [AdminConquistaController::class, 'bulkStore'])->name('conquistas.bulk-store');
     Route::resource('conquistas', AdminConquistaController::class)->except(['show']);
     Route::resource('conquistas-imagens', AdminConquistaImagemController::class, [
         'parameters' => ['conquistas-imagens' => 'conquista_imagem'],
     ])->except(['show', 'create']);
+    Route::post('patrocinios/upload-massa', [AdminPatrocinioController::class, 'bulkStore'])->name('patrocinios.bulk-store');
     Route::resource('patrocinios', AdminPatrocinioController::class)->except(['show']);
     Route::resource('patrocinios-imagens', AdminPatrocinioImagemController::class, [
         'parameters' => ['patrocinios-imagens' => 'patrocinio_imagem'],
     ])->except(['show', 'create']);
+    Route::post('premiacoes/upload-massa', [AdminPremiacaoController::class, 'bulkStore'])->name('premiacoes.bulk-store');
     Route::resource('premiacoes', AdminPremiacaoController::class, [
         'parameters' => ['premiacoes' => 'premiacao'],
     ])->except(['show']);
     Route::resource('premiacoes-imagens', AdminPremiacaoImagemController::class, [
         'parameters' => ['premiacoes-imagens' => 'premiacao_imagem'],
     ])->except(['show', 'create']);
+    Route::get('idioma-regiao', [AdminIdiomaRegiaoController::class, 'index'])->name('idioma-regiao.index');
+    Route::post('idioma-regiao/idiomas', [AdminIdiomaRegiaoController::class, 'storeIdioma'])->name('idioma-regiao.idiomas.store');
+    Route::patch('idioma-regiao/idiomas/{idioma}', [AdminIdiomaRegiaoController::class, 'updateIdioma'])->name('idioma-regiao.idiomas.update');
+    Route::delete('idioma-regiao/idiomas/{idioma}', [AdminIdiomaRegiaoController::class, 'destroyIdioma'])->name('idioma-regiao.idiomas.destroy');
+    Route::post('idioma-regiao/regioes', [AdminIdiomaRegiaoController::class, 'storeRegiao'])->name('idioma-regiao.regioes.store');
+    Route::patch('idioma-regiao/regioes/{regiao}', [AdminIdiomaRegiaoController::class, 'updateRegiao'])->name('idioma-regiao.regioes.update');
+    Route::delete('idioma-regiao/regioes/{regiao}', [AdminIdiomaRegiaoController::class, 'destroyRegiao'])->name('idioma-regiao.regioes.destroy');
     Route::resource('clubes', AdminClubeController::class)
         ->only(['index', 'edit', 'update', 'destroy']);
     Route::resource('ligas-usuarios', AdminLigaJogadorController::class, [

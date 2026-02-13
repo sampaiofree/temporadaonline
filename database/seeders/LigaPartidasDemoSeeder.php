@@ -13,7 +13,6 @@ use App\Models\UserDisponibilidade;
 use App\Services\PartidaSchedulerService;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
@@ -23,20 +22,26 @@ class LigaPartidasDemoSeeder extends Seeder
     {
         $liga = Liga::query()->find(1);
         if (! $liga) {
-            Log::warning('LigaPartidasDemoSeeder: liga_id=1 não encontrada');
+            Log::warning('LigaPartidasDemoSeeder: liga_id=1 nao encontrada');
             return;
         }
 
-        $liga->update([
-            'timezone' => $liga->timezone ?: 'America/Sao_Paulo',
-        ]);
+        $liga->loadMissing('confederacao');
+        if (! $liga->confederacao_id || ! $liga->confederacao) {
+            Log::warning('LigaPartidasDemoSeeder: liga sem confederacao vinculada.', [
+                'liga_id' => $liga->id,
+            ]);
+            return;
+        }
+
+        $tz = $liga->resolveTimezone();
 
         if ($liga->periodos()->count() === 0) {
-            $start = Carbon::now($liga->timezone)->startOfDay();
+            $start = Carbon::now($tz)->startOfDay();
             $end = $start->copy()->addDays(30);
 
             LigaPeriodo::create([
-                'liga_id' => $liga->id,
+                'confederacao_id' => $liga->confederacao_id,
                 'inicio' => $start->toDateString(),
                 'fim' => $end->toDateString(),
             ]);
@@ -72,7 +77,7 @@ class LigaPartidasDemoSeeder extends Seeder
                 $club->save();
             }
 
-            // a cada 3º clube, não cria disponibilidade para testar cenário sem slot
+            // A cada 3o clube, nao cria disponibilidade para testar cenario sem slot.
             if (($index + 1) % 3 === 0) {
                 UserDisponibilidade::query()->where('user_id', $user->id)->delete();
                 return;
@@ -102,11 +107,12 @@ class LigaPartidasDemoSeeder extends Seeder
             }
         }
 
-        Log::info('LigaPartidasDemoSeeder concluído', [
+        Log::info('LigaPartidasDemoSeeder concluido', [
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'clubs' => $clubs->count(),
             'partidas' => Partida::query()->where('liga_id', $liga->id)->count(),
-            'timezone' => $liga->timezone,
+            'timezone' => $tz,
         ]);
     }
 }

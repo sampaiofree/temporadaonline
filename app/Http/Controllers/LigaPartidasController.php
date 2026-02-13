@@ -42,9 +42,10 @@ class LigaPartidasController extends Controller
                 ->keyBy('partida_id');
         }
 
+        $tz = $liga->resolveTimezone();
+
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($liga, $clube, $avaliacoes) {
-                $tz = $liga->timezone ?? 'UTC';
+            ->map(function (Partida $partida) use ($tz, $clube, $avaliacoes) {
                 $avaliacao = $avaliacoes->get($partida->id);
 
                 return [
@@ -87,7 +88,7 @@ class LigaPartidasController extends Controller
                 'id' => $liga->id,
                 'nome' => $liga->nome,
                 'jogo' => $liga->jogo?->nome,
-                'timezone' => $liga->timezone,
+                'timezone' => $tz,
             ],
             'clube' => $clube ? [
                 'id' => $clube->id,
@@ -126,7 +127,7 @@ class LigaPartidasController extends Controller
 
         $partida->loadMissing(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo']);
 
-        $tz = $liga->timezone ?? 'UTC';
+        $tz = $liga->resolveTimezone();
 
         $payload = [
             'id' => $partida->id,
@@ -155,7 +156,7 @@ class LigaPartidasController extends Controller
                 'id' => $liga->id,
                 'nome' => $liga->nome,
                 'jogo' => $liga->jogo?->nome,
-                'timezone' => $liga->timezone,
+                'timezone' => $tz,
             ],
             'clube' => $clube ? [
                 'id' => $clube->id,
