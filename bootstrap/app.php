@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\EnsureLegacyFirstAccessCompleted;
 use App\Http\Middleware\EnsureRosterLimitDuringMarketClosed;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $middleware->alias([
                 'admin' => AdminMiddleware::class,
+                'legacy.first_access' => EnsureLegacyFirstAccessCompleted::class,
                 'roster.limit' => EnsureRosterLimitDuringMarketClosed::class,
             ]);
         })

@@ -39,7 +39,7 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::delete('/me/disponibilidades/{id}', [UserDisponibilidadeController::class, 'destroy']);
     Route::get('/me/pendencias', [PendingActionsController::class, 'index']);
 
-    // Partidas - agendamento pelo visitante
+    // Partidas - agendamento pelos participantes
     Route::get('/partidas/{partida}/slots', [PartidaScheduleController::class, 'slots']);
     Route::post('/partidas/{partida}/agendar', [PartidaScheduleController::class, 'agendar']);
     Route::post('/partidas/{partida}/checkin', [PartidaActionsController::class, 'checkin']);

@@ -22,6 +22,7 @@ const LEGACY_MY_CLUB_DATA_URL = String(LEGACY_CONFIG?.myClubDataUrl || '/legacy/
 const LEGACY_SQUAD_DATA_URL = String(LEGACY_CONFIG?.squadDataUrl || '/legacy/squad-data');
 const LEGACY_MATCH_CENTER_DATA_URL = String(LEGACY_CONFIG?.matchCenterDataUrl || '/legacy/match-center-data');
 const LEGACY_FINANCE_DATA_URL = String(LEGACY_CONFIG?.financeDataUrl || '/legacy/finance-data');
+const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inbox-data');
 const LEGACY_PUBLIC_CLUB_PROFILE_DATA_URL = String(LEGACY_CONFIG?.publicClubProfileDataUrl || '/legacy/public-club-profile-data');
 const LEGACY_ESQUEMA_TATICO_DATA_URL = String(LEGACY_CONFIG?.esquemaTaticoDataUrl || '/legacy/esquema-tatico-data');
 const LEGACY_ESQUEMA_TATICO_SAVE_URL = String(LEGACY_CONFIG?.esquemaTaticoSaveUrl || '/legacy/esquema-tatico');
@@ -503,7 +504,116 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, sk
 
 // --- New Inbox View ---
 
-const InboxView = ({ onBack, onAction }: { onBack: () => void, onAction: (type: string) => void }) => {
+const formatLegacyInboxDate = (iso: string | null | undefined) => {
+  if (!iso) return 'AGORA';
+
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return 'AGORA';
+
+  return date.toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const LEGACY_INBOX_EMPTY_SUMMARY = {
+  hasPendingActions: false,
+  totalActions: 0,
+  totalMessages: 0,
+  scheduleCount: 0,
+  confirmationCount: 0,
+  evaluationCount: 0,
+  headline: 'SEM ACOES PENDENTES',
+  detail: 'Nenhuma pendencia encontrada na inbox.',
+  primaryAction: null as string | null,
+};
+
+const getLegacyInboxDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_INBOX_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const normalizeLegacyInboxSummary = (summary: any) => ({
+  hasPendingActions: Boolean(summary?.has_pending_actions),
+  totalActions: Math.max(0, Number(summary?.total_actions ?? 0) || 0),
+  totalMessages: Math.max(0, Number(summary?.total_messages ?? 0) || 0),
+  scheduleCount: Math.max(0, Number(summary?.schedule_count ?? 0) || 0),
+  confirmationCount: Math.max(0, Number(summary?.confirmation_count ?? 0) || 0),
+  evaluationCount: Math.max(0, Number(summary?.evaluation_count ?? 0) || 0),
+  headline: String(summary?.headline || LEGACY_INBOX_EMPTY_SUMMARY.headline),
+  detail: String(summary?.detail || LEGACY_INBOX_EMPTY_SUMMARY.detail),
+  primaryAction: summary?.primary_action ? String(summary.primary_action) : null,
+});
+
+const InboxView = ({
+  onBack,
+  onAction,
+  currentCareer,
+}: {
+  onBack: () => void,
+  onAction: (type: string) => void,
+  currentCareer: any,
+}) => {
+  const [messages, setMessages] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInbox = async () => {
+      if (!currentCareer?.id) {
+        setMessages([]);
+        setError('Selecione uma confederacao para carregar a inbox.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const endpoint = getLegacyInboxDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+
+        if (cancelled) return;
+
+        const rawMessages = Array.isArray(payload?.inbox?.messages) ? payload.inbox.messages : [];
+        const nextMessages = rawMessages.map((item: any) => ({
+          id: String(item?.id || Math.random()),
+          type: String(item?.type || 'INBOX'),
+          title: String(item?.title || 'PENDENCIA'),
+          sender: String(item?.sender || 'LEGACY'),
+          content: String(item?.content || ''),
+          date: formatLegacyInboxDate(item?.date),
+          urgent: Boolean(item?.urgent),
+          action: String(item?.action || ''),
+          actionLabel: String(item?.action_label || 'ACESSAR PENDENCIA'),
+        }));
+
+        setMessages(nextMessages);
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setMessages([]);
+        setError(currentError?.message || 'Não foi possível carregar as mensagens.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadInbox();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6 overflow-y-auto">
       <header className="mb-8">
@@ -515,29 +625,36 @@ const InboxView = ({ onBack, onAction }: { onBack: () => void, onAction: (type: 
       </header>
 
       <div className="space-y-4">
-        {MOCK_INBOX_MESSAGES.map((msg) => (
-          <div key={msg.id} className={`bg-[#1E1E1E] p-6 border-r-[3px] transition-all ${msg.urgent ? 'border-[#B22222]' : 'border-[#FFD700]'}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
-             <div className="flex justify-between items-start mb-4">
-                <div>
-                   <span className={`text-[8px] font-black px-2 py-0.5 italic tracking-tighter ${msg.urgent ? 'bg-[#B22222] text-white' : 'bg-[#FFD700] text-[#121212]'}`}>{msg.type}</span>
-                   <h4 className="text-[13px] font-black italic uppercase text-white mt-2 leading-none">{msg.title}</h4>
-                   <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">DE: {msg.sender}</p>
-                </div>
-                <span className="text-[8px] font-black text-white/20 italic">{msg.date}</span>
-             </div>
-             <p className="text-[10px] text-white/60 leading-relaxed uppercase italic font-bold mb-6">{msg.content}</p>
-             <div className="flex gap-2">
-                <button 
-                  onClick={() => onAction(msg.action)}
-                  className="flex-1 bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
-                  style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                >
-                  ACESSAR PENDÊNCIA
-                </button>
-                <button className="bg-white/5 text-white/20 p-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                  <i className="fas fa-trash-can text-xs"></i>
-                </button>
-             </div>
+        {loading ? (
+          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white/50">Carregando mensagens reais...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
+          </div>
+        ) : messages.length === 0 ? (
+          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white/40">Sem mensagens pendentes no momento.</p>
+          </div>
+        ) : messages.map((msg) => (
+          <div key={String(msg.id)} className={`bg-[#1E1E1E] p-6 border-r-[3px] transition-all ${msg.urgent ? 'border-[#B22222]' : 'border-[#FFD700]'}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <span className={`text-[8px] font-black px-2 py-0.5 italic tracking-tighter ${msg.urgent ? 'bg-[#B22222] text-white' : 'bg-[#FFD700] text-[#121212]'}`}>{msg.type}</span>
+                <h4 className="text-[13px] font-black italic uppercase text-white mt-2 leading-none">{msg.title}</h4>
+                <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">DE: {msg.sender}</p>
+              </div>
+              <span className="text-[8px] font-black text-white/20 italic">{msg.date}</span>
+            </div>
+            <p className="text-[10px] text-white/60 leading-relaxed uppercase italic font-bold mb-6">{msg.content}</p>
+            <button
+              onClick={() => onAction(String(msg.action || ''))}
+              className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
+              style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+            >
+              {String(msg.actionLabel || 'ACESSAR PENDÊNCIA')}
+            </button>
           </div>
         ))}
       </div>
@@ -925,7 +1042,7 @@ const ScheduleMatchesView = ({
   const [scheduleNotice, setScheduleNotice] = useState('');
 
   const pendingMatches = useMemo(
-    () => matches.filter((partida) => partida?.is_visitante && isLegacySchedulingAllowed(partida)),
+    () => matches.filter((partida) => isLegacySchedulingAllowed(partida)),
     [matches],
   );
 
@@ -1210,7 +1327,7 @@ const MatchCenterView = ({
     [partidas],
   );
   const pendingScheduleCount = useMemo(
-    () => partidas.filter((partida) => partida?.is_visitante && isLegacySchedulingAllowed(partida)).length,
+    () => partidas.filter((partida) => isLegacySchedulingAllowed(partida)).length,
     [partidas],
   );
   const pendingSummaries = useMemo(
@@ -1291,7 +1408,7 @@ const MatchCenterView = ({
                       variant="outline"
                       onClick={() => onOpenSchedule(activeMatch)}
                       className="!py-5 !px-2 !text-[9px]"
-                      disabled={!activeMatch?.is_visitante || !isLegacySchedulingAllowed(activeMatch)}
+                      disabled={!isLegacySchedulingAllowed(activeMatch)}
                     >
                       AGENDAR / REAGENDAR HORÁRIO
                     </MCOButton>
@@ -1815,6 +1932,7 @@ const FanProgressWidget = ({ fans }: { fans: number }) => {
 
 const LegacyUTCard = ({ player }: { player: any }) => {
   const statsEntries = Object.entries(player.stats || {});
+  const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyleBadges, player?.playstyles || []);
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
       <div className="absolute inset-0 bg-[#FFD700] opacity-10 blur-3xl animate-pulse"></div>
@@ -1846,8 +1964,14 @@ const LegacyUTCard = ({ player }: { player: any }) => {
           </div>
         </div>
         <div className="absolute bottom-10 left-0 right-0 flex justify-center gap-2 px-6">
-          {(player.playstyles || []).slice(0, 4).map((ps: string, idx: number) => (
-             <div key={idx} className="w-5 h-5 bg-[#FFD700]/5 border border-[#FFD700]/10 flex items-center justify-center transform rotate-45"><i className="fas fa-bolt text-[8px] text-[#FFD700] transform -rotate-45"></i></div>
+          {playstyleBadges.slice(0, 4).map((badge: any, idx: number) => (
+             <div key={`${badge?.name || idx}`} className="w-5 h-5 bg-[#FFD700]/5 border border-[#FFD700]/10 flex items-center justify-center transform rotate-45 overflow-hidden">
+               {badge?.imageUrl ? (
+                 <img src={badge.imageUrl} alt={badge.name || 'Playstyle'} className="w-4 h-4 object-contain transform -rotate-45" />
+               ) : (
+                 <i className="fas fa-bolt text-[8px] text-[#FFD700] transform -rotate-45"></i>
+               )}
+             </div>
           ))}
         </div>
       </div>
@@ -1857,6 +1981,7 @@ const LegacyUTCard = ({ player }: { player: any }) => {
 
 const DetailedAttributes = ({ player }: { player: any }) => {
   const sections = player.detailedStats ? Object.entries(player.detailedStats) : [];
+  const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyleBadges, player?.playstyles || []);
   return (
     <div className="w-full bg-[#1E1E1E] p-6 overflow-y-auto max-h-[70vh] space-y-8 relative" style={{ clipPath: AGGRESSIVE_CLIP }}>
       <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ backgroundImage: SLANTED_PATTERN }}></div>
@@ -1899,10 +2024,14 @@ const DetailedAttributes = ({ player }: { player: any }) => {
         <div className="space-y-4">
            <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">PLAYSTYLES</h4>
            <div className="grid grid-cols-2 gap-2">
-             {(player.playstyles || []).map((ps: string) => (
-               <div key={ps} className="bg-[#121212] p-3 flex items-center gap-2" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-                 <i className="fas fa-bolt text-[10px] text-[#FFD700]"></i>
-                 <span className="text-[9px] font-black text-white uppercase italic tracking-tighter">{ps}</span>
+             {playstyleBadges.map((badge: any, idx: number) => (
+               <div key={`${badge?.name || idx}`} className="bg-[#121212] p-3 flex items-center gap-2" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+                 {badge?.imageUrl ? (
+                   <img src={badge.imageUrl} alt={badge.name || 'Playstyle'} className="w-4 h-4 object-contain shrink-0" />
+                 ) : (
+                   <i className="fas fa-bolt text-[10px] text-[#FFD700]"></i>
+                 )}
+                 <span className="text-[9px] font-black text-white uppercase italic tracking-tighter">{badge?.name || 'PLAYSTYLE'}</span>
                </div>
              ))}
            </div>
@@ -2655,95 +2784,162 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
 
 // --- Container Views ---
 
-const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenStats, onOpenLeaderboard, onOpenInbox, careers, currentCareer, onCareerChange, userStats, onOpenOwnProfile }: any) => (
-  <div className="min-h-screen bg-[#121212] pt-16 pb-32">
-    <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
-    
-    <div className="p-4 space-y-6">
-      <header className="px-4 mb-4 flex justify-between items-end">
-        <div>
-          <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">DASHBOARD</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">MANAGER HUB</p>
+const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenStats, onOpenLeaderboard, onOpenInbox, onOpenSchedulePending, careers, currentCareer, onCareerChange, userStats, onOpenOwnProfile }: any) => {
+  const [inboxSummary, setInboxSummary] = useState(LEGACY_INBOX_EMPTY_SUMMARY);
+  const [inboxLoading, setInboxLoading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadInboxSummary = async () => {
+      if (!currentCareer?.id) {
+        setInboxSummary(LEGACY_INBOX_EMPTY_SUMMARY);
+        setInboxLoading(false);
+        return;
+      }
+
+      setInboxLoading(true);
+
+      try {
+        const endpoint = getLegacyInboxDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setInboxSummary(normalizeLegacyInboxSummary(payload?.inbox?.summary));
+      } catch {
+        if (cancelled) return;
+        setInboxSummary(LEGACY_INBOX_EMPTY_SUMMARY);
+      } finally {
+        if (!cancelled) {
+          setInboxLoading(false);
+        }
+      }
+    };
+
+    void loadInboxSummary();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const hasPendingActions = inboxSummary.hasPendingActions;
+  const pendingCountLabel = hasPendingActions && inboxSummary.totalActions > 0
+    ? ` (${inboxSummary.totalActions})`
+    : '';
+  const pendingText = inboxLoading
+    ? 'CARREGANDO CONTEXTO DA INBOX...'
+    : hasPendingActions
+    ? inboxSummary.detail
+    : 'SEM AÇÕES PENDENTES NO MOMENTO.';
+  const handlePendingActionsClick = () => {
+    if (hasPendingActions && inboxSummary.primaryAction === 'SCHEDULE') {
+      if (typeof onOpenSchedulePending === 'function') {
+        onOpenSchedulePending();
+        return;
+      }
+    }
+
+    onOpenInbox();
+  };
+
+  return (
+    <div className="min-h-screen bg-[#121212] pt-16 pb-32">
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
+      
+      <div className="p-4 space-y-6">
+        <header className="px-4 mb-4 flex justify-between items-end">
+          <div>
+            <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">DASHBOARD</h2>
+            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">MANAGER HUB</p>
+          </div>
+          <button onClick={onOpenOwnProfile} className="bg-[#1E1E1E] text-[#FFD700] text-[9px] font-black italic px-4 py-2 border-r-2 border-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+            VER PERFIL
+          </button>
+        </header>
+
+        <section
+          onClick={handlePendingActionsClick}
+          className={`mx-4 p-4 flex items-center gap-4 cursor-pointer ${hasPendingActions ? 'bg-[#B22222] animate-pulse' : 'bg-[#1E1E1E] border border-white/10'}`}
+          style={{ clipPath: AGGRESSIVE_CLIP }}
+        >
+          <i className={`fas ${hasPendingActions ? 'fa-triangle-exclamation' : 'fa-inbox'} text-white text-xl`}></i>
+          <div className="flex-grow">
+            <p className="text-[10px] font-black italic uppercase text-white leading-none">
+              AÇÕES PENDENTES{pendingCountLabel}
+            </p>
+            <p className="text-[8px] font-bold text-white/60 uppercase italic">
+              {pendingText}
+            </p>
+          </div>
+          <i className="fas fa-chevron-right text-white/40 text-xs"></i>
+        </section>
+
+        <div className="grid grid-cols-1 gap-4">
+          <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
+              </div>
+              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                <i className="fas fa-sitemap"></i>
+              </div>
+            </div>
+          </section>
+
+          <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
+              </div>
+              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                <i className="fas fa-right-left"></i>
+              </div>
+            </div>
+          </section>
+
+          <section onClick={onOpenLeaderboard} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">ESTADO DO META</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">RANKING GLOBAL</p>
+              </div>
+              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                <i className="fas fa-ranking-star"></i>
+              </div>
+            </div>
+          </section>
+
+          <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
+              </div>
+              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                <i className="fas fa-chart-line"></i>
+              </div>
+            </div>
+          </section>
+
+          <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="relative z-10 flex justify-between items-center">
+              <div>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
+              </div>
+              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                <i className="fas fa-landmark"></i>
+              </div>
+            </div>
+          </section>
         </div>
-        <button onClick={onOpenOwnProfile} className="bg-[#1E1E1E] text-[#FFD700] text-[9px] font-black italic px-4 py-2 border-r-2 border-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-          VER PERFIL
-        </button>
-      </header>
-
-      {/* NOVO: ALERTA DE INBOX RÁPIDO */}
-      <section onClick={onOpenInbox} className="mx-4 bg-[#B22222] p-4 flex items-center gap-4 cursor-pointer animate-pulse" style={{ clipPath: AGGRESSIVE_CLIP }}>
-         <i className="fas fa-triangle-exclamation text-white text-xl"></i>
-         <div className="flex-grow">
-            <p className="text-[10px] font-black italic uppercase text-white leading-none">AÇÕES PENDENTES</p>
-            <p className="text-[8px] font-bold text-white/60 uppercase italic">VOCÊ TEM 1 NOVA PROPOSTA DE TRANSFERÊNCIA</p>
-         </div>
-         <i className="fas fa-chevron-right text-white/40 text-xs"></i>
-      </section>
-
-      <div className="grid grid-cols-1 gap-4">
-        <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
-              <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
-            </div>
-            <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-              <i className="fas fa-sitemap"></i>
-            </div>
-          </div>
-        </section>
-
-        <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
-              <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
-            </div>
-            <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-              <i className="fas fa-right-left"></i>
-            </div>
-          </div>
-        </section>
-
-        <section onClick={onOpenLeaderboard} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">ESTADO DO META</h4>
-              <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">RANKING GLOBAL</p>
-            </div>
-            <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-              <i className="fas fa-ranking-star"></i>
-            </div>
-          </div>
-        </section>
-
-        <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
-              <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
-            </div>
-            <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-              <i className="fas fa-chart-line"></i>
-            </div>
-          </div>
-        </section>
-
-        <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <div className="relative z-10 flex justify-between items-center">
-            <div>
-              <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
-              <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
-            </div>
-            <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-              <i className="fas fa-landmark"></i>
-            </div>
-          </div>
-        </section>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ProfileView = ({ onBack }: any) => {
   const [activeWidget, setActiveWidget] = useState<'user' | 'game' | 'schedule'>('user');
@@ -3547,9 +3743,17 @@ const getLegacyPrimaryPosition = (positions: string | null | undefined) => {
 const mapLegacyMarketPlayer = (player: any) => {
   const valueEur = Number(player?.value_eur ?? 0);
   const wageEur = Number(player?.wage_eur ?? 0);
-  const valueM = Math.max(0, Math.round(valueEur / 1_000_000));
-  const salaryM = Math.max(0, Math.round(wageEur / 1_000_000));
+  const valueM = toLegacyMoneyInMillions(valueEur);
+  const salaryM = toLegacyMoneyInMillions(wageEur);
   const clubStatus = String(player?.club_status || 'livre');
+  const pace = toLegacyStatValue(player?.pace, player?.movement_sprint_speed ?? 65);
+  const shooting = toLegacyStatValue(player?.shooting, player?.attacking_finishing ?? 65);
+  const passing = toLegacyStatValue(player?.passing, player?.attacking_short_passing ?? 65);
+  const dribbling = toLegacyStatValue(player?.dribbling, player?.skill_dribbling ?? 65);
+  const defending = toLegacyStatValue(player?.defending, player?.defending_standing_tackle ?? 65);
+  const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
+  const playstyles = normalizeLegacyTraits(player?.player_traits);
+  const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles);
 
   const statusLabel =
     clubStatus === 'livre'
@@ -3575,85 +3779,12 @@ const mapLegacyMarketPlayer = (player: any) => {
     can_buy: Boolean(player?.can_buy),
     can_multa: Boolean(player?.can_multa),
     photo: proxyFaceUrl(player?.player_face_url),
-    stats: MOCK_STATS_TEMPLATE,
-    detailedStats: MOCK_DETAILED_TEMPLATE,
-    playstyles: [],
-    weakFoot: 3,
-    skillMoves: 3,
-  };
-};
-
-const toLegacyStatValue = (value: any, fallback = 60) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) {
-    return Math.max(1, Math.min(99, Number(fallback)));
-  }
-
-  return Math.max(1, Math.min(99, Math.round(parsed)));
-};
-
-const toLegacyMoneyInMillions = (value: any) => {
-  const parsed = Number(value ?? 0);
-  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
-  return Math.max(0, Math.round(parsed / 1_000_000));
-};
-
-const toLegacyStarRating = (value: any, fallback = 3) => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return Math.max(1, Math.min(5, fallback));
-  return Math.max(1, Math.min(5, Math.round(parsed)));
-};
-
-const normalizeLegacyTraits = (traits: any) => {
-  if (Array.isArray(traits)) {
-    return traits
-      .map((trait) => String(trait || '').trim())
-      .filter(Boolean)
-      .slice(0, 8);
-  }
-
-  const raw = String(traits || '')
-    .replace(/[{}\[\]"]/g, '')
-    .trim();
-
-  if (!raw) return [];
-
-  return raw
-    .split(/[;,|]/)
-    .map((trait) => trait.trim())
-    .filter(Boolean)
-    .slice(0, 8);
-};
-
-const mapLegacySquadPlayer = (entry: any) => {
-  const player = entry?.elencopadrao || {};
-
-  const pace = toLegacyStatValue(player?.pace, player?.movement_sprint_speed ?? 65);
-  const shooting = toLegacyStatValue(player?.shooting, player?.attacking_finishing ?? 65);
-  const passing = toLegacyStatValue(player?.passing, player?.attacking_short_passing ?? 65);
-  const dribbling = toLegacyStatValue(player?.dribbling, player?.skill_dribbling ?? 65);
-  const defending = toLegacyStatValue(player?.defending, player?.defending_standing_tackle ?? 65);
-  const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
-
-  const valueEur = Number(entry?.value_eur ?? player?.value_eur ?? 0);
-  const wageEur = Number(entry?.wage_eur ?? player?.wage_eur ?? 0);
-  const playstyles = normalizeLegacyTraits(player?.player_traits);
-
-  return {
-    id: Number(entry?.id ?? player?.id ?? 0),
-    playerId: Number(player?.id ?? 0),
-    isActive: Boolean(entry?.ativo),
-    name: String(player?.short_name || player?.long_name || 'ATLETA'),
-    ovr: toLegacyStatValue(player?.overall, 60),
-    pos: getLegacyPrimaryPosition(player?.player_positions),
     age: Number(player?.age ?? 0) || undefined,
-    value: toLegacyMoneyInMillions(valueEur),
-    salary: toLegacyMoneyInMillions(wageEur),
-    marketValue: toLegacyMoneyInMillions(valueEur),
-    photo: proxyFaceUrl(player?.player_face_url),
+    marketValue: valueM,
     skillMoves: toLegacyStarRating(player?.skill_moves, 3),
     weakFoot: toLegacyStarRating(player?.weak_foot, 3),
     playstyles,
+    playstyleBadges,
     stats: {
       PAC: pace,
       SHO: shooting,
@@ -3700,6 +3831,148 @@ const mapLegacySquadPlayer = (entry: any) => {
   };
 };
 
+function toLegacyStatValue(value: any, fallback = 60) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return Math.max(1, Math.min(99, Number(fallback)));
+  }
+
+  return Math.max(1, Math.min(99, Math.round(parsed)));
+}
+
+function toLegacyMoneyInMillions(value: any) {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+  return Math.max(0, Math.round(parsed / 1_000_000));
+}
+
+function toLegacyStarRating(value: any, fallback = 3) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return Math.max(1, Math.min(5, fallback));
+  return Math.max(1, Math.min(5, Math.round(parsed)));
+}
+
+function normalizeLegacyTraits(traits: any) {
+  if (Array.isArray(traits)) {
+    return traits
+      .map((trait) => String(trait || '').trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  }
+
+  const raw = String(traits || '')
+    .replace(/[{}\[\]"]/g, '')
+    .trim();
+
+  if (!raw) return [];
+
+  return raw
+    .split(/[;,|]/)
+    .map((trait) => trait.trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function normalizeLegacyPlaystyleBadges(badges: any, fallbackNames: string[] = []) {
+  const normalized = Array.isArray(badges)
+    ? badges
+        .map((badge: any) => ({
+          name: String(badge?.name || '').trim(),
+          imageUrl: String(badge?.imageUrl || badge?.image_url || '').trim(),
+        }))
+        .filter((badge: any) => badge.name !== '')
+    : [];
+
+  if (normalized.length > 0) {
+    return normalized.slice(0, 8);
+  }
+
+  return fallbackNames
+    .map((name) => String(name || '').trim())
+    .filter(Boolean)
+    .slice(0, 8)
+    .map((name) => ({ name, imageUrl: '' }));
+}
+
+const mapLegacySquadPlayer = (entry: any) => {
+  const player = entry?.elencopadrao || {};
+
+  const pace = toLegacyStatValue(player?.pace, player?.movement_sprint_speed ?? 65);
+  const shooting = toLegacyStatValue(player?.shooting, player?.attacking_finishing ?? 65);
+  const passing = toLegacyStatValue(player?.passing, player?.attacking_short_passing ?? 65);
+  const dribbling = toLegacyStatValue(player?.dribbling, player?.skill_dribbling ?? 65);
+  const defending = toLegacyStatValue(player?.defending, player?.defending_standing_tackle ?? 65);
+  const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
+
+  const valueEur = Number(entry?.value_eur ?? player?.value_eur ?? 0);
+  const wageEur = Number(entry?.wage_eur ?? player?.wage_eur ?? 0);
+  const playstyles = normalizeLegacyTraits(player?.player_traits);
+  const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles);
+
+  return {
+    id: Number(entry?.id ?? player?.id ?? 0),
+    playerId: Number(player?.id ?? 0),
+    isActive: Boolean(entry?.ativo),
+    name: String(player?.short_name || player?.long_name || 'ATLETA'),
+    ovr: toLegacyStatValue(player?.overall, 60),
+    pos: getLegacyPrimaryPosition(player?.player_positions),
+    age: Number(player?.age ?? 0) || undefined,
+    value: toLegacyMoneyInMillions(valueEur),
+    salary: toLegacyMoneyInMillions(wageEur),
+    marketValue: toLegacyMoneyInMillions(valueEur),
+    photo: proxyFaceUrl(player?.player_face_url),
+    skillMoves: toLegacyStarRating(player?.skill_moves, 3),
+    weakFoot: toLegacyStarRating(player?.weak_foot, 3),
+    playstyles,
+    playstyleBadges,
+    stats: {
+      PAC: pace,
+      SHO: shooting,
+      PAS: passing,
+      DRI: dribbling,
+      DEF: defending,
+      PHY: physical,
+    },
+    detailedStats: {
+      PACE: {
+        Aceleracao: toLegacyStatValue(player?.movement_acceleration, pace),
+        Pique: toLegacyStatValue(player?.movement_sprint_speed, pace),
+      },
+      SHOOTING: {
+        Finalizacao: toLegacyStatValue(player?.attacking_finishing, shooting),
+        ForcaChute: toLegacyStatValue(player?.power_shot_power, shooting),
+        ChuteLongo: toLegacyStatValue(player?.power_long_shots, shooting),
+      },
+      PASSING: {
+        PasseCurto: toLegacyStatValue(player?.attacking_short_passing, passing),
+        PasseLongo: toLegacyStatValue(player?.skill_long_passing, passing),
+        Visao: toLegacyStatValue(player?.mentality_vision, passing),
+      },
+      DRIBBLING: {
+        Drible: toLegacyStatValue(player?.skill_dribbling, dribbling),
+        Controle: toLegacyStatValue(player?.skill_ball_control, dribbling),
+        Agilidade: toLegacyStatValue(player?.movement_agility, dribbling),
+        Equilibrio: toLegacyStatValue(player?.movement_balance, dribbling),
+        Reacao: toLegacyStatValue(player?.movement_reactions, dribbling),
+      },
+      DEFENSE: {
+        Marcacao: toLegacyStatValue(player?.defending_marking_awareness, defending),
+        Interceptacao: toLegacyStatValue(player?.mentality_interceptions, defending),
+        Dividida: toLegacyStatValue(player?.defending_standing_tackle, defending),
+        Carrinho: toLegacyStatValue(player?.defending_sliding_tackle, defending),
+      },
+      PHYSICAL: {
+        Forca: toLegacyStatValue(player?.power_strength, physical),
+        Folego: toLegacyStatValue(player?.power_stamina, physical),
+        Salto: toLegacyStatValue(player?.power_jumping, physical),
+        Agressividade: toLegacyStatValue(player?.mentality_aggression, physical),
+      },
+    },
+  };
+};
+
+const LEGACY_MARKET_PAGE_SIZE = 20;
+
 const MarketView = ({
   onBack,
   userStats,
@@ -3732,6 +4005,15 @@ const MarketView = ({
   const [filterValMin, setFilterValMin] = useState('');
   const [filterValMax, setFilterValMax] = useState('');
   const [sortBy, setSortBy] = useState('OVR_DESC');
+  const [marketPage, setMarketPage] = useState(1);
+  const [marketPagination, setMarketPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    total: 0,
+    from: 0,
+    to: 0,
+    perPage: LEGACY_MARKET_PAGE_SIZE,
+  });
 
   useEffect(() => {
     setSubMode(initialSubMode);
@@ -3761,6 +4043,14 @@ const MarketView = ({
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setMarketPagination({
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+          from: 0,
+          to: 0,
+          perPage: LEGACY_MARKET_PAGE_SIZE,
+        });
         setMarketError('Selecione uma confederação para carregar o mercado.');
         return;
       }
@@ -3771,12 +4061,23 @@ const MarketView = ({
       try {
         const endpoint = new URL(LEGACY_MARKET_DATA_URL, window.location.origin);
         endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+        endpoint.searchParams.set('paginate', '1');
+        endpoint.searchParams.set('sub_mode', subMode);
+        endpoint.searchParams.set('page', String(marketPage));
+        endpoint.searchParams.set('per_page', String(LEGACY_MARKET_PAGE_SIZE));
+        endpoint.searchParams.set('filter_status', filterStatus);
+        endpoint.searchParams.set('filter_pos', filterPos);
+        endpoint.searchParams.set('filter_quality', filterQuality);
+        endpoint.searchParams.set('sort_by', sortBy);
+        if (filterValMin !== '') endpoint.searchParams.set('filter_val_min', filterValMin);
+        if (filterValMax !== '') endpoint.searchParams.set('filter_val_max', filterValMax);
 
         const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
 
         if (cancelled) return;
 
         const players = Array.isArray(payload?.mercado?.players) ? payload.mercado.players : [];
+        const paginationRaw = payload?.mercado?.pagination ?? {};
         const radarIds = Array.isArray(payload?.mercado?.radar_ids)
           ? payload.mercado.radar_ids
               .map((id: any) => Number(id))
@@ -3784,11 +4085,29 @@ const MarketView = ({
           : [];
         const ligaId = Number(payload?.liga?.id ?? 0);
         const clubeId = Number(payload?.clube?.id ?? 0);
+        const currentPage = Math.max(1, Number(paginationRaw?.current_page ?? marketPage) || 1);
+        const lastPage = Math.max(1, Number(paginationRaw?.last_page ?? 1) || 1);
+        const total = Math.max(0, Number(paginationRaw?.total ?? players.length) || 0);
+        const from = Number(paginationRaw?.from ?? (total > 0 ? 1 : 0)) || 0;
+        const to = Number(paginationRaw?.to ?? Math.min(total, players.length)) || 0;
+        const perPage = Math.max(1, Number(paginationRaw?.per_page ?? LEGACY_MARKET_PAGE_SIZE) || LEGACY_MARKET_PAGE_SIZE);
+
         setMarketPlayersRaw(players);
         setMarketClosed(Boolean(payload?.mercado?.closed));
         setMarketRadarIds(radarIds);
         setMarketLigaId(ligaId > 0 ? ligaId : null);
         setMarketClubId(clubeId > 0 ? clubeId : null);
+        setMarketPagination({
+          currentPage,
+          lastPage,
+          total,
+          from,
+          to,
+          perPage,
+        });
+        if (currentPage !== marketPage) {
+          setMarketPage(currentPage);
+        }
       } catch (error: any) {
         if (cancelled) return;
         setMarketPlayersRaw([]);
@@ -3796,6 +4115,14 @@ const MarketView = ({
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setMarketPagination({
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+          from: 0,
+          to: 0,
+          perPage: LEGACY_MARKET_PAGE_SIZE,
+        });
         setMarketError(error?.message || 'Não foi possível carregar os registros do mercado.');
       } finally {
         if (!cancelled) {
@@ -3809,7 +4136,18 @@ const MarketView = ({
     return () => {
       cancelled = true;
     };
-  }, [subMode, currentCareer?.id, marketReloadToken]);
+  }, [
+    subMode,
+    currentCareer?.id,
+    marketReloadToken,
+    marketPage,
+    filterStatus,
+    filterPos,
+    filterQuality,
+    filterValMin,
+    filterValMax,
+    sortBy,
+  ]);
 
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
   const marketPlayers = useMemo(() => marketPlayersRaw.map(mapLegacyMarketPlayer), [marketPlayersRaw]);
@@ -3908,55 +4246,25 @@ const MarketView = ({
       { value: 'CONTRATADO', label: 'CONTRATADO' },
     ];
 
-  const filteredPlayers = useMemo(() => {
-    const baseList = isMarketDataMode ? marketPlayers : [];
-    const list =
-      subMode === 'watchlist'
-        ? baseList.filter((player) => marketRadarSet.has(player.id))
-        : baseList;
+  const filteredPlayers = useMemo(
+    () => (isMarketDataMode ? marketPlayers : []),
+    [isMarketDataMode, marketPlayers],
+  );
 
-    return list.filter(p => {
-      const matchStatus = (() => {
-        if (filterStatus === 'TODOS') return true;
+  useEffect(() => {
+    setMarketPage(1);
+  }, [subMode, currentCareer?.id, filterStatus, filterPos, filterQuality, filterValMin, filterValMax, sortBy]);
 
-        if (isMarketDataMode) {
-          if (filterStatus === 'LIVRE') return p.club_status === 'livre';
-          if (filterStatus === 'MEU') return p.club_status === 'meu';
-          if (filterStatus === 'RIVAL') return p.club_status === 'outro';
-          if (filterStatus === 'CONTRATADO') return p.club_status !== 'livre';
-          return true;
-        }
-
-        return (p as any).status === filterStatus;
-      })();
-
-      let matchPos = filterPos === 'TODAS';
-      if (!matchPos) {
-        if (filterPos === 'ATACANTES') matchPos = ['ATA', 'PE', 'PD', 'SA'].includes(p.pos);
-        else if (filterPos === 'MEIO') matchPos = ['MC', 'MEI', 'VOL', 'ME', 'MD'].includes(p.pos);
-        else if (filterPos === 'DEFESA') matchPos = ['ZAG', 'LD', 'LE', 'LWB', 'RWB'].includes(p.pos);
-        else matchPos = p.pos === filterPos;
-      }
-      let matchQuality = filterQuality === 'TODAS';
-      if (!matchQuality) {
-        if (filterQuality === '90+') matchQuality = p.ovr >= 90;
-        else if (filterQuality === '89-88') matchQuality = p.ovr >= 88 && p.ovr <= 89;
-        else if (filterQuality === '87-84') matchQuality = p.ovr >= 84 && p.ovr <= 87;
-        else if (filterQuality === '83-80') matchQuality = p.ovr >= 80 && p.ovr <= 83;
-        else if (filterQuality === '79-73') matchQuality = p.ovr >= 73 && p.ovr <= 79;
-        else if (filterQuality === '72-') matchQuality = p.ovr <= 72;
-      }
-      const matchValMin = !filterValMin || p.value >= parseInt(filterValMin);
-      const matchValMax = !filterValMax || p.value <= parseInt(filterValMax);
-      return matchStatus && matchPos && matchQuality && matchValMin && matchValMax;
-    }).sort((a, b) => {
-      if (sortBy === 'OVR_DESC') return b.ovr - a.ovr;
-      if (sortBy === 'OVR_ASC') return a.ovr - b.ovr;
-      if (sortBy === 'VAL_DESC') return b.value - a.value;
-      if (sortBy === 'VAL_ASC') return a.value - b.value;
-      return 0;
-    });
-  }, [subMode, marketPlayers, isMarketDataMode, marketRadarSet, filterStatus, filterPos, filterQuality, filterValMin, filterValMax, sortBy]);
+  const totalFilteredPlayers = Math.max(0, Number(marketPagination.total ?? filteredPlayers.length) || 0);
+  const totalMarketPages = Math.max(1, Number(marketPagination.lastPage ?? 1) || 1);
+  const currentMarketPage = Math.max(1, Number(marketPagination.currentPage ?? marketPage) || 1);
+  const paginatedPlayers = filteredPlayers;
+  const currentPageStart = totalFilteredPlayers > 0
+    ? Math.max(1, Number(marketPagination.from ?? 1) || 1)
+    : 0;
+  const currentPageEnd = totalFilteredPlayers > 0
+    ? Math.max(currentPageStart, Number(marketPagination.to ?? currentPageStart) || currentPageStart)
+    : 0;
 
   const renderPlayerList = (title: string, subtitle: string) => (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
@@ -4065,6 +4373,16 @@ const MarketView = ({
             <span className="text-[8px] font-black italic uppercase text-right pr-2">VALOR</span>
             <span className="text-[8px] font-black italic uppercase text-center">AÇÕES</span>
           </div>
+          {!marketLoading && !marketError && totalFilteredPlayers > 0 && (
+            <div className="flex items-center justify-between gap-2 px-2 py-2 bg-[#1E1E1E]/50 border-l-[2px] border-[#FFD700]/40">
+              <p className="text-[8px] font-black italic uppercase text-white/45">
+                EXIBINDO {currentPageStart}-{currentPageEnd} DE {totalFilteredPlayers}
+              </p>
+              <p className="text-[8px] font-black italic uppercase text-[#FFD700]">
+                PAGINA {currentMarketPage}/{totalMarketPages}
+              </p>
+            </div>
+          )}
           {isMarketDataMode && marketLoading ? (
             <div className="text-center py-16 bg-[#1E1E1E]/30" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[9px] font-black italic uppercase text-white/40">CARREGANDO REGISTROS DO MERCADO...</p>
@@ -4073,7 +4391,7 @@ const MarketView = ({
             <div className="text-center py-16 bg-[#B22222]/20 border border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[9px] font-black italic uppercase text-white">{marketError}</p>
             </div>
-          ) : filteredPlayers.length > 0 ? filteredPlayers.map((player) => {
+          ) : totalFilteredPlayers > 0 ? paginatedPlayers.map((player) => {
             const isPrimaryBusy = marketActionBusyIds.includes(player.id);
             const isRadarBusy = radarBusyIds.includes(player.id);
             const isObserved = marketRadarSet.has(player.id);
@@ -4149,6 +4467,39 @@ const MarketView = ({
             </div>
           )}
         </div>
+        {!marketLoading && !marketError && totalFilteredPlayers > LEGACY_MARKET_PAGE_SIZE && (
+          <div className="mt-4 flex items-center justify-between gap-2 bg-[#1E1E1E] p-3 border-l-[3px] border-[#FFD700]/45">
+            <button
+              type="button"
+              onClick={() => setMarketPage((current) => Math.max(1, current - 1))}
+              disabled={currentMarketPage <= 1}
+              className={`text-[8px] font-black italic uppercase px-3 py-2 ${
+                currentMarketPage <= 1
+                  ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                  : 'bg-[#FFD700] text-[#121212]'
+              }`}
+              style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+            >
+              ANTERIOR
+            </button>
+            <p className="text-[8px] font-black italic uppercase text-white/60">
+              PAGINA {currentMarketPage} DE {totalMarketPages}
+            </p>
+            <button
+              type="button"
+              onClick={() => setMarketPage((current) => Math.min(totalMarketPages, current + 1))}
+              disabled={currentMarketPage >= totalMarketPages}
+              className={`text-[8px] font-black italic uppercase px-3 py-2 ${
+                currentMarketPage >= totalMarketPages
+                  ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                  : 'bg-[#FFD700] text-[#121212]'
+              }`}
+              style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+            >
+              PROXIMA
+            </button>
+          </div>
+        )}
       </div>
       {selectedPlayer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
@@ -4332,12 +4683,15 @@ const App = () => {
 
   const renderContent = () => {
     switch(view) {
-      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
+      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
       case 'season-stats': return <SeasonStatsView userStats={userStats} onBack={() => setView('hub-global')} />;
       case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} />;
-      case 'inbox': return <InboxView onBack={() => setView('hub-global')} onAction={(t) => {
-        if (t === 'TRANSFER') setView('market');
+      case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t) => {
+        if (t === 'SCHEDULE') {
+          setSelectedScheduleMatch(null);
+          setView('schedule-matches');
+        } else if (t === 'TRANSFER') setView('market');
         else if (t === 'MATCH') setView('match-center');
         else if (t === 'FINANCE') setView('finance');
         else setView('hub-global');
@@ -4358,7 +4712,7 @@ const App = () => {
       case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'profile': return <ProfileView onBack={() => setView('hub-global')} />;
-      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenStats={() => setView('season-stats')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} />;
+      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
     }
   };
 

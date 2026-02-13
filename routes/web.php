@@ -121,7 +121,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         ->name('elenco-padrao.jogadores.destroy');
 });
 
-Route::middleware(['auth', 'roster.limit'])->group(function () {
+Route::middleware(['auth', 'roster.limit', 'legacy.first_access'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ligas', [LigaController::class, 'index'])->name('ligas');
     Route::post('/ligas/{liga}/entrar', [LigaController::class, 'join'])->name('ligas.join');

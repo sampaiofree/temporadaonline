@@ -22,9 +22,9 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
         }
 
         return $controller->index($request);
-    })->name('index');
+    })->middleware('legacy.first_access')->name('index');
 
-    Route::middleware('auth')->group(function () {
+    Route::middleware(['auth', 'legacy.first_access'])->group(function () {
         Route::get('/primeiro-acesso', [PrimeiroAcessoController::class, 'show'])->name('primeiro_acesso');
         Route::put('/primeiro-acesso/profile', [PrimeiroAcessoController::class, 'updateProfile'])
             ->name('primeiro_acesso.profile.update');
@@ -47,6 +47,8 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('match_center.data');
         Route::get('/finance-data', [LegacyController::class, 'financeData'])
             ->name('finance.data');
+        Route::get('/inbox-data', [LegacyController::class, 'inboxData'])
+            ->name('inbox.data');
         Route::get('/public-club-profile-data', [LegacyController::class, 'publicClubProfileData'])
             ->name('public_club_profile.data');
         Route::get('/esquema-tatico-data', [LegacyController::class, 'esquemaTaticoData'])

@@ -17,10 +17,12 @@ use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDesempenho;
 use App\Models\PartidaFolhaPagamento;
+use App\Models\Playstyle;
 use App\Models\PlayerFavorite;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -65,6 +67,7 @@ class LegacyController extends Controller
                 'squadDataUrl' => route('legacy.squad.data'),
                 'matchCenterDataUrl' => route('legacy.match_center.data'),
                 'financeDataUrl' => route('legacy.finance.data'),
+                'inboxDataUrl' => route('legacy.inbox.data'),
                 'publicClubProfileDataUrl' => route('legacy.public_club_profile.data'),
                 'esquemaTaticoDataUrl' => route('legacy.esquema_tatico.data'),
                 'esquemaTaticoSaveUrl' => route('legacy.esquema_tatico.save'),
@@ -93,6 +96,7 @@ class LegacyController extends Controller
                 'clube' => null,
                 'mercado' => [
                     'players' => [],
+                    'pagination' => null,
                     'closed' => false,
                     'period' => null,
                     'radar_ids' => [],
@@ -139,7 +143,7 @@ class LegacyController extends Controller
                 ->sum('wage_eur');
         }
 
-        $players = Elencopadrao::query()
+        $playersCollection = Elencopadrao::query()
             ->select([
                 'id',
                 'short_name',
@@ -148,12 +152,52 @@ class LegacyController extends Controller
                 'overall',
                 'value_eur',
                 'wage_eur',
+                'age',
+                'weak_foot',
+                'skill_moves',
+                'player_traits',
+                'pace',
+                'shooting',
+                'passing',
+                'dribbling',
+                'defending',
+                'physic',
+                'movement_acceleration',
+                'movement_sprint_speed',
+                'attacking_finishing',
+                'power_shot_power',
+                'power_long_shots',
+                'attacking_short_passing',
+                'skill_long_passing',
+                'mentality_vision',
+                'skill_dribbling',
+                'skill_ball_control',
+                'movement_agility',
+                'movement_balance',
+                'movement_reactions',
+                'defending_marking_awareness',
+                'mentality_interceptions',
+                'defending_standing_tackle',
+                'defending_sliding_tackle',
+                'power_strength',
+                'power_stamina',
+                'power_jumping',
+                'mentality_aggression',
                 'player_face_url',
             ])
             ->where('jogo_id', $liga->jogo_id)
             ->orderByDesc('overall')
-            ->get()
-            ->map(function (Elencopadrao $player) use ($elencos, $userClub) {
+            ->get();
+
+        $traitNames = $playersCollection
+            ->flatMap(fn (Elencopadrao $player) => $this->parseLegacyTraitTags($player->player_traits))
+            ->unique(fn (string $name) => Str::lower($name))
+            ->values();
+
+        $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
+
+        $players = $playersCollection
+            ->map(function (Elencopadrao $player) use ($elencos, $userClub, $playstylesMap) {
                 $entry = $elencos->get($player->id);
                 $club = $entry?->ligaClube;
                 $clubLiga = $club?->liga;
@@ -176,6 +220,38 @@ class LegacyController extends Controller
                     'overall' => $player->overall,
                     'value_eur' => $player->value_eur,
                     'wage_eur' => $player->wage_eur,
+                    'age' => $player->age,
+                    'weak_foot' => $player->weak_foot,
+                    'skill_moves' => $player->skill_moves,
+                    'player_traits' => $player->player_traits,
+                    'playstyle_badges' => $this->mapLegacyPlaystyleBadges($player->player_traits, $playstylesMap),
+                    'pace' => $player->pace,
+                    'shooting' => $player->shooting,
+                    'passing' => $player->passing,
+                    'dribbling' => $player->dribbling,
+                    'defending' => $player->defending,
+                    'physic' => $player->physic,
+                    'movement_acceleration' => $player->movement_acceleration,
+                    'movement_sprint_speed' => $player->movement_sprint_speed,
+                    'attacking_finishing' => $player->attacking_finishing,
+                    'power_shot_power' => $player->power_shot_power,
+                    'power_long_shots' => $player->power_long_shots,
+                    'attacking_short_passing' => $player->attacking_short_passing,
+                    'skill_long_passing' => $player->skill_long_passing,
+                    'mentality_vision' => $player->mentality_vision,
+                    'skill_dribbling' => $player->skill_dribbling,
+                    'skill_ball_control' => $player->skill_ball_control,
+                    'movement_agility' => $player->movement_agility,
+                    'movement_balance' => $player->movement_balance,
+                    'movement_reactions' => $player->movement_reactions,
+                    'defending_marking_awareness' => $player->defending_marking_awareness,
+                    'mentality_interceptions' => $player->mentality_interceptions,
+                    'defending_standing_tackle' => $player->defending_standing_tackle,
+                    'defending_sliding_tackle' => $player->defending_sliding_tackle,
+                    'power_strength' => $player->power_strength,
+                    'power_stamina' => $player->power_stamina,
+                    'power_jumping' => $player->power_jumping,
+                    'mentality_aggression' => $player->mentality_aggression,
                     'club_status' => $clubStatus,
                     'club_name' => $club?->nome,
                     'liga_nome' => $clubLiga?->nome,
@@ -190,8 +266,7 @@ class LegacyController extends Controller
                     'player_face_url' => $player->player_face_url,
                 ];
             })
-            ->values()
-            ->all();
+            ->values();
 
         $favoriteQuery = PlayerFavorite::query()
             ->where('user_id', $user->id);
@@ -208,8 +283,40 @@ class LegacyController extends Controller
             ->values()
             ->all();
 
+        $filterStatus = Str::upper(trim((string) $request->query('filter_status', 'TODOS')));
+        $filterPos = Str::upper(trim((string) $request->query('filter_pos', 'TODAS')));
+        $filterQuality = Str::upper(trim((string) $request->query('filter_quality', 'TODAS')));
+        $sortBy = Str::upper(trim((string) $request->query('sort_by', 'OVR_DESC')));
+        $filterValMinRaw = trim((string) $request->query('filter_val_min', ''));
+        $filterValMaxRaw = trim((string) $request->query('filter_val_max', ''));
+        $filterValMin = is_numeric($filterValMinRaw) ? (int) $filterValMinRaw : null;
+        $filterValMax = is_numeric($filterValMaxRaw) ? (int) $filterValMaxRaw : null;
+        $subMode = Str::lower(trim((string) $request->query('sub_mode', 'list')));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $shouldPaginate = $request->boolean('paginate')
+            || $request->has('page')
+            || $request->has('per_page');
+
+        $players = $this->filterLegacyMarketPlayers(
+            $players,
+            $favoriteIds,
+            $subMode,
+            $filterStatus,
+            $filterPos,
+            $filterQuality,
+            $filterValMin,
+            $filterValMax,
+            $sortBy,
+        );
+
+        [$playersPayload, $pagination] = $shouldPaginate
+            ? $this->paginateLegacyMarketPlayers($players, $page, $perPage)
+            : [$players->values()->all(), null];
+
         $mercadoPayload = [
-            'players' => $players,
+            'players' => $playersPayload,
+            'pagination' => $pagination,
             'closed' => $mercadoFechado,
             'period' => $periodoAtivo,
             'radar_ids' => $favoriteIds,
@@ -239,6 +346,517 @@ class LegacyController extends Controller
             ] : null,
             'mercado' => $mercadoPayload,
         ]);
+    }
+
+    private function filterLegacyMarketPlayers(
+        Collection $players,
+        array $favoriteIds,
+        string $subMode,
+        string $filterStatus,
+        string $filterPos,
+        string $filterQuality,
+        ?int $filterValMin,
+        ?int $filterValMax,
+        string $sortBy,
+    ): Collection {
+        $favoriteLookup = array_flip(array_map('intval', $favoriteIds));
+        $normalizedSubMode = Str::lower($subMode);
+
+        return $players
+            ->filter(function (array $player) use (
+                $favoriteLookup,
+                $normalizedSubMode,
+                $filterStatus,
+                $filterPos,
+                $filterQuality,
+                $filterValMin,
+                $filterValMax
+            ): bool {
+                $playerId = (int) ($player['elencopadrao_id'] ?? 0);
+                $clubStatus = (string) ($player['club_status'] ?? 'livre');
+
+                if ($normalizedSubMode === 'watchlist' && ! isset($favoriteLookup[$playerId])) {
+                    return false;
+                }
+
+                if ($filterStatus !== 'TODOS') {
+                    if ($filterStatus === 'LIVRE' && $clubStatus !== 'livre') {
+                        return false;
+                    }
+
+                    if ($filterStatus === 'MEU' && $clubStatus !== 'meu') {
+                        return false;
+                    }
+
+                    if ($filterStatus === 'RIVAL' && $clubStatus !== 'outro') {
+                        return false;
+                    }
+
+                    if ($filterStatus === 'CONTRATADO' && $clubStatus === 'livre') {
+                        return false;
+                    }
+                }
+
+                $primaryPosition = $this->legacyPrimaryPositionAlias((string) ($player['player_positions'] ?? ''));
+                if (! $this->matchesLegacyPositionFilter($filterPos, $primaryPosition)) {
+                    return false;
+                }
+
+                $overall = (int) ($player['overall'] ?? 0);
+                if (! $this->matchesLegacyQualityFilter($filterQuality, $overall)) {
+                    return false;
+                }
+
+                $valueEur = (int) ($player['value_eur'] ?? 0);
+                $valueInMillions = (int) max(0, round($valueEur / 1_000_000));
+
+                if ($filterValMin !== null && $valueInMillions < $filterValMin) {
+                    return false;
+                }
+
+                if ($filterValMax !== null && $valueInMillions > $filterValMax) {
+                    return false;
+                }
+
+                return true;
+            })
+            ->sort(function (array $a, array $b) use ($sortBy): int {
+                $overallA = (int) ($a['overall'] ?? 0);
+                $overallB = (int) ($b['overall'] ?? 0);
+                $valueA = (int) max(0, round(((int) ($a['value_eur'] ?? 0)) / 1_000_000));
+                $valueB = (int) max(0, round(((int) ($b['value_eur'] ?? 0)) / 1_000_000));
+
+                return match ($sortBy) {
+                    'OVR_ASC' => ($overallA <=> $overallB) ?: ((int) ($a['elencopadrao_id'] ?? 0) <=> (int) ($b['elencopadrao_id'] ?? 0)),
+                    'VAL_DESC' => ($valueB <=> $valueA) ?: ($overallB <=> $overallA),
+                    'VAL_ASC' => ($valueA <=> $valueB) ?: ($overallB <=> $overallA),
+                    default => ($overallB <=> $overallA) ?: ($valueB <=> $valueA),
+                };
+            })
+            ->values();
+    }
+
+    private function paginateLegacyMarketPlayers(Collection $players, int $page, int $perPage): array
+    {
+        $total = $players->count();
+        $lastPage = max(1, (int) ceil($total / max($perPage, 1)));
+        $currentPage = min(max(1, $page), $lastPage);
+        $offset = ($currentPage - 1) * $perPage;
+        $items = $players->slice($offset, $perPage)->values()->all();
+        $from = $total > 0 ? $offset + 1 : null;
+        $to = $total > 0 ? $offset + count($items) : null;
+
+        return [
+            $items,
+            [
+                'current_page' => $currentPage,
+                'per_page' => $perPage,
+                'last_page' => $lastPage,
+                'total' => $total,
+                'from' => $from,
+                'to' => $to,
+            ],
+        ];
+    }
+
+    private function legacyPrimaryPositionAlias(string $positions): string
+    {
+        $positionMap = [
+            'GK' => 'GOL',
+            'RB' => 'LD',
+            'RWB' => 'LD',
+            'LB' => 'LE',
+            'LWB' => 'LE',
+            'CB' => 'ZAG',
+            'CDM' => 'VOL',
+            'CM' => 'MC',
+            'CAM' => 'MEI',
+            'RM' => 'MD',
+            'LM' => 'ME',
+            'RW' => 'PD',
+            'LW' => 'PE',
+            'ST' => 'ATA',
+            'CF' => 'SA',
+        ];
+
+        $first = collect(explode(',', $positions))
+            ->map(fn ($part) => Str::upper(trim((string) $part)))
+            ->filter()
+            ->first();
+
+        if (! $first) {
+            return '---';
+        }
+
+        return $positionMap[$first] ?? $first;
+    }
+
+    private function matchesLegacyPositionFilter(string $filterPos, string $position): bool
+    {
+        if ($filterPos === 'TODAS') {
+            return true;
+        }
+
+        return match ($filterPos) {
+            'ATACANTES' => in_array($position, ['ATA', 'PE', 'PD', 'SA'], true),
+            'MEIO' => in_array($position, ['MC', 'MEI', 'VOL', 'ME', 'MD'], true),
+            'DEFESA' => in_array($position, ['ZAG', 'LD', 'LE', 'LWB', 'RWB'], true),
+            default => $position === $filterPos,
+        };
+    }
+
+    private function matchesLegacyQualityFilter(string $filterQuality, int $overall): bool
+    {
+        return match ($filterQuality) {
+            '90+' => $overall >= 90,
+            '89-88' => $overall >= 88 && $overall <= 89,
+            '87-84' => $overall >= 84 && $overall <= 87,
+            '83-80' => $overall >= 80 && $overall <= 83,
+            '79-73' => $overall >= 73 && $overall <= 79,
+            '72-' => $overall <= 72,
+            default => true,
+        };
+    }
+
+    private function parseLegacyTraitTags(mixed $traits): Collection
+    {
+        if (is_array($traits)) {
+            return collect($traits)
+                ->map(fn ($tag) => trim((string) $tag))
+                ->map(fn ($tag) => ltrim($tag, '#'))
+                ->filter()
+                ->values();
+        }
+
+        $raw = str_replace(['{', '}', '[', ']', '"'], '', (string) $traits);
+
+        return collect(preg_split('/[;,|]/', $raw) ?: [])
+            ->map(fn ($tag) => trim((string) $tag))
+            ->map(fn ($tag) => ltrim($tag, '#'))
+            ->filter()
+            ->values();
+    }
+
+    private function buildLegacyPlaystylesMap(Collection $traitNames): Collection
+    {
+        if ($traitNames->isEmpty()) {
+            return collect();
+        }
+
+        $lowerNames = $traitNames
+            ->map(fn (string $name) => Str::lower($name))
+            ->values();
+
+        $placeholders = $lowerNames->map(fn () => '?')->implode(',');
+        if ($placeholders === '') {
+            return collect();
+        }
+
+        return Playstyle::query()
+            ->whereRaw("LOWER(nome) in ({$placeholders})", $lowerNames->all())
+            ->get(['nome', 'imagem'])
+            ->keyBy(fn (Playstyle $playstyle) => Str::lower((string) $playstyle->nome));
+    }
+
+    private function mapLegacyPlaystyleBadges(mixed $traits, Collection $playstylesMap): array
+    {
+        $traitNames = $this->parseLegacyTraitTags($traits)
+            ->unique(fn (string $name) => Str::lower($name))
+            ->values();
+
+        if ($traitNames->isEmpty()) {
+            return [];
+        }
+
+        return $traitNames
+            ->map(function (string $traitName) use ($playstylesMap) {
+                $match = $playstylesMap->get(Str::lower($traitName));
+
+                return [
+                    'name' => (string) ($match?->nome ?: $traitName),
+                    'image_url' => $this->resolveEscudoUrl($match?->imagem),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    public function inboxData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+                'liga' => null,
+                'clube' => null,
+                'inbox' => [
+                    'messages' => [],
+                    'summary' => $this->buildLegacyInboxSummary(0, 0, 0),
+                ],
+            ], 404);
+        }
+
+        $scopeConfederacaoId = $liga->confederacao_id;
+        $userClubQuery = $user->clubesLiga()->with('escudo:id,clube_imagem');
+
+        if ($scopeConfederacaoId) {
+            $userClubQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $userClubQuery->where('liga_id', $liga->id);
+        }
+
+        $clube = $userClubQuery->first();
+
+        if (! $clube) {
+            return response()->json([
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'timezone' => $liga->timezone ?? 'UTC',
+                    'confederacao_id' => $liga->confederacao_id,
+                    'confederacao_nome' => $liga->confederacao?->nome,
+                ],
+                'clube' => null,
+                'inbox' => [
+                    'messages' => [],
+                    'summary' => $this->buildLegacyInboxSummary(0, 0, 0),
+                ],
+                'onboarding_url' => route('legacy.onboarding_clube', [
+                    'stage' => 'confederacao',
+                    'confederacao_id' => $scopeConfederacaoId,
+                ]),
+            ]);
+        }
+
+        $partidas = Partida::query()
+            ->with(['mandante:id,nome,user_id', 'visitante:id,nome,user_id'])
+            ->where('liga_id', $liga->id)
+            ->whereIn('estado', [
+                'confirmacao_necessaria',
+                'confirmada',
+                'agendada',
+                'placar_registrado',
+                'placar_confirmado',
+                'em_reclamacao',
+                'finalizada',
+            ])
+            ->where(function ($query) use ($clube): void {
+                $query->where('mandante_id', $clube->id)
+                    ->orWhere('visitante_id', $clube->id);
+            })
+            ->orderByRaw('scheduled_at IS NULL DESC, scheduled_at ASC, placar_registrado_em IS NULL, placar_registrado_em ASC, created_at DESC')
+            ->get([
+                'id',
+                'mandante_id',
+                'visitante_id',
+                'estado',
+                'scheduled_at',
+                'placar_mandante',
+                'placar_visitante',
+                'placar_registrado_por',
+                'placar_registrado_em',
+                'created_at',
+            ]);
+
+        $avaliacoes = PartidaAvaliacao::query()
+            ->whereIn('partida_id', $partidas->pluck('id'))
+            ->where('avaliador_user_id', $user->id)
+            ->get()
+            ->keyBy('partida_id');
+
+        $scheduleMatches = $partidas
+            ->filter(function (Partida $partida): bool {
+                return in_array((string) $partida->estado, ['confirmacao_necessaria', 'confirmada', 'agendada'], true)
+                    && ! $partida->scheduled_at;
+            })
+            ->values();
+
+        $confirmationMatches = $partidas
+            ->filter(function (Partida $partida) use ($user): bool {
+                if ((string) $partida->estado !== 'placar_registrado') {
+                    return false;
+                }
+
+                return (int) ($partida->placar_registrado_por ?? 0) !== (int) $user->id;
+            })
+            ->values();
+
+        $evaluationMatches = $partidas
+            ->filter(function (Partida $partida) use ($avaliacoes): bool {
+                if (! in_array((string) $partida->estado, ['placar_registrado', 'placar_confirmado', 'em_reclamacao', 'finalizada'], true)) {
+                    return false;
+                }
+
+                return ! $avaliacoes->has($partida->id);
+            })
+            ->values();
+
+        $messages = [];
+
+        if ($scheduleMatches->isNotEmpty()) {
+            $scheduleCount = (int) $scheduleMatches->count();
+            $opponents = $scheduleMatches
+                ->take(2)
+                ->map(fn (Partida $partida) => $this->legacyOpponentName($partida, (int) $clube->id))
+                ->filter()
+                ->values();
+            $opponentsLabel = $opponents->isNotEmpty()
+                ? ' ('.$opponents->implode(', ').($scheduleCount > 2 ? ', ...' : '').')'
+                : '';
+
+            $messages[] = [
+                'id' => 'schedule-pending',
+                'type' => 'AGENDA',
+                'title' => $scheduleCount === 1
+                    ? 'PARTIDA PENDENTE DE AGENDAMENTO'
+                    : 'PARTIDAS PENDENTES DE AGENDAMENTO',
+                'sender' => 'MATCH CENTER',
+                'content' => $scheduleCount === 1
+                    ? "Voce tem 1 confronto sem horario definido{$opponentsLabel}."
+                    : "Voce tem {$scheduleCount} confrontos sem horario definido{$opponentsLabel}.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'SCHEDULE',
+                'action_label' => 'AGENDAR PARTIDAS',
+            ];
+        }
+
+        foreach ($confirmationMatches as $partida) {
+            $opponent = $this->legacyOpponentName($partida, (int) $clube->id);
+            $mandante = $partida->placar_mandante ?? '-';
+            $visitante = $partida->placar_visitante ?? '-';
+
+            $messages[] = [
+                'id' => 'confirmation-'.$partida->id,
+                'type' => 'SUMULA',
+                'title' => 'CONFIRMACAO DE PLACAR',
+                'sender' => "VS {$opponent}",
+                'content' => "Seu adversario registrou {$mandante} x {$visitante}. Confirme ou conteste no Match Center.",
+                'date' => $partida->placar_registrado_em?->toIso8601String(),
+                'urgent' => true,
+                'action' => 'MATCH',
+                'action_label' => 'IR PARA CONFRONTOS',
+            ];
+        }
+
+        foreach ($evaluationMatches as $partida) {
+            $opponent = $this->legacyOpponentName($partida, (int) $clube->id);
+
+            $messages[] = [
+                'id' => 'evaluation-'.$partida->id,
+                'type' => 'AVALIACAO',
+                'title' => 'AVALIE O ADVERSARIO',
+                'sender' => "VS {$opponent}",
+                'content' => 'Esta partida aguarda sua avaliacao de desempenho.',
+                'date' => $partida->placar_registrado_em?->toIso8601String(),
+                'urgent' => false,
+                'action' => 'MATCH',
+                'action_label' => 'ABRIR MATCH CENTER',
+            ];
+        }
+
+        $summary = $this->buildLegacyInboxSummary(
+            (int) $scheduleMatches->count(),
+            (int) $confirmationMatches->count(),
+            (int) $evaluationMatches->count(),
+        );
+
+        return response()->json([
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'timezone' => $liga->timezone ?? 'UTC',
+                'confederacao_id' => $liga->confederacao_id,
+                'confederacao_nome' => $liga->confederacao?->nome,
+            ],
+            'clube' => [
+                'id' => $clube->id,
+                'user_id' => $clube->user_id,
+                'nome' => $clube->nome,
+                'escudo_url' => $this->resolveEscudoUrl($clube->escudo?->clube_imagem),
+            ],
+            'inbox' => [
+                'messages' => $messages,
+                'summary' => $summary,
+            ],
+        ]);
+    }
+
+    private function legacyOpponentName(Partida $partida, int $clubId): string
+    {
+        $isMandante = (int) $partida->mandante_id === $clubId;
+        $opponent = $isMandante ? $partida->visitante?->nome : $partida->mandante?->nome;
+
+        return (string) ($opponent ?: 'ADVERSARIO');
+    }
+
+    private function buildLegacyInboxSummary(int $scheduleCount, int $confirmationCount, int $evaluationCount): array
+    {
+        $scheduleCount = max(0, $scheduleCount);
+        $confirmationCount = max(0, $confirmationCount);
+        $evaluationCount = max(0, $evaluationCount);
+        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount;
+        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
+
+        if ($totalActions === 0) {
+            return [
+                'has_pending_actions' => false,
+                'total_actions' => 0,
+                'total_messages' => 0,
+                'schedule_count' => 0,
+                'confirmation_count' => 0,
+                'evaluation_count' => 0,
+                'headline' => 'SEM ACOES PENDENTES',
+                'detail' => 'Nenhuma pendencia encontrada na inbox.',
+                'primary_action' => null,
+            ];
+        }
+
+        $segments = [];
+
+        if ($scheduleCount > 0) {
+            $segments[] = $scheduleCount === 1
+                ? '1 partida para agendar'
+                : "{$scheduleCount} partidas para agendar";
+        }
+
+        if ($confirmationCount > 0) {
+            $segments[] = $confirmationCount === 1
+                ? '1 confirmacao de placar'
+                : "{$confirmationCount} confirmacoes de placar";
+        }
+
+        if ($evaluationCount > 0) {
+            $segments[] = $evaluationCount === 1
+                ? '1 avaliacao pendente'
+                : "{$evaluationCount} avaliacoes pendentes";
+        }
+
+        $headline = $totalActions === 1
+            ? 'VOCE TEM 1 ACAO PENDENTE'
+            : "VOCE TEM {$totalActions} ACOES PENDENTES";
+
+        return [
+            'has_pending_actions' => true,
+            'total_actions' => $totalActions,
+            'total_messages' => $totalMessages,
+            'schedule_count' => $scheduleCount,
+            'confirmation_count' => $confirmationCount,
+            'evaluation_count' => $evaluationCount,
+            'headline' => $headline,
+            'detail' => implode(' e ', $segments).'.',
+            'primary_action' => $scheduleCount > 0 ? 'SCHEDULE' : 'MATCH',
+        ];
     }
 
     public function myClubData(Request $request): JsonResponse
@@ -1013,14 +1631,13 @@ class LegacyController extends Controller
         $elencoEntries = LigaClubeElenco::query()
             ->with('elencopadrao')
             ->where('liga_clube_id', $club->id)
+            ->where('ativo', true)
             ->when(
                 $scopeConfederacaoId,
                 fn ($query) => $query->where('confederacao_id', $scopeConfederacaoId),
                 fn ($query) => $query->where('liga_id', $club->liga_id),
             )
-            ->orderByDesc('ativo')
             ->orderByDesc('id')
-            ->limit(30)
             ->get();
 
         $players = $elencoEntries->map(function (LigaClubeElenco $entry) {

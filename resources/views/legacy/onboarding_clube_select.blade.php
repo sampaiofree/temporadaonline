@@ -27,7 +27,7 @@
         </script>
         @include('components.app_assets')
         @viteReactRefresh
-        @vite(['resources/js/legacy/onboarding_clube_select.jsx'])
+        @vite(['resources/css/app.css', 'resources/js/legacy/onboarding_clube_select.jsx'])
     </head>
     <body class="antialiased">
         <div id="legacy-onboarding-clube-select-app"></div>
