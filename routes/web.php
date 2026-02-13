@@ -39,7 +39,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/dashboard');
+Route::redirect('/', '/legacy');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
