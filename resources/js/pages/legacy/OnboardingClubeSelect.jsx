@@ -210,7 +210,18 @@ export default function OnboardingClubeSelect() {
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            {confederacoes.length === 0 ? (
+                <div className="bg-[#121212] border border-[#FFD700]/40 p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[10px] text-white/65 font-black uppercase italic tracking-[0.12em]">
+                        Voce ja esta inscrito em todas as confederacoes disponiveis.
+                    </p>
+                    <p className="text-[9px] text-white/40 font-bold uppercase italic tracking-[0.08em] mt-2">
+                        Cada confederacao permite apenas uma liga por usuario.
+                    </p>
+                </div>
+            ) : null}
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2" style={{ display: confederacoes.length === 0 ? 'none' : undefined }}>
                 {confederacoes.map((confed) => {
                     const active = String(confed.id) === String(selectedConfederacaoId);
 

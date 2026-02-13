@@ -40,8 +40,23 @@ class LegacyOnboardingClubeController extends Controller
         }
 
         $ligaId = $request->query('liga_id');
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
 
         if (! $ligaId) {
+            if ($confederacaoId) {
+                $userLiga = $this->resolveUserLeagueForConfederacao($user, $confederacaoId);
+
+                if ($userLiga) {
+                    return redirect()->route('legacy.onboarding_clube', [
+                        'liga_id' => $userLiga->id,
+                        'stage' => 'clube',
+                        'club_step' => 'nome',
+                        'step' => 1,
+                    ]);
+                }
+            }
+
             return view('legacy.onboarding_clube_select', [
                 'selectorData' => $this->buildSelectorData($user),
             ]);
@@ -81,6 +96,22 @@ class LegacyOnboardingClubeController extends Controller
             return response()->json([
                 'message' => 'Seu perfil está incompatível com esta liga (jogo/geração).',
             ], 422);
+        }
+
+        if ($liga->confederacao_id) {
+            $existingLiga = $this->resolveUserLeagueForConfederacao($user, (int) $liga->confederacao_id);
+
+            if ($existingLiga && (int) $existingLiga->id !== (int) $liga->id) {
+                return response()->json([
+                    'message' => 'Voce ja esta inscrito em outra liga desta confederacao.',
+                    'redirect' => route('legacy.onboarding_clube', [
+                        'liga_id' => $existingLiga->id,
+                        'stage' => 'clube',
+                        'club_step' => 'nome',
+                        'step' => 1,
+                    ]),
+                ], 422);
+            }
         }
 
         $user->ligas()->syncWithoutDetaching([$liga->id]);
@@ -203,8 +234,20 @@ class LegacyOnboardingClubeController extends Controller
     private function buildSelectorData(User $user): array
     {
         $registeredLeagueIds = $user->ligas()->pluck('ligas.id')->map(fn ($id) => (int) $id)->all();
+        $registeredConfederacaoIds = $user->ligas()
+            ->whereNotNull('ligas.confederacao_id')
+            ->pluck('ligas.confederacao_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
 
-        $confederacoes = Confederacao::query()
+        $confederacoesQuery = Confederacao::query();
+        if (! empty($registeredConfederacaoIds)) {
+            $confederacoesQuery->whereNotIn('id', $registeredConfederacaoIds);
+        }
+
+        $confederacoes = $confederacoesQuery
             ->with(['ligas' => function ($query) {
                 $query->with(['jogo:id,nome', 'geracao:id,nome', 'plataforma:id,nome'])
                     ->orderBy('nome');
@@ -244,6 +287,18 @@ class LegacyOnboardingClubeController extends Controller
                 'cancel_url' => route('legacy.index'),
             ],
         ];
+    }
+
+    private function resolveUserLeagueForConfederacao(User $user, int $confederacaoId): ?Liga
+    {
+        return $user->ligas()
+            ->where('ligas.confederacao_id', $confederacaoId)
+            ->orderBy('ligas.id')
+            ->first([
+                'ligas.id',
+                'ligas.nome',
+                'ligas.confederacao_id',
+            ]);
     }
 
     private function buildClubEditorData(Request $request): array
