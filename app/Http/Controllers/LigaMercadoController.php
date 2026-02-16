@@ -6,9 +6,10 @@ use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\Elencopadrao;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
-use App\Models\LigaPeriodo;
 use App\Models\LigaProposta;
 use App\Models\PlayerFavorite;
+use App\Services\AuctionService;
+use App\Services\MarketWindowService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -20,8 +21,21 @@ class LigaMercadoController extends Controller
     {
         $liga = $this->resolveUserLiga($request);
         $userClub = $this->resolveUserClub($request);
-        $periodoAtivo = LigaPeriodo::activeRangeForLiga($liga);
-        $mercadoFechado = $periodoAtivo !== null;
+        /** @var AuctionService $auctionService */
+        $auctionService = app(AuctionService::class);
+        /** @var MarketWindowService $marketWindowService */
+        $marketWindowService = app(MarketWindowService::class);
+
+        if ($liga->confederacao_id) {
+            $auctionService->finalizeExpiredAuctions((int) $liga->confederacao_id);
+        }
+
+        $marketWindow = $marketWindowService->resolveForLiga($liga);
+        $marketMode = (string) ($marketWindow['mode'] ?? MarketWindowService::MODE_OPEN);
+        $periodoAtivo = $marketWindow['match_period'] ?? null;
+        $periodoLeilaoAtivo = $marketWindow['auction_period'] ?? null;
+        $mercadoFechado = $marketMode === MarketWindowService::MODE_CLOSED;
+        $mercadoLeilao = $marketMode === MarketWindowService::MODE_AUCTION;
         $confederacaoId = $liga->confederacao_id;
 
         $elencosQuery = LigaClubeElenco::with(['elencopadrao', 'ligaClube.liga']);
@@ -101,8 +115,47 @@ class LigaMercadoController extends Controller
                     'player_face_url' => $player->player_face_url,
                 ];
             })
-            ->values()
-            ->all();
+            ->values();
+
+        if ($mercadoLeilao) {
+            $players = $players
+                ->filter(fn (array $player) => ($player['club_status'] ?? '') === 'livre')
+                ->values();
+
+            $auctionSnapshot = $auctionService->buildAuctionSnapshotForPlayers(
+                $liga,
+                $players->pluck('elencopadrao_id')->all(),
+                $userClub ? (int) $userClub->id : null,
+            );
+
+            $players = $players
+                ->map(function (array $player) use ($auctionSnapshot) {
+                    $playerId = (int) ($player['elencopadrao_id'] ?? 0);
+                    $baseValue = (int) ($player['value_eur'] ?? 0);
+                    $auction = $auctionSnapshot[$playerId] ?? null;
+
+                    $player['can_buy'] = false;
+                    $player['can_multa'] = false;
+                    $player['auction'] = [
+                        'enabled' => true,
+                        'status' => (string) ($auction['status'] ?? 'aberto'),
+                        'has_bid' => (bool) ($auction['has_bid'] ?? false),
+                        'base_value_eur' => (int) ($auction['base_value_eur'] ?? $baseValue),
+                        'current_bid_eur' => (int) ($auction['current_bid_eur'] ?? $baseValue),
+                        'leader_club_id' => isset($auction['leader_club_id']) ? (int) $auction['leader_club_id'] : null,
+                        'leader_club_name' => $auction['leader_club_name'] ?? null,
+                        'expires_at' => $auction['expires_at'] ?? null,
+                        'seconds_remaining' => isset($auction['seconds_remaining']) ? (int) $auction['seconds_remaining'] : null,
+                        'is_leader' => (bool) ($auction['is_leader'] ?? false),
+                        'next_min_bid_eur' => (int) ($auction['next_min_bid_eur'] ?? $baseValue),
+                    ];
+
+                    return $player;
+                })
+                ->values();
+        }
+
+        $players = $players->all();
 
         $favoriteQuery = PlayerFavorite::query()
             ->where('user_id', $request->user()->id);
@@ -123,6 +176,10 @@ class LigaMercadoController extends Controller
             'players' => $players,
             'closed' => $mercadoFechado,
             'period' => $periodoAtivo,
+            'mode' => $marketMode,
+            'auction_period' => $periodoLeilaoAtivo,
+            'bid_increment_options' => $auctionService->getBidIncrementOptions(),
+            'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
             'radar_ids' => $favoriteIds,
             'propostas_recebidas_count' => $userClub
                 ? (int) LigaProposta::query()

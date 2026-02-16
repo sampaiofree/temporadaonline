@@ -11,13 +11,16 @@ use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaPeriodo;
+use App\Services\MarketWindowService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 
 class LeagueTransferController extends Controller
 {
-    public function __construct(private readonly TransferService $transferService)
-    {
+    public function __construct(
+        private readonly TransferService $transferService,
+        private readonly MarketWindowService $marketWindowService,
+    ) {
     }
 
     public function buy(BuyPlayerRequest $request, Liga $liga, LigaClube $clube): JsonResponse
@@ -136,6 +139,13 @@ class LeagueTransferController extends Controller
 
     private function ensureMarketOpen(Liga $liga): ?JsonResponse
     {
+        $window = $this->marketWindowService->resolveForLiga($liga);
+        if ($window['is_auction'] ?? false) {
+            return response()->json([
+                'message' => 'Mercado em modo leilao. Compra, multa e negociacoes tradicionais estao bloqueadas.',
+            ], 423);
+        }
+
         $periodo = LigaPeriodo::activeRangeForLiga($liga);
         if (! $periodo) {
             return null;

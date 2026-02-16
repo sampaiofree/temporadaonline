@@ -8,12 +8,17 @@ use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaProposta;
+use App\Services\MarketWindowService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LigaPropostaController extends Controller
 {
+    public function __construct(private readonly MarketWindowService $marketWindowService)
+    {
+    }
+
     public function index(Request $request, Liga $liga, LigaClube $clube): JsonResponse
     {
         $this->ensureClubAccess($request, $liga, $clube);
@@ -57,6 +62,9 @@ class LigaPropostaController extends Controller
     public function store(Request $request, Liga $liga, LigaClube $clube): JsonResponse
     {
         $this->ensureClubAccess($request, $liga, $clube);
+        if ($blocked = $this->ensureProposalAllowed($liga)) {
+            return $blocked;
+        }
 
         $data = $request->validate([
             'elencopadrao_id' => ['required', 'integer', 'exists:elencopadrao,id'],
@@ -156,6 +164,9 @@ class LigaPropostaController extends Controller
     public function accept(Request $request, Liga $liga, LigaClube $clube, LigaProposta $proposta, TransferService $transferService): JsonResponse
     {
         $this->ensureClubAccess($request, $liga, $clube);
+        if ($blocked = $this->ensureProposalAllowed($liga)) {
+            return $blocked;
+        }
 
         if ((int) $proposta->clube_origem_id !== (int) $clube->id || (int) $proposta->liga_origem_id !== (int) $liga->id) {
             abort(403);
@@ -177,6 +188,9 @@ class LigaPropostaController extends Controller
     public function reject(Request $request, Liga $liga, LigaClube $clube, LigaProposta $proposta): JsonResponse
     {
         $this->ensureClubAccess($request, $liga, $clube);
+        if ($blocked = $this->ensureProposalAllowed($liga)) {
+            return $blocked;
+        }
 
         if ((int) $proposta->clube_origem_id !== (int) $clube->id || (int) $proposta->liga_origem_id !== (int) $liga->id) {
             abort(403);
@@ -198,6 +212,9 @@ class LigaPropostaController extends Controller
     public function cancel(Request $request, Liga $liga, LigaClube $clube, LigaProposta $proposta): JsonResponse
     {
         $this->ensureClubAccess($request, $liga, $clube);
+        if ($blocked = $this->ensureProposalAllowed($liga)) {
+            return $blocked;
+        }
 
         if ((int) $proposta->clube_destino_id !== (int) $clube->id || (int) $proposta->liga_destino_id !== (int) $liga->id) {
             abort(403);
@@ -282,5 +299,16 @@ class LigaPropostaController extends Controller
             ] : null,
             'oferta_jogadores' => $offer,
         ];
+    }
+
+    private function ensureProposalAllowed(Liga $liga): ?JsonResponse
+    {
+        if ($this->marketWindowService->isAuctionActive($liga)) {
+            return response()->json([
+                'message' => 'Mercado em modo leilao. Propostas entre clubes estao bloqueadas.',
+            ], 423);
+        }
+
+        return null;
     }
 }

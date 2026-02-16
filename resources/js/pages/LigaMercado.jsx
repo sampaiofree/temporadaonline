@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect } from 'react';
+﻿import { useMemo, useState, useEffect } from 'react';
 import Navbar from '../components/app_publico/Navbar';
 import Alert from '../components/app_publico/Alert';
 import PlayerDetailModal from '../components/app_publico/PlayerDetailModal';
@@ -14,14 +14,14 @@ const currencyFormatter = new Intl.NumberFormat('pt-BR', {
 });
 
 const formatCurrency = (value) => {
-    if (value === null || value === undefined) return '—';
+    if (value === null || value === undefined) return 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â';
     return currencyFormatter.format(value);
 };
 
 const formatShortMoney = (value) => {
-    if (value === null || value === undefined) return '—';
+    if (value === null || value === undefined) return 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â';
     const n = Number(value);
-    if (!Number.isFinite(n)) return '—';
+    if (!Number.isFinite(n)) return 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â';
 
     const abs = Math.abs(n);
 
@@ -97,14 +97,17 @@ const STATUS_FILTERS = [
 const MODAL_MODES = {
     BUY: 'buy',
     MULTA: 'multa',
+    AUCTION: 'auction',
 };
+
+const AUCTION_INCREMENT_OPTIONS_DEFAULT = [100_000, 200_000, 300_000, 500_000, 1_000_000];
 
 const OVR_FILTERS = [
     { value: 'all', label: 'Todos' },
     { value: 'elite', label: 'Elite 88+' },
-    { value: 'gold', label: 'Ouro 84–87' },
-    { value: 'silver', label: 'Prata 80–83' },
-    { value: 'bronze', label: 'Bronze ≤79' },
+    { value: 'gold', label: 'Ouro 84ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“87' },
+    { value: 'silver', label: 'Prata 80ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“83' },
+    { value: 'bronze', label: 'Bronze ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¤79' },
 ];
 
 const POSITION_GROUPS = [
@@ -199,12 +202,19 @@ export default function LigaMercado() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
     const mercado = getMercadoFromWindow();
+    const marketMode = String(mercado?.mode || (mercado?.closed ? 'closed' : 'open')).toLowerCase();
+    const isAuctionMode = marketMode === 'auction';
     const marketClosed = Boolean(mercado?.closed);
     const closedPeriod = mercado?.period ?? null;
+    const auctionPeriod = mercado?.auction_period ?? null;
     const closedPeriodLabel =
         closedPeriod?.inicio_label && closedPeriod?.fim_label
-            ? `O mercado está fechado durante o período de partidas (${closedPeriod.inicio_label} até ${closedPeriod.fim_label}).`
-            : 'O mercado está fechado durante o período de partidas.';
+            ? `O mercado esta fechado durante o periodo de partidas (${closedPeriod.inicio_label} ate ${closedPeriod.fim_label}).`
+            : 'O mercado esta fechado durante o periodo de partidas.';
+    const auctionPeriodLabel =
+        auctionPeriod?.inicio_label && auctionPeriod?.fim_label
+            ? `Leilao ativo: ${auctionPeriod.inicio_label} ate ${auctionPeriod.fim_label}.`
+            : 'Leilao ativo para jogadores livres.';
     const propostasRecebidasCount = Number(mercado?.propostas_recebidas_count ?? 0);
 
     const [playersData, setPlayersData] = useState(mercado.players || []);
@@ -219,6 +229,9 @@ export default function LigaMercado() {
     const [modalMode, setModalMode] = useState(null);
     const [isModalSubmitting, setIsModalSubmitting] = useState(false);
     const [modalError, setModalError] = useState('');
+    const [auctionBidIncrement, setAuctionBidIncrement] = useState(
+        Number(mercado?.bid_increment_options?.[0] ?? AUCTION_INCREMENT_OPTIONS_DEFAULT[0]),
+    );
 
     const [proposalPlayer, setProposalPlayer] = useState(null);
     const [proposalMoney, setProposalMoney] = useState('');
@@ -233,6 +246,16 @@ export default function LigaMercado() {
     const [detailCache, setDetailCache] = useState({});
 
     const [feedback, setFeedback] = useState('');
+
+    const auctionBidOptions = useMemo(() => {
+        const raw = Array.isArray(mercado?.bid_increment_options)
+            ? mercado.bid_increment_options
+                  .map((value) => Number(value))
+                  .filter((value) => Number.isFinite(value) && value > 0)
+            : [];
+
+        return raw.length > 0 ? raw : AUCTION_INCREMENT_OPTIONS_DEFAULT;
+    }, [mercado?.bid_increment_options]);
 
     // Top bar
     const [q, setQ] = useState('');
@@ -402,7 +425,7 @@ export default function LigaMercado() {
     const pageItems = filtered.slice((safePage - 1) * perPage, safePage * perPage);
 
     useEffect(() => {
-        // se filtros mudarem, volta pra página 1
+        // se filtros mudarem, volta pra pÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡gina 1
         setPage(1);
     }, [q, statusFilter, radarOnly, positionSectorFilter, positionFilter, ovrFilter, clubFilter, minValue, maxValue]);
 
@@ -442,12 +465,17 @@ export default function LigaMercado() {
     };
 
     /* =========================
-       Ações
+       AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes
 ========================= */
 
     const openMarketModal = (player, mode) => {
         if (!clube || !liga) {
-            setFeedback('Você precisa criar um clube antes de operar no mercado.');
+            setFeedback('Voce precisa criar um clube antes de operar no mercado.');
+            return;
+        }
+
+        if (isAuctionMode && mode !== MODAL_MODES.AUCTION) {
+            setFeedback('Mercado em modo leilao. Compra e multa estao bloqueadas.');
             return;
         }
 
@@ -464,9 +492,19 @@ export default function LigaMercado() {
 
     const openPurchaseModal = (player) => openMarketModal(player, MODAL_MODES.BUY);
     const openMultaModal = (player) => openMarketModal(player, MODAL_MODES.MULTA);
+    const openAuctionModal = (player) => {
+        const firstIncrement = Number(auctionBidOptions[0] ?? AUCTION_INCREMENT_OPTIONS_DEFAULT[0]);
+        setAuctionBidIncrement(firstIncrement);
+        openMarketModal(player, MODAL_MODES.AUCTION);
+    };
     const openProposalModal = (player) => {
         if (!clube || !liga) {
-            setFeedback('Você precisa criar um clube antes de operar no mercado.');
+            setFeedback('Voce precisa criar um clube antes de operar no mercado.');
+            return;
+        }
+
+        if (isAuctionMode) {
+            setFeedback('Mercado em modo leilao. Propostas estao bloqueadas.');
             return;
         }
 
@@ -541,11 +579,11 @@ export default function LigaMercado() {
                     setDetailExpanded(true);
                 }
             } else {
-                setDetailError('Não foi possível carregar a ficha completa.');
+                setDetailError('NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel carregar a ficha completa.');
             }
         } catch (error) {
             setDetailError(
-                error.response?.data?.message ?? 'Não foi possível carregar a ficha completa.',
+                error.response?.data?.message ?? 'NÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o foi possÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel carregar a ficha completa.',
             );
         } finally {
             setDetailLoading(false);
@@ -573,6 +611,18 @@ export default function LigaMercado() {
                   return { label: 'Crie seu clube', disabled: true, action: null };
               }
 
+              if (isAuctionMode) {
+                  if (detailPlayer.club_status === 'livre') {
+                      if (detailPlayer?.auction?.is_leader) {
+                          return { label: 'Liderando', disabled: true, action: null };
+                      }
+
+                      return { label: 'Dar lance', disabled: false, action: MODAL_MODES.AUCTION };
+                  }
+
+                  return { label: 'Leilao: indisponivel', disabled: true, action: null };
+              }
+
               if (detailPlayer.club_status === 'livre') {
                   return { label: 'Contratar jogador', disabled: false, action: MODAL_MODES.BUY };
               }
@@ -585,12 +635,14 @@ export default function LigaMercado() {
                   return { label: 'No clube', disabled: true, action: null };
               }
 
-              return { label: 'Indisponível', disabled: true, action: null };
+              return { label: 'Indisponivel', disabled: true, action: null };
           })()
         : null;
 
     const detailStatusLabel = detailPlayer
-        ? detailPlayer.club_status === 'livre'
+        ? detailPlayer?.auction?.has_bid && detailPlayer?.auction?.leader_club_name
+            ? `Lider: ${detailPlayer.auction.leader_club_name}`
+            : detailPlayer.club_status === 'livre'
             ? 'Livre'
             : detailPlayer.club_status === 'meu'
             ? 'Meu clube'
@@ -617,6 +669,8 @@ export default function LigaMercado() {
                       openPurchaseModal(detailPlayer);
                   } else if (detailAction.action === MODAL_MODES.MULTA) {
                       openMultaModal(detailPlayer);
+                  } else if (detailAction.action === MODAL_MODES.AUCTION) {
+                      openAuctionModal(detailPlayer);
                   }
               },
           }
@@ -649,8 +703,82 @@ export default function LigaMercado() {
         );
     };
 
+    const applyAuctionSnapshot = (playerId, auctionSnapshot) => {
+        if (!auctionSnapshot) {
+            return;
+        }
+
+        const normalized = {
+            enabled: Boolean(auctionSnapshot?.enabled ?? true),
+            status: String(auctionSnapshot?.status ?? 'aberto'),
+            has_bid: Boolean(auctionSnapshot?.has_bid ?? false),
+            base_value_eur: Number(auctionSnapshot?.base_value_eur ?? 0),
+            current_bid_eur: Number(
+                auctionSnapshot?.current_bid_eur ??
+                    auctionSnapshot?.base_value_eur ??
+                    0,
+            ),
+            leader_club_id:
+                auctionSnapshot?.leader_club_id === null || auctionSnapshot?.leader_club_id === undefined
+                    ? null
+                    : Number(auctionSnapshot.leader_club_id),
+            leader_club_name: auctionSnapshot?.leader_club_name ?? null,
+            expires_at: auctionSnapshot?.expires_at ?? null,
+            seconds_remaining:
+                auctionSnapshot?.seconds_remaining === null || auctionSnapshot?.seconds_remaining === undefined
+                    ? null
+                    : Number(auctionSnapshot.seconds_remaining),
+            is_leader: Boolean(auctionSnapshot?.is_leader ?? false),
+            next_min_bid_eur: Number(
+                auctionSnapshot?.next_min_bid_eur ??
+                    auctionSnapshot?.current_bid_eur ??
+                    auctionSnapshot?.base_value_eur ??
+                    0,
+            ),
+        };
+
+        setPlayersData((prev) =>
+            prev.map((entry) =>
+                entry.elencopadrao_id === playerId
+                    ? {
+                          ...entry,
+                          auction: normalized,
+                      }
+                    : entry,
+            ),
+        );
+
+        setModalPlayer((prev) =>
+            prev && prev.elencopadrao_id === playerId
+                ? {
+                      ...prev,
+                      auction: normalized,
+                  }
+                : prev,
+        );
+
+        setDetailPlayer((prev) =>
+            prev && prev.elencopadrao_id === playerId
+                ? {
+                      ...prev,
+                      auction: normalized,
+                  }
+                : prev,
+        );
+    };
+
     const getModalPaymentAmount = () => {
         if (!modalPlayer || !modalMode) return 0;
+
+        if (modalMode === MODAL_MODES.AUCTION) {
+            const hasBid = Boolean(modalPlayer?.auction?.has_bid);
+            const baseValue = Number(modalPlayer?.value_eur ?? 0);
+            const currentBid = Number(modalPlayer?.auction?.current_bid_eur ?? baseValue);
+            const increment = Math.max(0, Number(auctionBidIncrement || 0));
+
+            return hasBid ? currentBid + increment : baseValue;
+        }
+
         const baseValue = Number(
             (modalMode === MODAL_MODES.MULTA ? modalPlayer.entry_value_eur : null) ??
                 modalPlayer.value_eur ??
@@ -672,20 +800,45 @@ export default function LigaMercado() {
             return;
         }
 
+        const isBuy = modalMode === MODAL_MODES.BUY;
+        const isAuctionBid = modalMode === MODAL_MODES.AUCTION;
+
+        if (
+            isAuctionBid &&
+            modalPlayer?.auction?.has_bid &&
+            !auctionBidOptions.includes(Math.max(0, Number(auctionBidIncrement || 0)))
+        ) {
+            setModalError('Selecione um incremento valido para o lance.');
+            return;
+        }
+
         setIsModalSubmitting(true);
         setModalError('');
 
-        const isBuy = modalMode === MODAL_MODES.BUY;
-        const endpoint = isBuy ? 'comprar' : 'multa';
+        const endpoint = isAuctionBid ? 'leiloes/lances' : isBuy ? 'comprar' : 'multa';
         const paymentAmount = getModalPaymentAmount();
 
         try {
+            const payload = {
+                elencopadrao_id: modalPlayer.elencopadrao_id,
+                ...(isAuctionBid && modalPlayer?.auction?.has_bid
+                    ? { increment: Math.max(0, Number(auctionBidIncrement || 0)) }
+                    : {}),
+            };
+
             const { data } = await window.axios.post(
                 `/api/ligas/${liga.id}/clubes/${clube.id}/${endpoint}`,
-                {
-                    elencopadrao_id: modalPlayer.elencopadrao_id,
-                },
+                payload,
             );
+
+            if (isAuctionBid) {
+                setClubBalance((prev) => prev - paymentAmount);
+                applyAuctionSnapshot(modalPlayer.elencopadrao_id, data?.auction ?? null);
+                setFeedback(data?.message ?? 'Lance registrado com sucesso.');
+                setPage(1);
+                closeModal();
+                return;
+            }
 
             applyPlayerToMyClub(modalPlayer.elencopadrao_id);
             setClubBalance((prev) => prev - paymentAmount);
@@ -701,7 +854,11 @@ export default function LigaMercado() {
         } catch (error) {
             setModalError(
                 error.response?.data?.message ??
-                    (isBuy ? 'Não foi possível completar a compra.' : 'Não foi possível pagar a multa.'),
+                    (isAuctionBid
+                        ? 'Nao foi possivel registrar o lance.'
+                        : isBuy
+                        ? 'Nao foi possivel completar a compra.'
+                        : 'Nao foi possivel pagar a multa.'),
             );
         } finally {
             setIsModalSubmitting(false);
@@ -724,6 +881,10 @@ export default function LigaMercado() {
         if (!proposalPlayer || !liga || !clube) return;
         if (marketClosed) {
             setProposalError(closedPeriodLabel);
+            return;
+        }
+        if (isAuctionMode) {
+            setProposalError('Mercado em modo leilao. Propostas estao bloqueadas.');
             return;
         }
 
@@ -810,11 +971,12 @@ export default function LigaMercado() {
             modalPlayer && modalPlayer.elencopadrao_id === player.elencopadrao_id;
         const isBuyActive = modalMode === MODAL_MODES.BUY && isPlayerModalActive;
         const isMultaActive = modalMode === MODAL_MODES.MULTA && isPlayerModalActive;
+        const isAuctionActive = modalMode === MODAL_MODES.AUCTION && isPlayerModalActive;
         const isProposalActive =
             proposalPlayer && proposalPlayer.elencopadrao_id === player.elencopadrao_id;
 
         if (player.club_status === 'livre') {
-            const isDisabled = !clube;
+            const isDisabled = !clube || (isAuctionMode && Boolean(player?.auction?.is_leader));
             if (marketClosed) {
                 return (
                     <span className="table-action-badge neutral" aria-label="Mercado fechado">
@@ -826,19 +988,31 @@ export default function LigaMercado() {
                 <button
                     type="button"
                     className={`table-action-badge primary${isDisabled ? ' disabled' : ''}`}
-                    onClick={() => openPurchaseModal(player)}
-                    disabled={isDisabled || (isBuyActive && isModalSubmitting)}
+                    onClick={() => (isAuctionMode ? openAuctionModal(player) : openPurchaseModal(player))}
+                    disabled={isDisabled || ((isBuyActive || isAuctionActive) && isModalSubmitting)}
                 >
-                    {isBuyActive && isModalSubmitting
+                    {(isBuyActive || isAuctionActive) && isModalSubmitting
                         ? 'Operando...'
                         : isDisabled
-                        ? 'Crie seu clube'
+                        ? isAuctionMode && player?.auction?.is_leader
+                            ? 'Liderando'
+                            : 'Crie seu clube'
+                        : isAuctionMode
+                        ? 'Dar lance'
                         : 'Comprar'}
                 </button>
             );
         }
 
         if (player.club_status === 'outro') {
+            if (isAuctionMode) {
+                return (
+                    <span className="table-action-badge neutral" aria-label="Modo leilao">
+                        Leilao
+                    </span>
+                );
+            }
+
             if (marketClosed) {
                 return (
                     <span className="table-action-badge neutral" aria-label="Mercado fechado">
@@ -870,19 +1044,19 @@ export default function LigaMercado() {
 
         if (player.club_status === 'meu') {
             return (
-                <span className="table-action-badge neutral" aria-label="Jogador já pertence ao seu clube">
+                <span className="table-action-badge neutral" aria-label="Jogador ja pertence ao seu clube">
                     No clube
                 </span>
             );
         }
 
-        return <span>—</span>;
+        return <span>--</span>;
     };
 
     if (!liga) {
         return (
             <main className="liga-mercado-screen">
-                <p className="ligas-empty">Liga indisponível.</p>
+                <p className="ligas-empty">Liga indisponÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel.</p>
                 <Navbar active="ligas" />
             </main>
         );
@@ -892,10 +1066,14 @@ export default function LigaMercado() {
     const modalTitle =
         modalMode === MODAL_MODES.MULTA
             ? `Pagar multa por ${modalPlayer?.short_name || 'jogador'}`
+            : modalMode === MODAL_MODES.AUCTION
+            ? `Dar lance em ${modalPlayer?.short_name || 'jogador'}`
             : `Comprar ${modalPlayer?.short_name || 'jogador'}`;
     const modalDescription =
         modalMode === MODAL_MODES.MULTA
-            ? 'Veja o impacto financeiro antes de pagar a cláusula de rescisão.'
+            ? 'Veja o impacto financeiro antes de pagar a clausula de rescisao.'
+            : modalMode === MODAL_MODES.AUCTION
+            ? 'Selecione o valor do lance. Cada novo lance reinicia o cronometro de 5 minutos.'
             : 'Veja o impacto financeiro antes de confirmar a compra.';
 
     return (
@@ -903,7 +1081,7 @@ export default function LigaMercado() {
             {/* HERO */}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">MERCADO</p>
-                <h1 className="ligas-title">Jogadores da Confederação</h1>
+                <h1 className="ligas-title">Jogadores da ConfederaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o</h1>
                 <p className="ligas-subtitle">
                     {clube ? `Operando como ${clube.nome}` : 'Crie seu clube para negociar no mercado.'}
                 </p>
@@ -915,8 +1093,15 @@ export default function LigaMercado() {
                     description={closedPeriodLabel}
                 />
             )}
+            {isAuctionMode && (
+                <Alert
+                    variant="info"
+                    title="Modo leilao"
+                    description={auctionPeriodLabel}
+                />
+            )}
 
-            {/* TOP BAR: Busca + Botão Filtros */}
+            {/* TOP BAR: Busca + BotÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o Filtros */}
             <section className="mercado-filters" aria-label="Busca e filtros do mercado">
                 <div className="mercado-search">
                     <span className="mercado-search-icon" aria-hidden="true">
@@ -940,7 +1125,7 @@ export default function LigaMercado() {
                     Filtros
                 </button>
 
-                {liga && (
+                {liga && !isAuctionMode && (
                     <a
                         href={`/liga/mercado/propostas?liga_id=${liga.id}`}
                         className="btn-outline mercado-propostas-button"
@@ -970,7 +1155,7 @@ export default function LigaMercado() {
                         <div className="mercado-drawer-header">
                             <div>
                                 <p className="mercado-drawer-eyebrow">Central de scouting</p>
-                                <strong>Painel de transferências</strong>
+                                <strong>Painel de transferÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âªncias</strong>
                             </div>
                             <button type="button" className="btn-outline" onClick={() => setFiltersOpen(false)}>
                                 Fechar
@@ -1045,7 +1230,7 @@ export default function LigaMercado() {
 
                                 <div className="mercado-drawer-field">
                                     <label className="mercado-drawer-label" htmlFor="filtro-posicao">
-                                        Posição
+                                        PosiÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o
                                     </label>
                                     <select
                                         id="filtro-posicao"
@@ -1058,7 +1243,7 @@ export default function LigaMercado() {
                                             <optgroup key={group.sector} label={group.label}>
                                                 {group.items.map((item) => (
                                                     <option key={item.code} value={item.code}>
-                                                        {item.ptbr} · {item.label}
+                                                        {item.ptbr} ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â· {item.label}
                                                     </option>
                                                 ))}
                                             </optgroup>
@@ -1089,27 +1274,27 @@ export default function LigaMercado() {
                                             className="mercado-drawer-input"
                                             type="text"
                                             inputMode="decimal"
-                                            placeholder="Mín (M)"
+                                            placeholder="MÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­n (M)"
                                             value={minValue}
                                             onChange={(e) => setMinValue(e.target.value)}
-                                            aria-label="Valor mínimo em milhões"
+                                            aria-label="Valor mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nimo em milhÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes"
                                         />
-                                        <span className="mercado-drawer-range-separator">até</span>
+                                        <span className="mercado-drawer-range-separator">atÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â©</span>
                                         <input
                                             className="mercado-drawer-input"
                                             type="text"
                                             inputMode="decimal"
-                                            placeholder="Máx (M)"
+                                            placeholder="MÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡x (M)"
                                             value={maxValue}
                                             onChange={(e) => setMaxValue(e.target.value)}
-                                            aria-label="Valor máximo em milhões"
+                                            aria-label="Valor mÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ximo em milhÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="mercado-drawer-field mercado-drawer-field-full">
                                     <label className="mercado-drawer-label" htmlFor="filtro-clube">
-                                        Vínculo com clube
+                                        VÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­nculo com clube
                                     </label>
                                     <select
                                         id="filtro-clube"
@@ -1143,15 +1328,15 @@ export default function LigaMercado() {
                                         <option value="overall:asc">OVR (menor)</option>
                                         <option value="value_eur:desc">Valor (maior)</option>
                                         <option value="value_eur:asc">Valor (menor)</option>
-                                        <option value="wage_eur:desc">Salário (maior)</option>
-                                        <option value="wage_eur:asc">Salário (menor)</option>
-                                        <option value="name:asc">Nome (A–Z)</option>
-                                        <option value="name:desc">Nome (Z–A)</option>
+                                        <option value="wage_eur:desc">SalÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡rio (maior)</option>
+                                        <option value="wage_eur:asc">SalÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡rio (menor)</option>
+                                        <option value="name:asc">Nome (AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“Z)</option>
+                                        <option value="name:desc">Nome (ZÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“A)</option>
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Ações do modal */}
+                            {/* AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Âµes do modal */}
                             <div className="mercado-drawer-actions mercado-drawer-actions-scout">
                                 <button type="button" className="btn-outline mercado-scout-clear" onClick={clearFilters}>
                                     Limpar filtros
@@ -1172,18 +1357,20 @@ export default function LigaMercado() {
             <section className="mercado-table-wrap" aria-label="Resultados do mercado" style={{ marginTop: 20 }}>
                 <div className="mercado-list-header">
                     <span>Jogador / OVR</span>
-                    <span>Valores / Ação</span>
+                    <span>Valores / AÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o</span>
                 </div>
                 <div className="mercado-player-list">
                     {pageItems.length === 0 ? (
                         <p className="mercado-no-results">Nenhum jogador encontrado.</p>
                     ) : (
                         pageItems.map((p) => {
-                            const name = getPlayerName(p) || '—';
-                            const positionBadge = normalizePositions(p.player_positions)[0] || '—';
+                            const name = getPlayerName(p) || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â';
+                            const positionBadge = normalizePositions(p.player_positions)[0] || 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â';
                             const ovrTone = getOvrTone(p.overall);
                             const statusLabel =
-                                p.club_status === 'livre'
+                                p?.auction?.has_bid && p?.auction?.leader_club_name
+                                    ? `Lider: ${p.auction.leader_club_name}`
+                                    : p.club_status === 'livre'
                                     ? 'Livre'
                                     : p.club_status === 'meu'
                                     ? 'Meu clube'
@@ -1201,12 +1388,12 @@ export default function LigaMercado() {
                                 <article key={p.elencopadrao_id} className={`mercado-player-card status-${p.club_status}`}>
                                     {isRadar && (
                                         <span className="mercado-player-radar-badge">
-                                            📡 No radar
+                                            ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã¢â‚¬Å“ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ No radar
                                         </span>
                                     )}
                                     <div className="mercado-player-card-content">
                                         <span className={`mercado-ovr-badge ovr-${ovrTone}`}>
-                                            {p.overall ?? '—'}
+                                            {p.overall ?? 'ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â'}
                                         </span>
                                         <button
                                             type="button"
@@ -1240,7 +1427,7 @@ export default function LigaMercado() {
                                                     aria-label={isRadar ? 'Remover do radar' : 'Enviar olheiro'}
                                                     title={isRadar ? 'Remover do radar' : 'Enviar olheiro'}
                                                 >
-                                                    🔭
+                                                    ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â°ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¸ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­
                                                 </button>
                                             </div>
                                             <span className="mercado-player-salary">
@@ -1256,45 +1443,108 @@ export default function LigaMercado() {
                 </div>
             </section>
 
-            {modalPlayer && (
+                        {modalPlayer && (
                 <div className="meu-elenco-modal-overlay" role="dialog" aria-modal="true">
                     <div className="meu-elenco-modal">
                         <h3>{modalTitle}</h3>
                         <p className="meu-elenco-modal-description">{modalDescription}</p>
-                        <div className="modal-field">
-                            <span>Valor que será pago</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(modalPaymentAmount)}</p>
-                        </div>
-                        <div className="modal-field">
-                            <span>Salário do jogador</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(modalPlayer.wage_eur)}</p>
-                        </div>
-                        <div className="modal-field">
-                            <span>Saldo atual da carteira</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance)}</p>
-                        </div>
-                        <div className="modal-field">
-                            <span>Saldo após a operação</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance - modalPaymentAmount)}</p>
-                        </div>
-                        <div className="modal-field">
-                            <span>Custo por rodada atual</span>
-                            <p style={{ fontWeight: 600 }}>{formatCurrency(clubSalaryPerRound)}</p>
-                        </div>
-                        <div className="modal-field">
-                            <span>Novo custo por rodada</span>
-                            <p style={{ fontWeight: 600 }}>
-                                {formatCurrency(clubSalaryPerRound + (modalPlayer.wage_eur || 0))}
-                            </p>
-                        </div>
+                        {modalMode === MODAL_MODES.AUCTION ? (
+                            <>
+                                <div className="modal-field">
+                                    <span>Lance atual</span>
+                                    <p style={{ fontWeight: 600 }}>
+                                        {formatCurrency(
+                                            modalPlayer?.auction?.current_bid_eur ??
+                                                modalPlayer?.auction?.base_value_eur ??
+                                                modalPlayer?.value_eur ??
+                                                0,
+                                        )}
+                                    </p>
+                                </div>
+                                {modalPlayer?.auction?.leader_club_name && (
+                                    <div className="modal-field">
+                                        <span>Clube lider</span>
+                                        <p style={{ fontWeight: 600 }}>{modalPlayer.auction.leader_club_name}</p>
+                                    </div>
+                                )}
+                                {modalPlayer?.auction?.has_bid ? (
+                                    <div className="modal-field">
+                                        <span>Incremento do lance</span>
+                                        <div
+                                            className="filter-pill-row filter-pill-row-compact"
+                                            style={{ marginTop: 6, flexWrap: 'wrap' }}
+                                        >
+                                            {auctionBidOptions.map((option) => (
+                                                <button
+                                                    key={option}
+                                                    type="button"
+                                                    className={`filter-pill${auctionBidIncrement === option ? ' active' : ''}`}
+                                                    onClick={() => setAuctionBidIncrement(option)}
+                                                    disabled={isModalSubmitting}
+                                                >
+                                                    +{formatShortMoney(option)}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="modal-field">
+                                        <span>Primeiro lance</span>
+                                        <p style={{ fontWeight: 600 }}>
+                                            Lance inicial no valor de mercado do atleta.
+                                        </p>
+                                    </div>
+                                )}
+                                <div className="modal-field">
+                                    <span>Valor do seu lance</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(modalPaymentAmount)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Saldo atual da carteira</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Saldo apos o lance</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance - modalPaymentAmount)}</p>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                <div className="modal-field">
+                                    <span>Valor que sera pago</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(modalPaymentAmount)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Salario do jogador</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(modalPlayer.wage_eur)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Saldo atual da carteira</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Saldo apos a operacao</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(clubBalance - modalPaymentAmount)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Custo por rodada atual</span>
+                                    <p style={{ fontWeight: 600 }}>{formatCurrency(clubSalaryPerRound)}</p>
+                                </div>
+                                <div className="modal-field">
+                                    <span>Novo custo por rodada</span>
+                                    <p style={{ fontWeight: 600 }}>
+                                        {formatCurrency(clubSalaryPerRound + (modalPlayer.wage_eur || 0))}
+                                    </p>
+                                </div>
+                            </>
+                        )}
                         {modalError && <p className="modal-error">{modalError}</p>}
-                        <div className="meu-elenco-modal-actions" style={{marginTop: 10}}>
+                        <div className="meu-elenco-modal-actions" style={{ marginTop: 10 }}>
                             <button
                                 type="button"
                                 className="btn-outline"
                                 onClick={closeModal}
                                 disabled={isModalSubmitting}
-
                                 style={{ marginRight: 8 }}
                             >
                                 Cancelar
@@ -1307,6 +1557,8 @@ export default function LigaMercado() {
                             >
                                 {isModalSubmitting
                                     ? 'Operando...'
+                                    : modalMode === MODAL_MODES.AUCTION
+                                    ? 'Confirmar lance'
                                     : modalMode === MODAL_MODES.MULTA
                                     ? 'Confirmar multa'
                                     : 'Confirmar compra'}
@@ -1399,8 +1651,8 @@ export default function LigaMercado() {
                 />
             )}
 
-            {/* RESULTADOS + PAGINAÇÃO TOPO */}
-            <section className="mco-pagination" aria-label="Resumo e paginação do mercado">
+            {/* RESULTADOS + PAGINAÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¾Ãƒâ€šÃ‚Â¢O TOPO */}
+            <section className="mco-pagination" aria-label="Resumo e paginaÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â§ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â£o do mercado">
                 <span className="mco-pagination-count">
                     <strong>{filtered.length.toLocaleString('pt-BR')}</strong> jogadores encontrados
                 </span>
@@ -1411,10 +1663,10 @@ export default function LigaMercado() {
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                         disabled={safePage <= 1}
                     >
-                        ◀ Voltar
+                        ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚ÂÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦Ãƒâ€šÃ‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ Voltar
                     </button>
                     <div className="mco-pagination-label">
-                        <span>Página</span>
+                        <span>PÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¡gina</span>
                         <strong>
                             <span>{safePage}</span> / {totalPages}
                         </strong>
@@ -1425,7 +1677,7 @@ export default function LigaMercado() {
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                         disabled={safePage >= totalPages}
                     >
-                        Próxima ▶
+                        PrÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â³xima ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ÃƒÆ’Ã¢â‚¬Â¦ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¶
                     </button>
                 </div>
                 <div className="mco-pagination-progress">
@@ -1452,3 +1704,4 @@ export default function LigaMercado() {
         </main>
     );
 }
+

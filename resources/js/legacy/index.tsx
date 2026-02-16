@@ -171,7 +171,7 @@ const jsonRequest = async (url: string, options: RequestInit = {}) => {
         ? Object.values(errors).flat().find(Boolean)
         : null;
 
-    throw new Error((firstError as string) || payload?.message || 'Falha na requisição.');
+    throw new Error((firstError as string) || payload?.message || 'Falha na requisiÃ§Ã£o.');
   }
 
   return payload;
@@ -198,7 +198,7 @@ const multipartRequest = async (url: string, formData: FormData, options: Reques
         ? Object.values(errors).flat().find(Boolean)
         : null;
 
-    throw new Error((firstError as string) || payload?.message || 'Falha na requisição.');
+    throw new Error((firstError as string) || payload?.message || 'Falha na requisiÃ§Ã£o.');
   }
 
   return payload;
@@ -218,7 +218,7 @@ const formatLegacyFansLabel = (rawValue: number) => {
   return String(Math.round(value));
 };
 
-// --- Configurações de Dados (Mock) ---
+// --- ConfiguraÃ§Ãµes de Dados (Mock) ---
 const CONFED_CONFIG: any = {
   UEFA: { 
     name: 'UEFA Europe', 
@@ -234,10 +234,10 @@ const CONFED_CONFIG: any = {
 };
 
 const MOCK_INBOX_MESSAGES = [
-  { id: 1, type: 'NEGOCIAÇÃO', title: 'PROPOSTA POR VINÍCIUS JR.', sender: 'MANCHESTER CITY', content: 'O City ofereceu M$ 185M para fechar o negócio agora.', date: '14:20', urgent: true, action: 'TRANSFER' },
-  { id: 2, type: 'SÚMULA', title: 'PLACAR REGISTRADO', sender: 'GOLIAS_FC', content: 'Seu adversário registrou a derrota (1x2) na Elite Division.', date: '12:05', urgent: false, action: 'MATCH' },
-  { id: 3, type: 'CONVITE', title: 'COPA DO BRASIL LEGACY', sender: 'ADMIN MCO', content: 'Você foi pré-selecionado para o Draft da Temporada 26.', date: 'ONTEM', urgent: false, action: 'INVITE' },
-  { id: 4, type: 'SISTEMA', title: 'PREMIAÇÃO DISPONÍVEL', sender: 'LEGACY XI', content: 'Seu bônus de Uber Score de 4.8 estrelas foi creditado: M$ 25M.', date: 'ONTEM', urgent: false, action: 'FINANCE' },
+  { id: 1, type: 'NEGOCIAÃ‡ÃƒO', title: 'PROPOSTA POR VINÃCIUS JR.', sender: 'MANCHESTER CITY', content: 'O City ofereceu M$ 185M para fechar o negÃ³cio agora.', date: '14:20', urgent: true, action: 'TRANSFER' },
+  { id: 2, type: 'SÃšMULA', title: 'PLACAR REGISTRADO', sender: 'GOLIAS_FC', content: 'Seu adversÃ¡rio registrou a derrota (1x2) na Elite Division.', date: '12:05', urgent: false, action: 'MATCH' },
+  { id: 3, type: 'CONVITE', title: 'COPA DO BRASIL LEGACY', sender: 'ADMIN MCO', content: 'VocÃª foi prÃ©-selecionado para o Draft da Temporada 26.', date: 'ONTEM', urgent: false, action: 'INVITE' },
+  { id: 4, type: 'SISTEMA', title: 'PREMIAÃ‡ÃƒO DISPONÃVEL', sender: 'LEGACY XI', content: 'Seu bÃ´nus de Uber Score de 4.8 estrelas foi creditado: M$ 25M.', date: 'ONTEM', urgent: false, action: 'FINANCE' },
 ];
 
 const MOCK_RECENT_RESULTS = [
@@ -315,7 +315,7 @@ const MOCK_CONTINENTAL_GROUPS = {
     { pos: 1, club: 'LIVERPOOL', p: 6, v: 5, pts: 15 },
     { pos: 2, club: 'ARSENAL', p: 6, v: 4, pts: 12 },
     { pos: 3, club: 'DORTMUND', p: 6, v: 2, pts: 6 },
-    { pos: 4, club: 'ATLÉTICO', p: 6, v: 0, pts: 1 },
+    { pos: 4, club: 'ATLÃ‰TICO', p: 6, v: 0, pts: 1 },
   ],
 };
 
@@ -331,25 +331,25 @@ const MOCK_CONTINENTAL_BRACKET = [
 const MOCK_STATS_TEMPLATE = { PAC: 85, SHO: 80, PAS: 75, DRI: 85, DEF: 50, PHY: 70 };
 const MOCK_DETAILED_TEMPLATE = {
   PACE: { 'Velocidade': 85 },
-  SHOOTING: { 'Finalização': 80 },
-  PASSING: { 'Visão': 75 },
+  SHOOTING: { 'FinalizaÃ§Ã£o': 80 },
+  PASSING: { 'VisÃ£o': 75 },
   DRIBBLING: { 'Drible': 85 },
-  DEFENSE: { 'Intercepção': 50 },
-  PHYSICAL: { 'Força': 70 }
+  DEFENSE: { 'IntercepÃ§Ã£o': 50 },
+  PHYSICAL: { 'ForÃ§a': 70 }
 };
 
 const MOCK_SQUAD = [
   { 
-    id: 1, name: 'VINÍCIUS JR.', ovr: 90, pos: 'ATA', age: 23, salary: 12.5, marketValue: 150,
+    id: 1, name: 'VINÃCIUS JR.', ovr: 90, pos: 'ATA', age: 23, salary: 12.5, marketValue: 150,
     photo: 'https://img.asmedia.epimg.net/resizer/v2/LALQ7O7P2ZGVPL6J5H5A3X4V6E.jpg?auth=f8c5b0b1b1b1b1b1b1b1b1b1b1b1b1b1&width=1200&height=1200&smart=true',
     stats: { PAC: 95, SHO: 82, PAS: 78, DRI: 91, DEF: 34, PHY: 68 },
     detailedStats: {
-      PACE: { 'Aceleração': 96, 'Pique': 94 },
-      SHOOTING: { 'Posicionamento': 89, 'Finalização': 84, 'Força do Chute': 76, 'Chute Longo': 70, 'Voleio': 75 },
-      PASSING: { 'Visão': 81, 'Cruzamento': 77, 'Passe Curto': 82, 'Passe Longo': 68, 'Curva': 84 },
-      DRIBBLING: { 'Agilidade': 94, 'Equilíbrio': 86, 'Reação': 89, 'Controle': 90, 'Drible': 92, 'Compostura': 84 },
-      DEFENSE: { 'Interceptação': 25, 'Cabeceio': 50, 'Noção Defensiva': 32, 'Dividida': 24 },
-      PHYSICAL: { 'Salto': 75, 'Fôlego': 84, 'Força': 60, 'Agressividade': 65 }
+      PACE: { 'AceleraÃ§Ã£o': 96, 'Pique': 94 },
+      SHOOTING: { 'Posicionamento': 89, 'FinalizaÃ§Ã£o': 84, 'ForÃ§a do Chute': 76, 'Chute Longo': 70, 'Voleio': 75 },
+      PASSING: { 'VisÃ£o': 81, 'Cruzamento': 77, 'Passe Curto': 82, 'Passe Longo': 68, 'Curva': 84 },
+      DRIBBLING: { 'Agilidade': 94, 'EquilÃ­brio': 86, 'ReaÃ§Ã£o': 89, 'Controle': 90, 'Drible': 92, 'Compostura': 84 },
+      DEFENSE: { 'InterceptaÃ§Ã£o': 25, 'Cabeceio': 50, 'NoÃ§Ã£o Defensiva': 32, 'Dividida': 24 },
+      PHYSICAL: { 'Salto': 75, 'FÃ´lego': 84, 'ForÃ§a': 60, 'Agressividade': 65 }
     },
     skillMoves: 5, weakFoot: 4, 
     playstyles: ['FINESSE SHOT', 'QUICK STEP', 'TRIVELA', 'TECHNICAL']
@@ -359,12 +359,12 @@ const MOCK_SQUAD = [
     photo: 'https://publish.onefootball.com/wp-content/uploads/sites/10/2023/12/Real-Madrid-v-SSC-Napoli-Group-C-UEFA-Champions-League-202324-1701511242-1000x750.jpg',
     stats: { PAC: 78, SHO: 80, PAS: 85, DRI: 88, DEF: 78, PHY: 82 },
     detailedStats: {
-      PACE: { 'Aceleração': 76, 'Pique': 80 },
-      SHOOTING: { 'Posicionamento': 85, 'Finalização': 82, 'Força do Chute': 81, 'Chute Longo': 79, 'Penalidade': 72 },
-      PASSING: { 'Visão': 88, 'Cruzamento': 76, 'Passe Curto': 89, 'Passe Longo': 84, 'Curva': 80 },
-      DRIBBLING: { 'Agilidade': 82, 'Equilíbrio': 78, 'Reação': 90, 'Controle': 88, 'Drible': 88, 'Compostura': 90 },
-      DEFENSE: { 'Interceptação': 80, 'Cabeceio': 75, 'Noção Defensiva': 78, 'Dividida': 81 },
-      PHYSICAL: { 'Salto': 79, 'Fôlego': 90, 'Força': 82, 'Agressividade': 84 }
+      PACE: { 'AceleraÃ§Ã£o': 76, 'Pique': 80 },
+      SHOOTING: { 'Posicionamento': 85, 'FinalizaÃ§Ã£o': 82, 'ForÃ§a do Chute': 81, 'Chute Longo': 79, 'Penalidade': 72 },
+      PASSING: { 'VisÃ£o': 88, 'Cruzamento': 76, 'Passe Curto': 89, 'Passe Longo': 84, 'Curva': 80 },
+      DRIBBLING: { 'Agilidade': 82, 'EquilÃ­brio': 78, 'ReaÃ§Ã£o': 90, 'Controle': 88, 'Drible': 88, 'Compostura': 90 },
+      DEFENSE: { 'InterceptaÃ§Ã£o': 80, 'Cabeceio': 75, 'NoÃ§Ã£o Defensiva': 78, 'Dividida': 81 },
+      PHYSICAL: { 'Salto': 79, 'FÃ´lego': 90, 'ForÃ§a': 82, 'Agressividade': 84 }
     },
     skillMoves: 4, weakFoot: 4,
     playstyles: ['RELENTLESS', 'POWER SHOT', 'INTERCEPT', 'ANTICIPATE']
@@ -373,7 +373,7 @@ const MOCK_SQUAD = [
 
 const MOCK_MARKET_PLAYERS = [
   { id: 101, name: 'E. HAALAND', ovr: 91, pos: 'ATA', age: 23, value: 200, status: 'CONTRATADO', club: 'MAN CITY', photo: 'https://cdn.resfu.com/media/img_news/agencias/afp/2023/11/04/ea203b879a9f99e3f9a7b9e9e9e9e9e9.jpg?size=1000x', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['POWER SHOT'], skillMoves: 3, weakFoot: 3, salary: 25 },
-  { id: 102, name: 'K. MBAPPÉ', ovr: 91, pos: 'ATA', age: 25, value: 220, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://images2.minutemediacdn.com/image/upload/c_crop,w_4444,h_2499,x_0,y_156/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images%2FGettyImages%2Fmmsport%2F90min_en_international_web%2F01hznh0k0f4q9104b9p3.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['QUICK STEP'], skillMoves: 5, weakFoot: 4, salary: 30 },
+  { id: 102, name: 'K. MBAPPÃ‰', ovr: 91, pos: 'ATA', age: 25, value: 220, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://images2.minutemediacdn.com/image/upload/c_crop,w_4444,h_2499,x_0,y_156/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images%2FGettyImages%2Fmmsport%2F90min_en_international_web%2F01hznh0k0f4q9104b9p3.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['QUICK STEP'], skillMoves: 5, weakFoot: 4, salary: 30 },
   { id: 103, name: 'K. DE BRUYNE', ovr: 90, pos: 'MC', age: 32, value: 120, status: 'LIVRE', club: 'AGENTE LIVRE', photo: 'https://tmssl.akamaized.net/images/foto/galerie/kevin-de-bruyne-manchester-city-2023-24-1710497555-132338.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['INCISIVE PASS'], skillMoves: 4, weakFoot: 5, salary: 20 },
   { id: 106, name: 'SALAH', ovr: 89, pos: 'PD', age: 31, value: 90, status: 'CONTRATADO', club: 'LIVERPOOL', photo: 'https://tmssl.akamaized.net/images/foto/galerie/mohamed-salah-liverpool-2023-24-1701103043-122915.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['FINESSE SHOT'], skillMoves: 4, weakFoot: 3, salary: 22 },
   { id: 107, name: 'VANDIJK', ovr: 89, pos: 'ZAG', age: 32, value: 85, status: 'CONTRATADO', club: 'LIVERPOOL', photo: 'https://tmssl.akamaized.net/images/foto/galerie/virgil-van-dijk-liverpool-2023-24-1698759325-120713.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['ANTICIPATE'], skillMoves: 2, weakFoot: 3, salary: 19 },
@@ -384,7 +384,7 @@ const MOCK_WATCHLIST = [
   { id: 105, name: 'RODRYGO', ovr: 86, pos: 'ATA', age: 23, value: 110, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://tmssl.akamaized.net/images/foto/galerie/rodrygo-real-madrid-2023-24-1712733934-134591.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['FINESSE SHOT'], skillMoves: 4, weakFoot: 4, salary: 18 },
 ];
 
-// --- Utilitários de Estilo ---
+// --- UtilitÃ¡rios de Estilo ---
 const AGGRESSIVE_CLIP = "polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)";
 const SHIELD_CLIP = "polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)";
 const SLANTED_PATTERN = "repeating-linear-gradient(45deg, rgba(255,215,0,0.05) 0, rgba(255,215,0,0.05) 1px, transparent 0, transparent 10px)";
@@ -437,7 +437,7 @@ const MCOBottomNav = ({
   hasInboxNotifications?: boolean,
 }) => {
   const navItems = [
-    { id: 'hub-global', icon: 'fa-house', label: 'INÍCIO' },
+    { id: 'hub-global', icon: 'fa-house', label: 'INÃCIO' },
     { id: 'match-center', icon: 'fa-shield-halved', label: 'CONFRONTOS' },
     { id: 'inbox', icon: 'fa-envelope', label: 'INBOX', badge: true },
     { id: 'profile', icon: 'fa-user', label: 'PERFIL' }
@@ -466,7 +466,7 @@ const MCOBottomNav = ({
 const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRating = 0 }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÇÃO';
+  const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÃ‡ÃƒO';
   
   const renderStars = (score: number) => {
     const stars = [];
@@ -840,7 +840,7 @@ const InboxView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setMessages([]);
-        setError(currentError?.message || 'Não foi possível carregar as mensagens.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as mensagens.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -860,7 +860,7 @@ const InboxView = ({
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MCO INBOX</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÓCIOS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÃ“CIOS</p>
       </header>
 
       <div className="space-y-4">
@@ -892,7 +892,7 @@ const InboxView = ({
               className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
               style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
             >
-              {String(msg.actionLabel || 'ACESSAR PENDÊNCIA')}
+              {String(msg.actionLabel || 'ACESSAR PENDÃŠNCIA')}
             </button>
           </div>
         ))}
@@ -939,7 +939,7 @@ const LeaderboardView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setItems([]);
-        setError(currentError?.message || 'Não foi possível carregar o ranking.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o ranking.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1068,8 +1068,8 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESTATÍSTICAS</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">ANÁLISE DE PERFORMANCE</p>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESTATÃSTICAS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">ANÃLISE DE PERFORMANCE</p>
       </header>
 
       {loading ? (
@@ -1083,10 +1083,10 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : (
@@ -1104,7 +1104,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
               className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'history' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
               style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
             >
-              HISTÓRICO LEGACY
+              HISTÃ“RICO LEGACY
             </button>
           </div>
 
@@ -1117,7 +1117,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                     <p className="text-3xl font-black italic font-heading text-white">{summary.goals}</p>
                   </div>
                   <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÓRIAS TOTAL</p>
+                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÃ“RIAS TOTAL</p>
                     <p className="text-3xl font-black italic font-heading text-white">{summary.wins}</p>
                   </div>
                 </div>
@@ -1136,7 +1136,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                 </div>
 
                 <div className="bg-[#1E1E1E] p-6 border-b-[3px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÉTRICAS POR PARTIDA</h4>
+                  <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÃ‰TRICAS POR PARTIDA</h4>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-black italic uppercase">GOLS / JOGO</span>
@@ -1163,7 +1163,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                       <p className="text-[9px] font-bold text-white/30 uppercase mt-1 italic">{h.wins}V - {h.draws}E - {h.losses}D</p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos > 0 ? `${h.pos}º` : '--'}</div>
+                      <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos > 0 ? `${h.pos}Âº` : '--'}</div>
                       {h.trophy && <i className="fas fa-trophy text-[#FFD700] text-lg drop-shadow-[0_0_8px_#FFD700]"></i>}
                     </div>
                   </div>
@@ -1171,7 +1171,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
               </div>
             ) : (
               <div className="bg-[#1E1E1E] p-8 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhum histórico disponível para esta confederação.</p>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhum histÃ³rico disponÃ­vel para esta confederaÃ§Ã£o.</p>
               </div>
             )}
           </div>
@@ -1288,11 +1288,11 @@ const PublicClubProfileView = ({
         ) : activeTab === 'status' ? (
           <>
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">NÍVEL DE PRESTÍGIO</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">NÃVEL DE PRESTÃGIO</h4>
               <div className="bg-[#1E1E1E] p-8 border-l-[6px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÇÃO ATUAL</p>
+                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÃ‡ÃƒO ATUAL</p>
                     <h3 className="text-4xl font-black italic uppercase font-heading text-white">{profile.clubSizeName}</h3>
                   </div>
                   <div className="text-right">
@@ -1304,27 +1304,27 @@ const PublicClubProfileView = ({
             </section>
 
             <section className="space-y-4">
-               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÉUS</h4>
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÃ‰US</h4>
                <div className="grid grid-cols-2 gap-4">
                  {profile.wonTrophies.map((trophy: any, index: number) => (
                    <div key={String(trophy?.id ?? index)} className="bg-[#1E1E1E] p-6 text-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                       <i className="fas fa-trophy text-3xl text-[#FFD700] mb-3"></i>
-                      <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÉU')}</p>
+                      <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÃ‰U')}</p>
                    </div>
                  ))}
                  {profile.wonTrophies.length === 0 && (
                     <div className="col-span-2 py-10 bg-[#1E1E1E] text-center opacity-20" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÇA REGISTRADA</p>
+                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÃ‡A REGISTRADA</p>
                     </div>
                  )}
                </div>
             </section>
 
             <section className="space-y-4">
-               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">MÉTRICAS COMPETITIVAS</h4>
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">MÃ‰TRICAS COMPETITIVAS</h4>
                <div className="grid grid-cols-3 gap-3">
                  <div className="bg-[#1E1E1E] p-4 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">VITÓRIAS</p>
+                    <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">VITÃ“RIAS</p>
                     <p className="text-xl font-black italic font-heading text-white">{profile.wins}</p>
                  </div>
                  <div className="bg-[#1E1E1E] p-4 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -1340,7 +1340,7 @@ const PublicClubProfileView = ({
           </>
         ) : (
           <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÇÕES ATIVAS</h4>
+             <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÃ‡Ã•ES ATIVAS</h4>
              <div className="space-y-3">
                {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
                  <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -1353,7 +1353,7 @@ const PublicClubProfileView = ({
                     </div>
                     <div className="flex-grow">
                       <p className="text-[12px] font-black italic uppercase text-white leading-none">{String(player?.nome ?? 'ATLETA')}</p>
-                      <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} • OVR {Number(player?.ovr ?? 0)}</p>
+                      <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} â€¢ OVR {Number(player?.ovr ?? 0)}</p>
                     </div>
                     <div className="text-right">
                        <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
@@ -1375,20 +1375,20 @@ const PublicClubProfileView = ({
 
 const LEGACY_MATCH_STATUS_LABELS: Record<string, string> = {
   agendada: 'Agendada',
-  confirmacao_necessaria: 'Confirmação pendente',
+  confirmacao_necessaria: 'ConfirmaÃ§Ã£o pendente',
   confirmada: 'Confirmada',
   placar_registrado: 'Placar registrado',
   placar_confirmado: 'Placar confirmado',
-  em_reclamacao: 'Em reclamação',
+  em_reclamacao: 'Em reclamaÃ§Ã£o',
   finalizada: 'Finalizada',
   wo: 'W.O.',
   cancelada: 'Cancelada',
 };
 
 const formatLegacyMatchDate = (iso: string | null | undefined) => {
-  if (!iso) return 'Aguardando confirmação';
+  if (!iso) return 'Aguardando confirmaÃ§Ã£o';
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return 'Aguardando confirmação';
+  if (Number.isNaN(date.getTime())) return 'Aguardando confirmaÃ§Ã£o';
 
   return date.toLocaleString('pt-BR', {
     weekday: 'short',
@@ -1439,7 +1439,7 @@ const ScheduleMatchesView = ({
     const loadMatches = async () => {
       if (!currentCareer?.id) {
         setMatches([]);
-        setError('Selecione uma confederação para carregar as partidas.');
+        setError('Selecione uma confederaÃ§Ã£o para carregar as partidas.');
         return;
       }
 
@@ -1456,7 +1456,7 @@ const ScheduleMatchesView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setMatches([]);
-        setError(currentError?.message || 'Não foi possível carregar as partidas.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1490,7 +1490,7 @@ const ScheduleMatchesView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setCalendarDays([]);
-        setScheduleNotice(currentError?.message || 'Não foi possível carregar os horários.');
+        setScheduleNotice(currentError?.message || 'NÃ£o foi possÃ­vel carregar os horÃ¡rios.');
       } finally {
         if (!cancelled) setCalendarLoading(false);
       }
@@ -1527,9 +1527,9 @@ const ScheduleMatchesView = ({
             : partida,
         ),
       );
-      setScheduleNotice('Horário confirmado com sucesso.');
+      setScheduleNotice('HorÃ¡rio confirmado com sucesso.');
     } catch (currentError: any) {
-      setScheduleNotice(currentError?.message || 'Não foi possível confirmar o horário.');
+      setScheduleNotice(currentError?.message || 'NÃ£o foi possÃ­vel confirmar o horÃ¡rio.');
     } finally {
       setSubmitting(false);
     }
@@ -1585,16 +1585,16 @@ const ScheduleMatchesView = ({
           {selectedPartida && (
             <section className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] mb-4">
-                Horários disponíveis
+                HorÃ¡rios disponÃ­veis
               </h4>
               <p className="text-[9px] font-bold uppercase italic text-white/40 mb-4">
                 {selectedPartida.is_visitante ? selectedPartida.mandante : selectedPartida.visitante}
               </p>
 
               {calendarLoading ? (
-                <p className="text-[10px] text-white/40 font-black uppercase italic">CARREGANDO HORÁRIOS...</p>
+                <p className="text-[10px] text-white/40 font-black uppercase italic">CARREGANDO HORÃRIOS...</p>
               ) : calendarDays.length === 0 ? (
-                <p className="text-[10px] text-white/50 font-black uppercase italic">Sem horários disponíveis no momento.</p>
+                <p className="text-[10px] text-white/50 font-black uppercase italic">Sem horÃ¡rios disponÃ­veis no momento.</p>
               ) : (
                 <div className="space-y-4">
                   {calendarDays.map((day) => (
@@ -1628,7 +1628,7 @@ const ScheduleMatchesView = ({
                   disabled={submitting || !selectedSlot}
                   onClick={handleSchedule}
                 >
-                  {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR HORÁRIO'}
+                  {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR HORÃRIO'}
                 </MCOButton>
               </div>
             </section>
@@ -1672,7 +1672,7 @@ const MatchCenterView = ({
       if (!currentCareer?.id) {
         setPartidas([]);
         setClube(null);
-        setError('Selecione uma confederação para visualizar os confrontos.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar os confrontos.');
         return;
       }
 
@@ -1691,7 +1691,7 @@ const MatchCenterView = ({
         if (cancelled) return;
         setPartidas([]);
         setClube(null);
-        setError(currentError?.message || 'Não foi possível carregar as partidas.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1726,7 +1726,7 @@ const MatchCenterView = ({
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <header className="px-6 mb-8 mt-4">
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÚMULAS E CONFRONTOS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÃšMULAS E CONFRONTOS</p>
       </header>
       <div className="px-4 space-y-8">
         {loading ? (
@@ -1792,19 +1792,19 @@ const MatchCenterView = ({
                       className="!py-5 !px-2 !text-[9px]"
                       disabled={!isLegacySchedulingAllowed(activeMatch)}
                     >
-                      AGENDAR / REAGENDAR HORÁRIO
+                      AGENDAR / REAGENDAR HORÃRIO
                     </MCOButton>
                   </div>
                 </div>
               ) : (
                 <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederação.</p>
+                  <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederaÃ§Ã£o.</p>
                 </div>
               )}
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃO DE AGENDA</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃƒO DE AGENDA</h4>
               <MCOCard onClick={() => onOpenSchedule(activeMatch)} className="p-6" active={true} accentColor="#FFD700">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-5">
@@ -1824,7 +1824,7 @@ const MatchCenterView = ({
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÚMULAS PENDENTES</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÃšMULAS PENDENTES</h4>
               {pendingSummaries.length > 0 ? pendingSummaries.map((match) => (
                 <div
                   key={match.id}
@@ -1839,12 +1839,12 @@ const MatchCenterView = ({
                   </div>
                   <div className="text-right">
                     <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
-                    <p className="text-xs font-black italic text-white">CONFIRMAÇÃO</p>
+                    <p className="text-xs font-black italic text-white">CONFIRMAÃ‡ÃƒO</p>
                   </div>
                 </div>
               )) : (
                 <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma súmula pendente.</p>
+                  <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma sÃºmula pendente.</p>
                 </div>
               )}
             </section>
@@ -1914,7 +1914,7 @@ const ReportMatchView = ({
           <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">FINALIZAR PARTIDA</h2>
         </header>
         <div className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] text-white/60 font-black uppercase italic">Partida não selecionada.</p>
+          <p className="text-[10px] text-white/60 font-black uppercase italic">Partida nÃ£o selecionada.</p>
         </div>
       </div>
     );
@@ -1994,7 +1994,7 @@ const ReportMatchView = ({
       });
       setHasPreview(true);
     } catch (currentError: any) {
-      setError(currentError?.message || 'Não foi possível analisar as imagens.');
+      setError(currentError?.message || 'NÃ£o foi possÃ­vel analisar as imagens.');
     } finally {
       setLoading(false);
     }
@@ -2007,7 +2007,7 @@ const ReportMatchView = ({
     const placarVisitante = Number(resolvedPlacar.visitante ?? 0);
 
     if (!Number.isFinite(placarMandante) || !Number.isFinite(placarVisitante)) {
-      setError('Placar inválido. Faça uma nova análise.');
+      setError('Placar invÃ¡lido. FaÃ§a uma nova anÃ¡lise.');
       return;
     }
 
@@ -2033,10 +2033,10 @@ const ReportMatchView = ({
         }),
       });
 
-      setSuccess('Súmula registrada com sucesso.');
+      setSuccess('SÃºmula registrada com sucesso.');
       onCompleted();
     } catch (currentError: any) {
-      setError(currentError?.message || 'Não foi possível confirmar os dados.');
+      setError(currentError?.message || 'NÃ£o foi possÃ­vel confirmar os dados.');
     } finally {
       setSaving(false);
     }
@@ -2057,7 +2057,7 @@ const ReportMatchView = ({
     }));
   };
 
-  const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
+  const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : 'â€”';
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
@@ -2068,13 +2068,13 @@ const ReportMatchView = ({
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">FINALIZAR PARTIDA</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">{partida?.mandante} VS {partida?.visitante}</p>
         <p className="text-[9px] text-white/40 font-bold uppercase italic tracking-[0.1em] mt-2">
-          {LEGACY_MATCH_STATUS_LABELS[String(partida?.estado)] || partida?.estado} • {formatLegacyMatchDate(partida?.scheduled_at)}
+          {LEGACY_MATCH_STATUS_LABELS[String(partida?.estado)] || partida?.estado} â€¢ {formatLegacyMatchDate(partida?.scheduled_at)}
         </p>
       </header>
 
       <section className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar extraído</p>
+          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar extraÃ­do</p>
           <p className="text-2xl font-black italic font-heading text-[#FFD700]">{placarLabel}</p>
         </div>
         {hasPreview && (
@@ -2158,7 +2158,7 @@ const ReportMatchView = ({
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">{partida?.mandante}</h4>
             {unknownMandante.length > 0 && (
               <p className="text-[8px] font-black uppercase italic text-[#B22222] mb-3">
-                Não identificados: {unknownMandante.join(', ')}
+                NÃ£o identificados: {unknownMandante.join(', ')}
               </p>
             )}
             <div className="space-y-2">
@@ -2177,7 +2177,7 @@ const ReportMatchView = ({
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">{partida?.visitante}</h4>
             {unknownVisitante.length > 0 && (
               <p className="text-[8px] font-black uppercase italic text-[#B22222] mb-3">
-                Não identificados: {unknownVisitante.join(', ')}
+                NÃ£o identificados: {unknownVisitante.join(', ')}
               </p>
             )}
             <div className="space-y-2">
@@ -2204,7 +2204,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
 
   const handleConfirm = () => {
     if (scoreValue === 0) {
-      alert("ERRO: VOCÊ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
+      alert("ERRO: VOCÃŠ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
       return;
     }
     alert("RESULTADO CONFIRMADO! O LEGADO DO CLUBE FOI ATUALIZADO.");
@@ -2212,7 +2212,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
   };
 
   const handleDispute = () => {
-    alert("DISPUTA ABERTA. UM ADMINISTRADOR DA LIGA IRÁ ANALISAR O CASO.");
+    alert("DISPUTA ABERTA. UM ADMINISTRADOR DA LIGA IRÃ ANALISAR O CASO.");
     onBack();
   };
 
@@ -2225,7 +2225,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONFIRMAR RESULTADO</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÇÃO DO OPONENTE</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÃ‡ÃƒO DO OPONENTE</p>
       </header>
       <div className="space-y-8">
         <div className="bg-[#1E1E1E] p-10 relative overflow-hidden text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -2251,7 +2251,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
              </div>
            </div>
            <div className="mt-8 pt-8 border-t border-white/5">
-             <p className="text-[11px] font-black italic text-white/40 uppercase mb-4">AVALIE A CONDUTA DO ADVERSÁRIO</p>
+             <p className="text-[11px] font-black italic text-white/40 uppercase mb-4">AVALIE A CONDUTA DO ADVERSÃRIO</p>
              <div className="flex justify-center gap-3">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button 
@@ -2270,7 +2270,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
           <MCOButton variant="outline" onClick={handleDispute} className="w-full py-5 !text-[10px] text-[#B22222] border-[#B22222]/30">DISCORDAR / ABRIR DISPUTA</MCOButton>
         </div>
         <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest text-center px-4 leading-relaxed">
-           * AO CONFIRMAR, VOCÊ CONCORDA QUE O PLACAR ACIMA É VERÍDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
+           * AO CONFIRMAR, VOCÃŠ CONCORDA QUE O PLACAR ACIMA Ã‰ VERÃDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
         </p>
       </div>
     </div>
@@ -2296,7 +2296,7 @@ const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?
     <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
       <div className="flex justify-between items-end mb-4">
         <div>
-          <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÇÃO DO CLUBE</p>
+          <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÃ‡ÃƒO DO CLUBE</p>
           <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTierLabel}</h3>
         </div>
         <div className="text-right">
@@ -2361,13 +2361,13 @@ const DetailedAttributes = ({ player }: { player: any }) => {
           <div className="w-12 h-12 bg-[#FFD700] text-[#121212] flex items-center justify-center font-black italic font-heading text-2xl" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>{player.ovr}</div>
           <div className="flex-grow">
             <p className="text-2xl font-black italic uppercase font-heading text-white leading-none">{player.name}</p>
-            <p className="text-[10px] font-bold text-[#FFD700] uppercase italic tracking-[0.2em]">{player.pos} • {player.age || '??'} ANOS</p>
+            <p className="text-[10px] font-bold text-[#FFD700] uppercase italic tracking-[0.2em]">{player.pos} â€¢ {player.age || '??'} ANOS</p>
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
            <div className="bg-[#121212] p-4 border-l-[3px] border-[#FFD700]/30" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
-             <p className="text-[8px] font-black text-white/30 uppercase italic mb-1 tracking-widest">SALÁRIO MENSAL</p>
+             <p className="text-[8px] font-black text-white/30 uppercase italic mb-1 tracking-widest">SALÃRIO MENSAL</p>
              <p className="text-xl font-black italic font-heading text-white">M$ {player.salary || '0'}M</p>
            </div>
            <div className="bg-[#121212] p-4 border-r-[3px] border-[#FFD700]/30 text-right" style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)" }}>
@@ -2452,7 +2452,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setSquadPlayersRaw([]);
         setClubData(null);
-        setError('Selecione uma confederação para visualizar seu elenco.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar seu elenco.');
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
         return;
       }
@@ -2479,7 +2479,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
         if (cancelled) return;
         setSquadPlayersRaw([]);
         setClubData(null);
-        setError(currentError?.message || 'Não foi possível carregar o elenco.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o elenco.');
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -2513,7 +2513,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MEU ELENCO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic mt-2">
-          {clubData?.nome ? String(clubData.nome).toUpperCase() : 'CLUBE NÃO DEFINIDO'}
+          {clubData?.nome ? String(clubData.nome).toUpperCase() : 'CLUBE NÃƒO DEFINIDO'}
         </p>
       </header>
 
@@ -2528,16 +2528,16 @@ const SquadView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : squadPlayers.length === 0 ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Nenhum atleta cadastrado no elenco desta confederação.
+            Nenhum atleta cadastrado no elenco desta confederaÃ§Ã£o.
           </p>
         </div>
       ) : (
@@ -2553,7 +2553,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
               <div className="flex-grow overflow-hidden">
                 <p className="text-lg font-black italic font-heading text-white uppercase truncate">{player.name}</p>
                 <p className="text-[10px] text-[#FFD700] font-bold uppercase italic">
-                  {player.pos} • OVR {player.ovr}
+                  {player.pos} â€¢ OVR {player.ovr}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -2574,7 +2574,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
           <div className="relative w-full max-w-sm flex flex-col items-center">
             <div className="w-full flex justify-end mb-4"><button onClick={closePlayer} className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}><i className="fas fa-times text-xl"></i></button></div>
             {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
-            <div className="mt-8 w-full"><MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5" onClick={() => setShowDetailed(!showDetailed)}>{showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}</MCOButton></div>
+            <div className="mt-8 w-full"><MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5" onClick={() => setShowDetailed(!showDetailed)}>{showDetailed ? "VER CARD ULTIMATE" : "FICHA TÃ‰CNICA COMPLETA"}</MCOButton></div>
           </div>
         </div>
       )}
@@ -2725,10 +2725,10 @@ const AchievementsView = ({
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : groups.length === 0 ? (
@@ -3038,7 +3038,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setClubData(null);
         setFinanceData(null);
-        setError('Selecione uma confederação para visualizar o financeiro.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar o financeiro.');
         return;
       }
 
@@ -3063,7 +3063,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
         if (cancelled) return;
         setClubData(null);
         setFinanceData(null);
-        setError(currentError?.message || 'Não foi possível carregar os dados financeiros.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados financeiros.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -3109,10 +3109,10 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : (
@@ -3122,7 +3122,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
               <p className="text-[9px] text-[#FFD700] font-black uppercase italic mb-1 tracking-widest">SALDO EM CAIXA</p>
               <p className="text-4xl font-black italic font-heading text-white">M$ {totalBalance}M</p>
               <p className="text-[8px] text-white/30 font-black uppercase italic mt-2 tracking-widest">
-                {rodadasRestantes === null ? 'SEM CUSTO SALARIAL' : `${rodadasRestantes} RODADAS DE FÔLEGO`}
+                {rodadasRestantes === null ? 'SEM CUSTO SALARIAL' : `${rodadasRestantes} RODADAS DE FÃ”LEGO`}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -3139,19 +3139,19 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
-              RECEITAS DE PATROCÍNIO
+              RECEITAS DE PATROCÃNIO
             </h4>
             <div className="space-y-3">
               {patrocinioResgatados.length > 0 ? patrocinioResgatados.map((item: any) => (
                 <div key={String(item.id)} className="bg-[#181818] p-5 flex justify-between items-center border-r-[2px] border-[#FFD700]/30" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
                   <div>
-                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{item.observacao || 'Patrocínio'}</p>
+                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{item.observacao || 'PatrocÃ­nio'}</p>
                     <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest">{String(item.created_at || '').slice(0, 10)}</p>
                   </div>
                   <p className="text-xl font-black italic font-heading text-[#FFD700]">M$ {toMValue(item.valor)}M</p>
                 </div>
               )) : (
-                <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum patrocínio resgatado.</p>
+                <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum patrocÃ­nio resgatado.</p>
               )}
             </div>
           </div>
@@ -3181,7 +3181,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
-              MOVIMENTAÇÕES RECENTES
+              MOVIMENTAÃ‡Ã•ES RECENTES
             </h4>
             <div className="space-y-3">
               {movimentos.length > 0 ? movimentos.map((movement: any) => (
@@ -3195,7 +3195,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
                   </p>
                 </div>
               )) : (
-                <p className="text-[10px] font-black italic uppercase text-white/40">Sem movimentações recentes.</p>
+                <p className="text-[10px] font-black italic uppercase text-white/40">Sem movimentaÃ§Ãµes recentes.</p>
               )}
             </div>
           </div>
@@ -3268,7 +3268,7 @@ const LeagueTableView = ({
       if (!currentCareer?.id) {
         setRows([]);
         setLeagueName('LIGA NACIONAL');
-        setError('Selecione uma confederação para visualizar a tabela.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar a tabela.');
         setLoading(false);
         return;
       }
@@ -3287,7 +3287,7 @@ const LeagueTableView = ({
         if (cancelled) return;
         setRows([]);
         setLeagueName('LIGA NACIONAL');
-        setError(currentError?.message || 'Não foi possível carregar a tabela da liga.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar a tabela da liga.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -3305,7 +3305,7 @@ const LeagueTableView = ({
       <header className="mb-8">
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{leagueName}</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÇÃO</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÃ‡ÃƒO</p>
       </header>
       <div className="flex-grow overflow-y-auto">
         <div className="min-w-full">
@@ -3318,7 +3318,7 @@ const LeagueTableView = ({
            </div>
            {loading ? (
             <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificação...</p>
+              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificaÃ§Ã£o...</p>
             </div>
            ) : error ? (
             <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -3337,7 +3337,7 @@ const LeagueTableView = ({
                   className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
                   style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                 >
-                  <span className="text-[10px] font-black italic font-heading">{row.pos}º</span>
+                  <span className="text-[10px] font-black italic font-heading">{row.pos}Âº</span>
                   <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
@@ -3367,7 +3367,7 @@ const LeagueCupView = ({ onBack, onOpenClub }: { onBack: () => void, onOpenClub:
             </div>
             {match.pensH !== undefined && (
               <div className="bg-[#121212]/50 p-5 mt-4 border border-white/5 relative z-10" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                 <p className="text-[9px] font-black italic text-[#FFD700] uppercase text-center mb-4 tracking-[0.2em]">DISPUTA DE PÊNALTIS</p>
+                 <p className="text-[9px] font-black italic text-[#FFD700] uppercase text-center mb-4 tracking-[0.2em]">DISPUTA DE PÃŠNALTIS</p>
                  <div className="flex justify-between items-center px-4">
                     <div className="flex gap-2">{[...Array(5)].map((_, i) => (<div key={i} className={`w-3 h-3 rotate-45 border ${i < (match.pensH || 0) ? 'bg-[#FFD700] border-[#FFD700]' : 'border-white/10'}`}></div>))}</div>
                     <div className="flex flex-col items-center"><span className="text-2xl font-black italic font-heading text-[#FFD700] leading-none">{match.pensH}</span><span className="text-[8px] text-white/20 font-black italic">VS</span><span className="text-2xl font-black italic font-heading text-white leading-none">{match.pensA}</span></div>
@@ -3438,7 +3438,7 @@ const ContinentalTournamentView = ({ onBack, onOpenClub }: { onBack: () => void,
                 <div className="space-y-1">
                   {teams.map((row) => (
                     <div key={row.club} onClick={() => onOpenClub(row.club)} className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-3 items-center transition-all cursor-pointer active:opacity-70 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : (row.pos <= 2 ? 'bg-[#1E1E1E] border-l-[3px] border-[#008000]' : 'bg-[#1E1E1E] border-l-[3px] border-transparent opacity-60')}`} style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                      <span className="text-[9px] font-black italic font-heading">{row.pos}º</span>
+                      <span className="text-[9px] font-black italic font-heading">{row.pos}Âº</span>
                       <span className="text-[10px] font-black italic uppercase truncate">{row.club}</span>
                       <span className="text-[9px] font-black italic text-center opacity-40">{row.p}</span>
                       <span className="text-[9px] font-black italic text-center opacity-40">{row.v}</span>
@@ -3548,7 +3548,7 @@ const ProfileGameWidget = ({ data, onChange }: any) => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2">
-        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">GERAÇÃO DO CONSOLE</label>
+        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">GERAÃ‡ÃƒO DO CONSOLE</label>
         <select
           value={data.geracao_id || ''}
           onChange={(e) => onChange('geracao_id', e.target.value ? Number(e.target.value) : null)}
@@ -3576,7 +3576,7 @@ const ProfileGameWidget = ({ data, onChange }: any) => {
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">VERSÃO DO JOGO</label>
+        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">VERSÃƒO DO JOGO</label>
         <select
           value={data.jogo_id || ''}
           onChange={(e) => onChange('jogo_id', e.target.value ? Number(e.target.value) : null)}
@@ -3597,7 +3597,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
   const daysOfWeek = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      <p className="text-[10px] text-white/30 uppercase italic tracking-widest leading-relaxed">CADASTRAR MÚLTIPLOS HORÁRIOS PARA CADA DIA DA SEMANA.</p>
+      <p className="text-[10px] text-white/30 uppercase italic tracking-widest leading-relaxed">CADASTRAR MÃšLTIPLOS HORÃRIOS PARA CADA DIA DA SEMANA.</p>
       <div className="space-y-4">
         {daysOfWeek.map((day) => {
           const daySlots = availability[day] || [];
@@ -3607,7 +3607,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                   <span className={`w-10 h-10 flex items-center justify-center font-black italic text-xs ${hasSlots ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#121212] text-white/20'}`} style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>{day}</span>
-                  <span className="text-[10px] font-black text-white uppercase italic tracking-widest">{hasSlots ? `${daySlots.length} SLOT(S)` : 'INDISPONÍVEL'}</span>
+                  <span className="text-[10px] font-black text-white uppercase italic tracking-widest">{hasSlots ? `${daySlots.length} SLOT(S)` : 'INDISPONÃVEL'}</span>
                 </div>
                 <button 
                   onClick={() => onAddSlot(day)}
@@ -3627,7 +3627,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
                         onChange={(e) => onTimeChange(day, idx, 'from', e.target.value)}
                         className="flex-1 bg-transparent text-white font-black italic text-xs outline-none"
                       />
-                      <span className="text-[8px] text-[#FFD700] font-black italic">ATÉ</span>
+                      <span className="text-[8px] text-[#FFD700] font-black italic">ATÃ‰</span>
                       <input 
                         type="time" 
                         value={slot.to}
@@ -3696,7 +3696,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
     ? 'CARREGANDO CONTEXTO DA INBOX...'
     : hasPendingActions
     ? inboxSummary.detail
-    : 'SEM NOTIFICAÇÕES PENDENTES NO MOMENTO.';
+    : 'SEM NOTIFICAÃ‡Ã•ES PENDENTES NO MOMENTO.';
   const handlePendingActionsClick = () => {
     if (hasPendingActions && inboxSummary.primaryAction === 'SCHEDULE') {
       if (typeof onOpenSchedulePending === 'function') {
@@ -3715,7 +3715,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           onClick={() => navigateTo(LEGACY_ONBOARDING_CLUBE_URL)}
           className="w-full max-w-xs py-5 text-sm"
         >
-          ESCOLHER CONFEDERAÇÃO
+          ESCOLHER CONFEDERAÃ‡ÃƒO
         </MCOButton>
       </div>
     );
@@ -3744,7 +3744,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <i className={`fas ${hasPendingActions ? 'fa-triangle-exclamation' : 'fa-inbox'} text-white text-xl`}></i>
           <div className="flex-grow">
             <p className="text-[10px] font-black italic uppercase text-white leading-none">
-              AÇÕES PENDENTES{pendingCountLabel}
+              AÃ‡Ã•ES PENDENTES{pendingCountLabel}
             </p>
             <p className="text-[8px] font-bold text-white/60 uppercase italic">
               {pendingText}
@@ -3757,7 +3757,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÃ‡Ã•ES</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3769,7 +3769,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÃ“CIOS</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3793,8 +3793,8 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÃ“RICO</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÃSTICAS</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
                 <i className="fas fa-chart-line"></i>
@@ -3805,7 +3805,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃƒO DE CLUBE</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3829,9 +3829,9 @@ const ProfileView = ({ onBack }: any) => {
   const [availability, setAvailability] = useState<any>(buildEmptyAvailability());
 
   const widgets = [
-    { id: 'user', icon: 'fa-user-gear', label: 'USUÁRIO' },
+    { id: 'user', icon: 'fa-user-gear', label: 'USUÃRIO' },
     { id: 'game', icon: 'fa-gamepad', label: 'JOGO' },
-    { id: 'schedule', icon: 'fa-calendar-days', label: 'HORÁRIOS' }
+    { id: 'schedule', icon: 'fa-calendar-days', label: 'HORÃRIOS' }
   ];
 
   useEffect(() => {
@@ -3872,7 +3872,7 @@ const ProfileView = ({ onBack }: any) => {
         });
         setAvailability(currentAvailability);
       } catch (error: any) {
-        alert(error?.message || 'Falha ao carregar configurações.');
+        alert(error?.message || 'Falha ao carregar configuraÃ§Ãµes.');
       } finally {
         setLoading(false);
       }
@@ -3883,7 +3883,7 @@ const ProfileView = ({ onBack }: any) => {
 
   const handleSave = async () => {
     if (!LEGACY_CONFIG.profileUpdateUrl || !LEGACY_CONFIG.profileDisponibilidadesSyncUrl) {
-      alert('Configuração legacy ausente para salvar dados.');
+      alert('ConfiguraÃ§Ã£o legacy ausente para salvar dados.');
       return;
     }
 
@@ -3917,9 +3917,9 @@ const ProfileView = ({ onBack }: any) => {
         body: JSON.stringify({ entries }),
       });
 
-      alert('ALTERAÇÕES SALVAS!');
+      alert('ALTERAÃ‡Ã•ES SALVAS!');
     } catch (error: any) {
-      alert(error?.message || 'Falha ao salvar configurações.');
+      alert(error?.message || 'Falha ao salvar configuraÃ§Ãµes.');
     } finally {
       setSaving(false);
     }
@@ -3943,7 +3943,7 @@ const ProfileView = ({ onBack }: any) => {
       <div className="mb-12">
         {loading && (
           <div className="text-center py-16 text-white/40 text-xs font-black italic uppercase tracking-[0.2em]">
-            CARREGANDO CONFIGURAÇÕES...
+            CARREGANDO CONFIGURAÃ‡Ã•ES...
           </div>
         )}
         {activeWidget === 'user' && <ProfileUserWidget data={userData} onChange={(f: any, v: any) => setUserData({...userData, [f]: v})} />}
@@ -3952,7 +3952,7 @@ const ProfileView = ({ onBack }: any) => {
       </div>
       <div className="fixed bottom-24 left-6 right-6 z-40">
         <MCOButton variant="primary" className="w-full py-5 text-lg" onClick={handleSave} disabled={saving}>
-          {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
+          {saving ? 'SALVANDO...' : 'SALVAR ALTERAÃ‡Ã•ES'}
         </MCOButton>
       </div>
     </div>
@@ -4033,7 +4033,7 @@ const LegacyTaticoPlayerChip = ({
         )}
       </span>
       <span className="block mt-1 px-2 py-1 bg-[#1E1E1E]/90 border border-white/10 text-[8px] font-black italic uppercase text-white leading-none whitespace-nowrap" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-        {overall || '--'} • {positionLabel}
+        {overall || '--'} â€¢ {positionLabel}
       </span>
     </button>
   );
@@ -4063,7 +4063,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setClubData(null);
         setPlayers([]);
         setPlacements({});
-        setError('Selecione uma confederação para montar seu esquema tático.');
+        setError('Selecione uma confederaÃ§Ã£o para montar seu esquema tÃ¡tico.');
         return;
       }
 
@@ -4095,7 +4095,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setPlayers([]);
         setPlacements({});
         setFieldBackgroundUrl(null);
-        setError(currentError?.message || 'Não foi possível carregar o esquema tático.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o esquema tÃ¡tico.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4205,7 +4205,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
     try {
       event.currentTarget.releasePointerCapture(dragging.pointerId);
     } catch (currentError) {
-      // Ignora ponteiro já liberado.
+      // Ignora ponteiro jÃ¡ liberado.
     }
 
     draggingRef.current = { id: null, pointerId: null };
@@ -4213,7 +4213,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
 
   const handleSave = async () => {
     if (!hasClub) {
-      setSaveError('Crie um clube nesta confederação antes de salvar o esquema.');
+      setSaveError('Crie um clube nesta confederaÃ§Ã£o antes de salvar o esquema.');
       return;
     }
 
@@ -4247,9 +4247,9 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         }),
       });
 
-      setSaveSuccess(payload?.message || 'Esquema tático salvo com sucesso.');
+      setSaveSuccess(payload?.message || 'Esquema tÃ¡tico salvo com sucesso.');
     } catch (currentError: any) {
-      setSaveError(currentError?.message || 'Não foi possível salvar o esquema tático.');
+      setSaveError(currentError?.message || 'NÃ£o foi possÃ­vel salvar o esquema tÃ¡tico.');
     } finally {
       setSaving(false);
     }
@@ -4275,9 +4275,9 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESQUEMA TÁTICO</h2>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESQUEMA TÃTICO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic">
-          {clubData?.nome ? `${clubData.nome} • ${ligaData?.nome || ''}` : 'MONTAGEM DE TIME'}
+          {clubData?.nome ? `${clubData.nome} â€¢ ${ligaData?.nome || ''}` : 'MONTAGEM DE TIME'}
         </p>
       </header>
 
@@ -4292,10 +4292,10 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : (
@@ -4361,7 +4361,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
           </section>
 
           <section className="bg-[#1E1E1E] p-5 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">ELENCO DISPONÍVEL</h4>
+            <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">ELENCO DISPONÃVEL</h4>
             <div className="space-y-2">
               {sortedRoster.length > 0 ? (
                 sortedRoster.map((player) => {
@@ -4376,7 +4376,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                       <div className="min-w-0">
                         <p className="text-[11px] font-black italic uppercase text-white truncate">{name}</p>
                         <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.15em]">
-                          OVR {overall || '--'} • {posLabel}
+                          OVR {overall || '--'} â€¢ {posLabel}
                         </p>
                       </div>
                       <button
@@ -4395,7 +4395,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                 })
               ) : (
                 <p className="text-[10px] font-black uppercase italic text-white/40">
-                  Nenhum jogador ativo disponível. Atualize seu elenco.
+                  Nenhum jogador ativo disponÃ­vel. Atualize seu elenco.
                 </p>
               )}
             </div>
@@ -4408,12 +4408,12 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
 
 const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const menus = [
-    { id: 'esquema-tatico', title: 'ESQUEMA TÁTICO', icon: 'fa-chess-board', desc: 'POSICIONAMENTO EM CAMPO' },
-    { id: 'squad', title: 'MEU ELENCO', icon: 'fa-users-line', desc: 'GESTÃO DE ATLETAS' },
+    { id: 'esquema-tatico', title: 'ESQUEMA TÃTICO', icon: 'fa-chess-board', desc: 'POSICIONAMENTO EM CAMPO' },
+    { id: 'squad', title: 'MEU ELENCO', icon: 'fa-users-line', desc: 'GESTÃƒO DE ATLETAS' },
     { id: 'achievements', title: 'CONQUISTAS', icon: 'fa-award', desc: 'OBJETIVOS E METAS' },
-    { id: 'patrocinios', title: 'PATROCÍNIO', icon: 'fa-handshake', desc: 'META DE FÃS E RESGATES' },
-    { id: 'finance', title: 'FINANCEIRO', icon: 'fa-sack-dollar', desc: 'BALANÇO E PATROCÍNIOS' },
-    { id: 'trophies', title: 'TROFÉUS', icon: 'fa-trophy', desc: 'GALERIA DE GLÓRIAS' }
+    { id: 'patrocinios', title: 'PATROCÃNIO', icon: 'fa-handshake', desc: 'META DE FÃƒS E RESGATES' },
+    { id: 'finance', title: 'FINANCEIRO', icon: 'fa-sack-dollar', desc: 'BALANÃ‡O E PATROCÃNIOS' },
+    { id: 'trophies', title: 'TROFÃ‰US', icon: 'fa-trophy', desc: 'GALERIA DE GLÃ“RIAS' }
   ];
 
   const [loading, setLoading] = useState(false);
@@ -4428,7 +4428,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setClubData(null);
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
-        setError('Selecione uma confederação para visualizar seu clube.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar seu clube.');
         return;
       }
 
@@ -4452,7 +4452,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       } catch (currentError: any) {
         if (cancelled) return;
         setClubData(null);
-        setError(currentError?.message || 'Não foi possível carregar os dados do clube.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados do clube.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4468,7 +4468,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const hasClub = Boolean(clubData?.id);
   const clubName = hasClub ? String(clubData.nome || 'MEU CLUBE') : 'SEM CLUBE';
   const clubFans = Number(clubData?.fans ?? 0);
-  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÇÃO') : 'SEM CLASSIFICAÇÃO';
+  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÃ‡ÃƒO') : 'SEM CLASSIFICAÃ‡ÃƒO';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -4490,10 +4490,10 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
+            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
           </MCOButton>
         </div>
       ) : (
@@ -4527,7 +4527,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
         setLigaData(null);
         setClubData(null);
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
-        setError('Selecione uma confederação para visualizar seus torneios.');
+        setError('Selecione uma confederaÃ§Ã£o para visualizar seus torneios.');
         return;
       }
 
@@ -4553,7 +4553,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
         if (cancelled) return;
         setLigaData(null);
         setClubData(null);
-        setError(currentError?.message || 'Não foi possível carregar os torneios desta confederação.');
+        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os torneios desta confederaÃ§Ã£o.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4575,7 +4575,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TORNEIOS</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÇÕES ATIVAS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÃ‡Ã•ES ATIVAS</p>
       </header>
       {loading ? (
         <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
@@ -4588,7 +4588,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
       ) : !hasLeague ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não participa de uma liga nesta confederação.
+            VocÃª ainda nÃ£o participa de uma liga nesta confederaÃ§Ã£o.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
             ENTRAR EM UMA LIGA
@@ -4603,7 +4603,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
                 <div>
                   <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
                   <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
+                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÃ‡ÃƒO')}
                   </span>
                 </div>
               </div>
@@ -4665,9 +4665,22 @@ const mapLegacyMarketPlayer = (player: any) => {
   const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
   const playstyles = normalizeLegacyTraits(player?.player_traits);
   const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles);
+  const auctionRaw = player?.auction || {};
+  const auctionEnabled = Boolean(auctionRaw?.enabled);
+  const auctionHasBid = Boolean(auctionRaw?.has_bid);
+  const auctionCurrentBidEur = Number(
+    auctionRaw?.current_bid_eur ?? auctionRaw?.base_value_eur ?? valueEur,
+  );
+  const auctionLeaderClubName = String(auctionRaw?.leader_club_name || '').trim();
+  const auctionStatusLabel =
+    auctionEnabled && auctionHasBid && auctionLeaderClubName
+      ? `LIDER: ${auctionLeaderClubName}`
+      : 'AGENTE LIVRE';
 
   const statusLabel =
-    clubStatus === 'livre'
+    auctionEnabled
+      ? auctionStatusLabel
+      : clubStatus === 'livre'
       ? 'AGENTE LIVRE'
       : clubStatus === 'meu'
       ? 'MEU CLUBE'
@@ -4692,6 +4705,24 @@ const mapLegacyMarketPlayer = (player: any) => {
     photo: proxyFaceUrl(player?.player_face_url),
     age: Number(player?.age ?? 0) || undefined,
     marketValue: valueM,
+    value_eur: valueEur,
+    wage_eur: wageEur,
+    auction: {
+      enabled: auctionEnabled,
+      status: String(auctionRaw?.status || ''),
+      hasBid: auctionHasBid,
+      currentBidEur: Number.isFinite(auctionCurrentBidEur) ? auctionCurrentBidEur : valueEur,
+      baseValueEur: Number(auctionRaw?.base_value_eur ?? valueEur),
+      leaderClubId: auctionRaw?.leader_club_id ? Number(auctionRaw.leader_club_id) : null,
+      leaderClubName: auctionLeaderClubName || null,
+      expiresAt: auctionRaw?.expires_at ? String(auctionRaw.expires_at) : null,
+      secondsRemaining:
+        auctionRaw?.seconds_remaining === null || auctionRaw?.seconds_remaining === undefined
+          ? null
+          : Number(auctionRaw.seconds_remaining),
+      isLeader: Boolean(auctionRaw?.is_leader),
+      nextMinBidEur: Number(auctionRaw?.next_min_bid_eur ?? valueEur),
+    },
     skillMoves: toLegacyStarRating(player?.skill_moves, 3),
     weakFoot: toLegacyStarRating(player?.weak_foot, 3),
     playstyles,
@@ -4755,6 +4786,28 @@ function toLegacyMoneyInMillions(value: any) {
   const parsed = Number(value ?? 0);
   if (!Number.isFinite(parsed) || parsed <= 0) return 0;
   return Math.max(0, Math.round(parsed / 1_000_000));
+}
+
+function toLegacyMoneyCompact(value: any) {
+  const parsed = Number(value ?? 0);
+  if (!Number.isFinite(parsed) || parsed <= 0) return '0';
+
+  if (parsed >= 1_000_000_000) {
+    const billions = parsed / 1_000_000_000;
+    return `${billions.toFixed(billions >= 10 ? 0 : 1).replace(/\.0$/, '')}B`;
+  }
+
+  if (parsed >= 1_000_000) {
+    const millions = parsed / 1_000_000;
+    return `${millions.toFixed(millions >= 10 ? 0 : 1).replace(/\.0$/, '')}M`;
+  }
+
+  if (parsed >= 1_000) {
+    const thousands = parsed / 1_000;
+    return `${thousands.toFixed(thousands >= 10 ? 0 : 1).replace(/\.0$/, '')}K`;
+  }
+
+  return String(Math.round(parsed));
 }
 
 function toLegacyStarRating(value: any, fallback = 3) {
@@ -4883,6 +4936,20 @@ const mapLegacySquadPlayer = (entry: any) => {
 };
 
 const LEGACY_MARKET_PAGE_SIZE = 20;
+const LEGACY_AUCTION_BID_OPTIONS_DEFAULT = [100000, 200000, 300000, 500000, 1000000];
+
+const getLegacyAuctionCountdown = (expiresAt: string | null | undefined, nowTimestamp: number) => {
+  if (!expiresAt) return null;
+
+  const expiry = new Date(expiresAt).getTime();
+  if (!Number.isFinite(expiry)) return null;
+
+  const diffMs = expiry - nowTimestamp;
+  const seconds = Math.max(0, Math.floor(diffMs / 1000));
+  const minutesPart = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const secondsPart = (seconds % 60).toString().padStart(2, '0');
+  return `${minutesPart}:${secondsPart}`;
+};
 
 const MarketView = ({
   onBack,
@@ -4902,6 +4969,9 @@ const MarketView = ({
   const [marketError, setMarketError] = useState('');
   const [marketNotice, setMarketNotice] = useState('');
   const [marketClosed, setMarketClosed] = useState(false);
+  const [marketMode, setMarketMode] = useState<'open' | 'closed' | 'auction'>('open');
+  const [marketAuctionPeriod, setMarketAuctionPeriod] = useState<any>(null);
+  const [marketBidOptions, setMarketBidOptions] = useState<number[]>(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
   const [marketRadarIds, setMarketRadarIds] = useState<number[]>([]);
   const [marketLigaId, setMarketLigaId] = useState<number | null>(null);
   const [marketClubId, setMarketClubId] = useState<number | null>(null);
@@ -4909,6 +4979,8 @@ const MarketView = ({
   const [marketActionBusyIds, setMarketActionBusyIds] = useState<number[]>([]);
   const [radarBusyIds, setRadarBusyIds] = useState<number[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [auctionBidPlayer, setAuctionBidPlayer] = useState<any>(null);
+  const [marketNowTs, setMarketNowTs] = useState(() => Date.now());
 
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [filterPos, setFilterPos] = useState('TODAS');
@@ -4941,6 +5013,36 @@ const MarketView = ({
   }, [subMode, currentCareer?.id]);
 
   useEffect(() => {
+    const timer = window.setInterval(() => {
+      setMarketNowTs(Date.now());
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (marketMode !== 'auction' || (subMode !== 'list' && subMode !== 'watchlist')) {
+      return;
+    }
+
+    const refreshInterval = window.setInterval(() => {
+      setMarketReloadToken((prev) => prev + 1);
+    }, 15000);
+
+    return () => {
+      window.clearInterval(refreshInterval);
+    };
+  }, [marketMode, subMode, currentCareer?.id]);
+
+  useEffect(() => {
+    if (marketMode !== 'auction') {
+      setAuctionBidPlayer(null);
+    }
+  }, [marketMode]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadMarket = async () => {
@@ -4951,9 +5053,13 @@ const MarketView = ({
       if (!currentCareer?.id) {
         setMarketPlayersRaw([]);
         setMarketClosed(false);
+        setMarketMode('open');
+        setMarketAuctionPeriod(null);
+        setMarketBidOptions(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setAuctionBidPlayer(null);
         setMarketPagination({
           currentPage: 1,
           lastPage: 1,
@@ -4962,7 +5068,7 @@ const MarketView = ({
           to: 0,
           perPage: LEGACY_MARKET_PAGE_SIZE,
         });
-        setMarketError('Selecione uma confederação para carregar o mercado.');
+        setMarketError('Selecione uma confederaÃ§Ã£o para carregar o mercado.');
         return;
       }
 
@@ -4989,6 +5095,14 @@ const MarketView = ({
 
         const players = Array.isArray(payload?.mercado?.players) ? payload.mercado.players : [];
         const paginationRaw = payload?.mercado?.pagination ?? {};
+        const rawMode = String(payload?.mercado?.mode || (payload?.mercado?.closed ? 'closed' : 'open')).toLowerCase();
+        const normalizedMode: 'open' | 'closed' | 'auction' =
+          rawMode === 'auction' ? 'auction' : rawMode === 'closed' ? 'closed' : 'open';
+        const bidOptionsRaw = Array.isArray(payload?.mercado?.bid_increment_options)
+          ? payload.mercado.bid_increment_options
+              .map((value: any) => Number(value))
+              .filter((value: number) => Number.isFinite(value) && value > 0)
+          : [];
         const radarIds = Array.isArray(payload?.mercado?.radar_ids)
           ? payload.mercado.radar_ids
               .map((id: any) => Number(id))
@@ -5005,6 +5119,9 @@ const MarketView = ({
 
         setMarketPlayersRaw(players);
         setMarketClosed(Boolean(payload?.mercado?.closed));
+        setMarketMode(normalizedMode);
+        setMarketAuctionPeriod(payload?.mercado?.auction_period ?? null);
+        setMarketBidOptions(bidOptionsRaw.length > 0 ? bidOptionsRaw : LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds(radarIds);
         setMarketLigaId(ligaId > 0 ? ligaId : null);
         setMarketClubId(clubeId > 0 ? clubeId : null);
@@ -5023,9 +5140,13 @@ const MarketView = ({
         if (cancelled) return;
         setMarketPlayersRaw([]);
         setMarketClosed(false);
+        setMarketMode('open');
+        setMarketAuctionPeriod(null);
+        setMarketBidOptions(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setAuctionBidPlayer(null);
         setMarketPagination({
           currentPage: 1,
           lastPage: 1,
@@ -5034,7 +5155,7 @@ const MarketView = ({
           to: 0,
           perPage: LEGACY_MARKET_PAGE_SIZE,
         });
-        setMarketError(error?.message || 'Não foi possível carregar os registros do mercado.');
+        setMarketError(error?.message || 'NÃ£o foi possÃ­vel carregar os registros do mercado.');
       } finally {
         if (!cancelled) {
           setMarketLoading(false);
@@ -5101,13 +5222,46 @@ const MarketView = ({
       const playerName = String(player?.name || 'Jogador');
       setMarketNotice(
         response?.status === 'removed'
-          ? `${playerName} removido da observação.`
-          : `${playerName} adicionado na observação.`,
+          ? `${playerName} removido da observaÃ§Ã£o.`
+          : `${playerName} adicionado na observaÃ§Ã£o.`,
       );
     } catch (error: any) {
-      setMarketNotice(error?.message || 'Não foi possível atualizar a observação.');
+      setMarketNotice(error?.message || 'NÃ£o foi possÃ­vel atualizar a observaÃ§Ã£o.');
     } finally {
       setBusyFlag(setRadarBusyIds as any, playerId, false);
+    }
+  };
+
+  const submitAuctionBid = async (player: any, increment: number | null = null) => {
+    const playerId = Number(player?.id ?? 0);
+    if (playerId <= 0) return;
+
+    if (!marketLigaId || !marketClubId) {
+      setMarketNotice('Crie um clube nesta confederacao para participar do leilao.');
+      return;
+    }
+
+    setBusyFlag(setMarketActionBusyIds as any, playerId, true);
+    setMarketNotice('');
+
+    try {
+      const payload: any = { elencopadrao_id: playerId };
+      if (increment && increment > 0) {
+        payload.increment = increment;
+      }
+
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/leiloes/lances`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+
+      setMarketNotice(response?.message || 'Lance registrado com sucesso.');
+      setAuctionBidPlayer(null);
+      setMarketReloadToken((prev) => prev + 1);
+    } catch (error: any) {
+      setMarketNotice(error?.message || 'Nao foi possivel registrar o lance.');
+    } finally {
+      setBusyFlag(setMarketActionBusyIds as any, playerId, false);
     }
   };
 
@@ -5115,13 +5269,33 @@ const MarketView = ({
     const playerId = Number(player?.id ?? 0);
     if (playerId <= 0 || player?.club_status === 'meu') return;
 
+    if (marketMode === 'auction') {
+      if (!marketLigaId || !marketClubId) {
+        setMarketNotice('Crie um clube nesta confederacao para participar do leilao.');
+        return;
+      }
+
+      if (player?.club_status !== 'livre') {
+        setMarketNotice('Apenas jogadores livres podem receber lances.');
+        return;
+      }
+
+      if (player?.auction?.isLeader) {
+        setMarketNotice('Seu clube ja lidera este leilao.');
+        return;
+      }
+
+      setAuctionBidPlayer(player);
+      return;
+    }
+
     if (marketClosed) {
-      setMarketNotice('Mercado fechado para esta confederação.');
+      setMarketNotice('Mercado fechado para esta confederaÃ§Ã£o.');
       return;
     }
 
     if (!marketLigaId || !marketClubId) {
-      setMarketNotice('Crie um clube nesta confederação para negociar no mercado.');
+      setMarketNotice('Crie um clube nesta confederaÃ§Ã£o para negociar no mercado.');
       return;
     }
 
@@ -5135,22 +5309,27 @@ const MarketView = ({
         body: JSON.stringify({ elencopadrao_id: playerId }),
       });
 
-      setMarketNotice(response?.message || 'Ação concluída com sucesso.');
+      setMarketNotice(response?.message || 'AÃ§Ã£o concluÃ­da com sucesso.');
       setMarketReloadToken((prev) => prev + 1);
     } catch (error: any) {
-      setMarketNotice(error?.message || 'Não foi possível concluir a ação.');
+      setMarketNotice(error?.message || 'NÃ£o foi possÃ­vel concluir a aÃ§Ã£o.');
     } finally {
       setBusyFlag(setMarketActionBusyIds as any, playerId, false);
     }
   };
 
   const statusOptions = isMarketDataMode
-    ? [
-      { value: 'TODOS', label: 'TODOS' },
-      { value: 'LIVRE', label: 'LIVRE' },
-      { value: 'MEU', label: 'MEU CLUBE' },
-      { value: 'RIVAL', label: 'RIVAIS' },
-    ]
+    ? marketMode === 'auction'
+      ? [
+        { value: 'TODOS', label: 'TODOS' },
+        { value: 'LIVRE', label: 'LIVRE' },
+      ]
+      : [
+        { value: 'TODOS', label: 'TODOS' },
+        { value: 'LIVRE', label: 'LIVRE' },
+        { value: 'MEU', label: 'MEU CLUBE' },
+        { value: 'RIVAL', label: 'RIVAIS' },
+      ]
     : [
       { value: 'TODOS', label: 'TODOS' },
       { value: 'LIVRE', label: 'LIVRE' },
@@ -5176,6 +5355,7 @@ const MarketView = ({
   const currentPageEnd = totalFilteredPlayers > 0
     ? Math.max(currentPageStart, Number(marketPagination.to ?? currentPageStart) || currentPageStart)
     : 0;
+  const isAuctionMode = marketMode === 'auction';
 
   const renderPlayerList = (title: string, subtitle: string) => (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
@@ -5189,7 +5369,17 @@ const MarketView = ({
           <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{subtitle}</p>
           {isMarketDataMode && marketClosed && (
             <p className="text-[9px] text-[#B22222] font-black uppercase italic tracking-[0.2em] mt-2">
-              Mercado fechado para esta confederação
+              Mercado fechado para esta confederaÃ§Ã£o
+            </p>
+          )}
+          {isMarketDataMode && isAuctionMode && (
+            <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em] mt-2">
+              Modo leilao ativo: apenas jogadores livres com lances.
+            </p>
+          )}
+          {isMarketDataMode && isAuctionMode && marketAuctionPeriod?.inicio_label && marketAuctionPeriod?.fim_label && (
+            <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-1">
+              Leilao: {marketAuctionPeriod.inicio_label} ate {marketAuctionPeriod.fim_label}
             </p>
           )}
           {!!marketNotice && (
@@ -5237,7 +5427,7 @@ const MarketView = ({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[7px] font-black text-white/30 uppercase italic">POSIÇÃO</label>
+                <label className="text-[7px] font-black text-white/30 uppercase italic">POSIÃ‡ÃƒO</label>
                 <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase">
                   <option value="TODAS">TODAS</option>
                   <option value="ATACANTES">CATEGORIA: ATACANTES</option>
@@ -5257,11 +5447,11 @@ const MarketView = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÍNIMO</label>
+                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÃNIMO</label>
                   <input type="number" placeholder="M$ MIN" value={filterValMin} onChange={(e) => setFilterValMin(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÁXIMO</label>
+                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÃXIMO</label>
                   <input type="number" placeholder="M$ MAX" value={filterValMax} onChange={(e) => setFilterValMax(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase" />
                 </div>
               </div>
@@ -5282,7 +5472,7 @@ const MarketView = ({
             <span className="text-[8px] font-black italic uppercase text-center">ATLETA</span>
             <span className="text-[8px] font-black italic uppercase">NOME</span>
             <span className="text-[8px] font-black italic uppercase text-right pr-2">VALOR</span>
-            <span className="text-[8px] font-black italic uppercase text-center">AÇÕES</span>
+            <span className="text-[8px] font-black italic uppercase text-center">AÃ‡Ã•ES</span>
           </div>
           {!marketLoading && !marketError && totalFilteredPlayers > 0 && (
             <div className="flex items-center justify-between gap-2 px-2 py-2 bg-[#1E1E1E]/50 border-l-[2px] border-[#FFD700]/40">
@@ -5306,9 +5496,14 @@ const MarketView = ({
             const isPrimaryBusy = marketActionBusyIds.includes(player.id);
             const isRadarBusy = radarBusyIds.includes(player.id);
             const isObserved = marketRadarSet.has(player.id);
+            const playerIsAuctionLeader = Boolean(player?.auction?.isLeader);
             const primaryActionLabel =
               isPrimaryBusy
                 ? 'OPERANDO...'
+                : isAuctionMode
+                ? playerIsAuctionLeader
+                  ? 'LIDERANDO'
+                  : 'LANCE'
                 : player.club_status === 'meu'
                 ? 'NO CLUBE'
                 : !marketClubId
@@ -5316,10 +5511,15 @@ const MarketView = ({
                 : player.club_status === 'outro'
                 ? (player.can_multa ? 'MULTA' : 'COMPRAR')
                 : 'COMPRAR';
-            const primaryDisabled = player.club_status === 'meu'
-              || (isMarketDataMode && marketClosed)
-              || !marketClubId
-              || isPrimaryBusy;
+            const primaryDisabled = isAuctionMode
+              ? !marketClubId
+                || isPrimaryBusy
+                || player.club_status !== 'livre'
+                || playerIsAuctionLeader
+              : player.club_status === 'meu'
+                || (isMarketDataMode && marketClosed)
+                || !marketClubId
+                || isPrimaryBusy;
 
             return (
               <div
@@ -5345,7 +5545,20 @@ const MarketView = ({
                   <p className="text-[7px] font-bold uppercase italic text-white/20 truncate mt-0.5">{player.club}</p>
                 </div>
                 <div className="text-right pr-2">
-                  <p className="text-[9px] font-black italic font-heading text-white">M$ {player.value}M</p>
+                  {isAuctionMode ? (
+                    <>
+                      <p className="text-[9px] font-black italic font-heading text-white">
+                        {toLegacyMoneyCompact(player?.auction?.currentBidEur ?? player?.value_eur ?? 0)}
+                      </p>
+                      {player?.auction?.expiresAt && (
+                        <p className="text-[7px] font-black italic uppercase text-[#FFD700]/75 mt-0.5">
+                          {getLegacyAuctionCountdown(player.auction.expiresAt, marketNowTs)}
+                        </p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[9px] font-black italic font-heading text-white">M$ {player.value}M</p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-1.5 px-1">
                   <button
@@ -5414,6 +5627,76 @@ const MarketView = ({
           </div>
         )}
       </div>
+      {auctionBidPlayer && (() => {
+        const hasBid = Boolean(auctionBidPlayer?.auction?.hasBid);
+        const currentBid = Number(
+          auctionBidPlayer?.auction?.currentBidEur ?? auctionBidPlayer?.value_eur ?? 0,
+        );
+        const isBusy = marketActionBusyIds.includes(Number(auctionBidPlayer?.id ?? 0));
+
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => !isBusy && setAuctionBidPlayer(null)}></div>
+            <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">LEILAO</p>
+              <h4 className="text-lg font-black italic uppercase text-white leading-tight">
+                {String(auctionBidPlayer?.name || 'ATLETA')}
+              </h4>
+              <p className="text-[9px] font-black italic uppercase text-white/50 mt-1">
+                Lance atual: {toLegacyMoneyCompact(currentBid)}
+              </p>
+              {auctionBidPlayer?.auction?.leaderClubName && (
+                <p className="text-[8px] font-black italic uppercase text-[#FFD700]/80 mt-1">
+                  Lider: {auctionBidPlayer.auction.leaderClubName}
+                </p>
+              )}
+
+              <div className="mt-4 space-y-2">
+                {!hasBid ? (
+                  <button
+                    type="button"
+                    className={`w-full text-[9px] font-black italic uppercase py-3 ${
+                      isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                    }`}
+                    style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                    onClick={() => !isBusy && void submitAuctionBid(auctionBidPlayer, null)}
+                    disabled={isBusy}
+                  >
+                    {isBusy ? 'OPERANDO...' : 'LANCE INICIAL'}
+                  </button>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    {marketBidOptions.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        className={`text-[8px] font-black italic uppercase py-2 ${
+                          isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                        }`}
+                        style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                        onClick={() => !isBusy && void submitAuctionBid(auctionBidPlayer, option)}
+                        disabled={isBusy}
+                      >
+                        +{toLegacyMoneyCompact(option)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="button"
+                className="w-full mt-3 text-[8px] font-black italic uppercase py-2 bg-white/10 text-white/50"
+                style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                onClick={() => !isBusy && setAuctionBidPlayer(null)}
+                disabled={isBusy}
+              >
+                FECHAR
+              </button>
+            </div>
+          </div>
+        );
+      })()}
       {selectedPlayer && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
           <div className="absolute inset-0" onClick={closePlayer}></div>
@@ -5426,7 +5709,7 @@ const MarketView = ({
             {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
             <div className="mt-8 w-full">
               <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={() => setShowDetailed(!showDetailed)}>
-                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}
+                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÃ‰CNICA COMPLETA"}
               </MCOButton>
             </div>
           </div>
@@ -5436,9 +5719,12 @@ const MarketView = ({
   );
 
   if (subMode === 'list') {
-    return renderPlayerList('MERCADO', marketClosed ? 'JANELA FECHADA' : 'JANELA ABERTA');
+    return renderPlayerList(
+      'MERCADO',
+      isAuctionMode ? 'MODO LEILAO' : marketClosed ? 'JANELA FECHADA' : 'JANELA ABERTA',
+    );
   }
-  if (subMode === 'watchlist') return renderPlayerList('OBSERVAÇÃO', 'LISTA DE SCOUTING');
+  if (subMode === 'watchlist') return renderPlayerList('OBSERVAÃ‡ÃƒO', 'LISTA DE SCOUTING');
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto">
@@ -5449,7 +5735,7 @@ const MarketView = ({
             <i className="fas fa-arrow-left mr-2"></i> VOLTAR
           </MCOButton>
           <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MERCADO</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÊNCIAS E NEGÓCIOS</p>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÃŠNCIAS E NEGÃ“CIOS</p>
         </header>
         <div className="grid grid-cols-1 gap-4">
           <MCOCard onClick={() => setSubMode('list')} className="p-8" active={true} accentColor="#FFD700">
@@ -5469,7 +5755,7 @@ const MarketView = ({
                 <i className="fas fa-binoculars text-2xl text-[#FFD700]"></i>
               </div>
               <div>
-                <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÇÃO</h4>
+                <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÃ‡ÃƒO</h4>
                 <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">ATLETAS MONITORADOS</p>
               </div>
             </div>
@@ -5680,7 +5966,7 @@ const App = () => {
 
       if (!clube) {
         setClubProfileToView(null);
-        setClubProfileError('Clube não encontrado para esta confederação.');
+        setClubProfileError('Clube nÃ£o encontrado para esta confederaÃ§Ã£o.');
         return;
       }
 
@@ -5700,7 +5986,7 @@ const App = () => {
       });
     } catch (currentError: any) {
       setClubProfileToView(null);
-      setClubProfileError(currentError?.message || 'Não foi possível carregar os dados do clube.');
+      setClubProfileError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados do clube.');
     } finally {
       setClubProfileLoading(false);
     }
