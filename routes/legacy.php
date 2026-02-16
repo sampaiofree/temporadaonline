@@ -53,6 +53,10 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('achievements.data');
         Route::post('/achievements/{conquista}/claim', [LegacyController::class, 'claimAchievement'])
             ->name('achievements.claim');
+        Route::get('/patrocinios-data', [LegacyController::class, 'patrociniosData'])
+            ->name('patrocinios.data');
+        Route::post('/patrocinios/{patrocinio}/claim', [LegacyController::class, 'claimPatrocinio'])
+            ->name('patrocinios.claim');
         Route::get('/season-stats-data', [LegacyController::class, 'seasonStatsData'])
             ->name('season_stats.data');
         Route::get('/finance-data', [LegacyController::class, 'financeData'])

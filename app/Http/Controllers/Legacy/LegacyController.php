@@ -16,6 +16,7 @@ use App\Models\LigaClubePatrocinio;
 use App\Models\LigaPeriodo;
 use App\Models\LigaProposta;
 use App\Models\LigaTransferencia;
+use App\Models\Patrocinio;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDesempenho;
@@ -24,6 +25,7 @@ use App\Models\Playstyle;
 use App\Models\PlayerFavorite;
 use App\Models\Temporada;
 use App\Models\User;
+use App\Services\LeagueFinanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -74,6 +76,7 @@ class LegacyController extends Controller
                 'leaderboardDataUrl' => route('legacy.leaderboard.data'),
                 'leagueTableDataUrl' => route('legacy.league_table.data'),
                 'achievementsDataUrl' => route('legacy.achievements.data'),
+                'patrociniosDataUrl' => route('legacy.patrocinios.data'),
                 'seasonStatsDataUrl' => route('legacy.season_stats.data'),
                 'financeDataUrl' => route('legacy.finance.data'),
                 'inboxDataUrl' => route('legacy.inbox.data'),
@@ -1732,6 +1735,204 @@ class LegacyController extends Controller
                 'stage' => 'confederacao',
                 'confederacao_id' => $scopeConfederacaoId,
             ]),
+        ]);
+    }
+
+    public function patrociniosData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+                'liga' => null,
+                'clube' => null,
+                'fans' => 0,
+                'groups' => [],
+                'onboarding_url' => route('legacy.onboarding_clube'),
+            ], 404);
+        }
+
+        $scopeConfederacaoId = $liga->confederacao_id;
+        $userClubQuery = $user->clubesLiga()->where('liga_id', $liga->id);
+
+        if ($scopeConfederacaoId) {
+            $userClubQuery->where('confederacao_id', $scopeConfederacaoId);
+        }
+
+        $clube = $userClubQuery->first();
+
+        $fans = $clube
+            ? (int) LigaClubeConquista::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $clube->id)
+                ->whereNotNull('claimed_at')
+                ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
+                ->sum('conquistas.fans')
+            : 0;
+
+        $claimedByPatrocinioId = collect();
+        if ($clube) {
+            $claimedByPatrocinioId = LigaClubePatrocinio::query()
+                ->where('liga_id', $liga->id)
+                ->where('liga_clube_id', $clube->id)
+                ->whereNotNull('claimed_at')
+                ->get(['patrocinio_id', 'claimed_at'])
+                ->mapWithKeys(fn (LigaClubePatrocinio $registro) => [
+                    (int) $registro->patrocinio_id => $registro->claimed_at?->toIso8601String(),
+                ]);
+        }
+
+        $items = Patrocinio::query()
+            ->orderBy('fans')
+            ->orderBy('id')
+            ->get(['id', 'nome', 'descricao', 'imagem', 'valor', 'fans'])
+            ->map(function (Patrocinio $patrocinio) use ($fans, $claimedByPatrocinioId): array {
+                $requiredFans = (int) ($patrocinio->fans ?? 0);
+                $claimedAt = $claimedByPatrocinioId->get((int) $patrocinio->id);
+                $canClaim = ! $claimedAt && $fans >= $requiredFans;
+                $progressPercent = $requiredFans > 0
+                    ? (int) min(100, max(0, round(($fans / $requiredFans) * 100)))
+                    : 0;
+
+                return [
+                    'id' => (int) $patrocinio->id,
+                    'nome' => (string) $patrocinio->nome,
+                    'descricao' => (string) ($patrocinio->descricao ?? ''),
+                    'imagem_url' => $this->resolveEscudoUrl($patrocinio->imagem),
+                    'valor' => (int) ($patrocinio->valor ?? 0),
+                    'fans' => $requiredFans,
+                    'current_fans' => $fans,
+                    'claimed_at' => $claimedAt,
+                    'status' => $claimedAt ? 'claimed' : ($canClaim ? 'available' : 'locked'),
+                    'progress' => [
+                        'value' => min($fans, max(0, $requiredFans)),
+                        'required' => max(0, $requiredFans),
+                        'percent' => $progressPercent,
+                    ],
+                ];
+            })
+            ->values();
+
+        $groups = $items->isEmpty()
+            ? []
+            : [
+                [
+                    'tipo' => 'patrocinios',
+                    'tipo_label' => 'Patrocinios',
+                    'current' => $fans,
+                    'total' => $items->count(),
+                    'claimed_count' => $items->where('status', 'claimed')->count(),
+                    'items' => $items->all(),
+                ],
+            ];
+
+        return response()->json([
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'confederacao_id' => $liga->confederacao_id,
+                'confederacao_nome' => $liga->confederacao?->nome,
+            ],
+            'clube' => $clube ? [
+                'id' => $clube->id,
+                'nome' => $clube->nome,
+            ] : null,
+            'fans' => $fans,
+            'groups' => $groups,
+            'onboarding_url' => route('legacy.onboarding_clube', [
+                'stage' => 'confederacao',
+                'confederacao_id' => $scopeConfederacaoId,
+            ]),
+        ]);
+    }
+
+    public function claimPatrocinio(Request $request, Patrocinio $patrocinio): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+            ], 404);
+        }
+
+        $scopeConfederacaoId = $liga->confederacao_id;
+        $userClubQuery = $user->clubesLiga()->where('liga_id', $liga->id);
+
+        if ($scopeConfederacaoId) {
+            $userClubQuery->where('confederacao_id', $scopeConfederacaoId);
+        }
+
+        $clube = $userClubQuery->first();
+        if (! $clube) {
+            return response()->json([
+                'message' => 'Clube nao encontrado para esta confederacao.',
+            ], 404);
+        }
+
+        $fans = (int) LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
+            ->sum('conquistas.fans');
+
+        if ($fans < (int) $patrocinio->fans) {
+            return response()->json([
+                'message' => 'Ainda nao atingiu os fans necessarios para este patrocinio.',
+            ], 422);
+        }
+
+        $existing = LigaClubePatrocinio::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->where('patrocinio_id', $patrocinio->id)
+            ->first();
+
+        if ($existing && $existing->claimed_at) {
+            return response()->json([
+                'message' => 'Patrocinio ja foi resgatado.',
+                'patrocinio_id' => (int) $patrocinio->id,
+                'claimed_at' => $existing->claimed_at?->toIso8601String(),
+            ], 409);
+        }
+
+        $finance = app(LeagueFinanceService::class);
+        $novoSaldo = $finance->credit($liga->id, $clube->id, (int) $patrocinio->valor);
+
+        $record = $existing ?? new LigaClubePatrocinio();
+        $record->fill([
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $clube->id,
+            'patrocinio_id' => $patrocinio->id,
+        ]);
+        $record->claimed_at = now();
+        $record->save();
+
+        return response()->json([
+            'message' => 'Patrocinio resgatado com sucesso.',
+            'patrocinio_id' => (int) $patrocinio->id,
+            'claimed_at' => $record->claimed_at?->toIso8601String(),
+            'saldo' => $novoSaldo,
         ]);
     }
 

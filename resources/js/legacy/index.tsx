@@ -23,6 +23,7 @@ const LEGACY_MATCH_CENTER_DATA_URL = String(LEGACY_CONFIG?.matchCenterDataUrl ||
 const LEGACY_LEADERBOARD_DATA_URL = String(LEGACY_CONFIG?.leaderboardDataUrl || '/legacy/leaderboard-data');
 const LEGACY_LEAGUE_TABLE_DATA_URL = String(LEGACY_CONFIG?.leagueTableDataUrl || '/legacy/league-table-data');
 const LEGACY_ACHIEVEMENTS_DATA_URL = String(LEGACY_CONFIG?.achievementsDataUrl || '/legacy/achievements-data');
+const LEGACY_PATROCINIOS_DATA_URL = String(LEGACY_CONFIG?.patrociniosDataUrl || '/legacy/patrocinios-data');
 const LEGACY_SEASON_STATS_DATA_URL = String(LEGACY_CONFIG?.seasonStatsDataUrl || '/legacy/season-stats-data');
 const LEGACY_FINANCE_DATA_URL = String(LEGACY_CONFIG?.financeDataUrl || '/legacy/finance-data');
 const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inbox-data');
@@ -38,6 +39,23 @@ const navigateTo = (url: string) => {
   }
 
   window.location.assign(url);
+};
+
+const submitLegacyLogout = () => {
+  const logoutUrl = String(LEGACY_CONFIG?.logoutUrl || '/legacy/logout');
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = logoutUrl;
+  form.style.display = 'none';
+
+  const tokenInput = document.createElement('input');
+  tokenInput.type = 'hidden';
+  tokenInput.name = '_token';
+  tokenInput.value = CSRF_TOKEN;
+  form.appendChild(tokenInput);
+
+  document.body.appendChild(form);
+  form.submit();
 };
 
 type LegacyMarketSubMode = 'menu' | 'list' | 'watchlist';
@@ -62,6 +80,7 @@ const LEGACY_ALLOWED_VIEWS = new Set<string>([
   'esquema-tatico',
   'squad',
   'achievements',
+  'patrocinios',
   'finance',
   'trophies',
   'tournaments',
@@ -426,7 +445,7 @@ const MCOBottomNav = ({
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E] border-t-[3px] border-[#FFD700] flex justify-around p-2 safe-area-bottom z-50">
       {navItems.map((item) => {
-        const isClubSubView = ['my-club', 'esquema-tatico', 'squad', 'achievements', 'finance', 'trophies'].includes(activeView);
+        const isClubSubView = ['my-club', 'esquema-tatico', 'squad', 'achievements', 'patrocinios', 'finance', 'trophies'].includes(activeView);
         const active = activeView === item.id || 
                        (item.id === 'match-center' && (activeView === 'report-match' || activeView === 'confirm-match' || activeView === 'schedule-matches')) || 
                        (item.id === 'hub-global' && (activeView === 'tournaments' || isClubSubView || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
@@ -446,6 +465,7 @@ const MCOBottomNav = ({
 
 const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRating = 0 }: any) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÇÃO';
   
   const renderStars = (score: number) => {
@@ -492,6 +512,18 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRat
               className="w-full text-left p-4 text-[10px] font-black italic uppercase text-[#FFD700]/70 hover:text-[#FFD700] transition-colors bg-[#121212]/50 border-t border-white/10"
             >
               <i className="fas fa-plus mr-2"></i> NOVA
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsOpen(false);
+                setLoggingOut(true);
+                submitLegacyLogout();
+              }}
+              disabled={loggingOut}
+              className="w-full text-left p-4 text-[10px] font-black italic uppercase text-[#B22222]/80 hover:text-[#B22222] transition-colors bg-[#121212]/50 border-t border-white/10 disabled:opacity-60"
+            >
+              <i className="fas fa-right-from-bracket mr-2"></i> {loggingOut ? 'SAINDO...' : 'SAIR'}
             </button>
           </div>
         )}
@@ -662,6 +694,24 @@ const getLegacyAchievementClaimEndpoint = (achievementId: any, careerId: any) =>
   return endpoint.toString();
 };
 
+const getLegacyPatrociniosDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_PATROCINIOS_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const getLegacyPatrocinioClaimEndpoint = (patrocinioId: any, careerId: any) => {
+  const endpoint = new URL(`/legacy/patrocinios/${encodeURIComponent(String(patrocinioId))}/claim`, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
 const normalizeLegacyLeaderboardItems = (items: any) => {
   const rows = Array.isArray(items) ? items : [];
 
@@ -711,6 +761,30 @@ const normalizeLegacyAchievementGroups = (groups: any) => {
       current: Math.max(0, Number(item?.current ?? 0) || 0),
       fans: Math.max(0, Number(item?.fans ?? 0) || 0),
       status: String(item?.status || 'locked'),
+      progressPercent: Math.max(0, Math.min(100, Number(item?.progress?.percent ?? 0) || 0)),
+    })),
+  }));
+};
+
+const normalizeLegacyPatrocinioGroups = (groups: any) => {
+  const rows = Array.isArray(groups) ? groups : [];
+
+  return rows.map((group: any) => ({
+    tipo: String(group?.tipo || 'patrocinios'),
+    tipoLabel: String(group?.tipo_label || 'Patrocinios'),
+    current: Math.max(0, Number(group?.current ?? 0) || 0),
+    total: Math.max(0, Number(group?.total ?? 0) || 0),
+    claimedCount: Math.max(0, Number(group?.claimed_count ?? 0) || 0),
+    items: (Array.isArray(group?.items) ? group.items : []).map((item: any) => ({
+      id: Number(item?.id ?? 0) || 0,
+      nome: String(item?.nome || 'Patrocinio'),
+      descricao: String(item?.descricao || ''),
+      imagemUrl: item?.imagem_url ? String(item.imagem_url) : '',
+      valor: Math.max(0, Number(item?.valor ?? 0) || 0),
+      fans: Math.max(0, Number(item?.fans ?? 0) || 0),
+      currentFans: Math.max(0, Number(item?.current_fans ?? 0) || 0),
+      status: String(item?.status || 'locked'),
+      claimedAt: item?.claimed_at ? String(item.claimed_at) : null,
       progressPercent: Math.max(0, Math.min(100, Number(item?.progress?.percent ?? 0) || 0)),
     })),
   }));
@@ -2729,6 +2803,227 @@ const AchievementsView = ({
   );
 };
 
+const PatrociniosView = ({
+  onBack,
+  currentCareer,
+}: {
+  onBack: () => void,
+  currentCareer: any,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [groups, setGroups] = useState<any[]>([]);
+  const [clubData, setClubData] = useState<any>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [claimingIds, setClaimingIds] = useState<number[]>([]);
+  const [claimNotice, setClaimNotice] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPatrocinios = async () => {
+      if (!currentCareer?.id) {
+        setClubData(null);
+        setGroups([]);
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setError('Selecione uma confederacao para visualizar os patrocinios.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+      setClaimNotice('');
+
+      try {
+        const endpoint = getLegacyPatrociniosDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setClubData(payload?.clube ?? null);
+        setGroups(normalizeLegacyPatrocinioGroups(payload?.groups));
+        setOnboardingUrl(
+          String(
+            payload?.onboarding_url ||
+              `${LEGACY_ONBOARDING_CLUBE_URL}?stage=confederacao&confederacao_id=${encodeURIComponent(String(currentCareer.id))}`,
+          ),
+        );
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setClubData(null);
+        setGroups([]);
+        setError(currentError?.message || 'Nao foi possivel carregar os patrocinios.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadPatrocinios();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const hasClub = Boolean(clubData?.id);
+  const toMValue = (value: any) => Math.max(0, Math.round(Number(value ?? 0) / 1_000_000));
+
+  const statusBadgeClass = (status: string) => {
+    if (status === 'claimed') return 'bg-[#008000] text-white';
+    if (status === 'available') return 'bg-[#FFD700] text-[#121212]';
+    return 'bg-white/10 text-white/50';
+  };
+
+  const statusBadgeLabel = (status: string) => {
+    if (status === 'claimed') return 'RESGATADO';
+    if (status === 'available') return 'DISPONIVEL';
+    return 'BLOQUEADO';
+  };
+
+  const handleClaim = async (item: any) => {
+    const patrocinioId = Number(item?.id ?? 0);
+    if (!patrocinioId || item?.status !== 'available') {
+      return;
+    }
+
+    setClaimingIds((prev) => (prev.includes(patrocinioId) ? prev : [...prev, patrocinioId]));
+    setClaimNotice('');
+    setError('');
+
+    try {
+      const endpoint = getLegacyPatrocinioClaimEndpoint(patrocinioId, currentCareer?.id);
+      const payload = await jsonRequest(endpoint, { method: 'POST' });
+
+      setGroups((prevGroups) =>
+        prevGroups.map((group: any) => {
+          const nextItems = (Array.isArray(group?.items) ? group.items : []).map((groupItem: any) =>
+            Number(groupItem?.id ?? 0) === patrocinioId
+              ? {
+                  ...groupItem,
+                  status: 'claimed',
+                }
+              : groupItem,
+          );
+
+          return {
+            ...group,
+            items: nextItems,
+            claimedCount: nextItems.filter((groupItem: any) => groupItem?.status === 'claimed').length,
+          };
+        }),
+      );
+
+      setClaimNotice(String(payload?.message || 'Patrocinio resgatado com sucesso.'));
+    } catch (currentError: any) {
+      setError(currentError?.message || 'Nao foi possivel resgatar o patrocinio.');
+    } finally {
+      setClaimingIds((prev) => prev.filter((id) => id !== patrocinioId));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
+      <header className="mb-10">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PATROCINIOS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic mt-2">
+          {clubData?.nome || 'SEM CLUBE'}
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="text-center py-14 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO PATROCINIOS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : !hasClub ? (
+        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+            Voce ainda nao possui clube nesta confederacao.
+          </p>
+          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+            CRIAR CLUBE NESTA CONFEDERACAO
+          </MCOButton>
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white/40">
+            Nenhum patrocinio cadastrado.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {!!claimNotice && (
+            <div className="bg-[#008000]/20 border border-[#008000] p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black uppercase italic text-white">{claimNotice}</p>
+            </div>
+          )}
+
+          {groups.map((group) => (
+            <section key={group.tipo} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="flex justify-between items-end mb-5">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
+                  <p className="text-xl font-black italic uppercase font-heading text-white">{group.current} FAS</p>
+                </div>
+                <p className="text-[9px] font-black italic uppercase text-white/40">
+                  {group.claimedCount}/{group.total} RESGATADOS
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {group.items.map((item: any) => (
+                  <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                    <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                      {item.imagemUrl ? (
+                        <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <i className="fas fa-handshake text-[#FFD700]/50"></i>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
+                      <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
+                        FAS: {item.currentFans}/{item.fans}
+                      </p>
+                      <p className="text-[8px] font-black uppercase italic text-[#FFD700]/70 tracking-[0.14em] mt-1">
+                        VALOR: M$ {toMValue(item.valor)}M
+                      </p>
+                      <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
+                        <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
+                      </div>
+                    </div>
+                    {item.status === 'available' ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleClaim(item)}
+                        disabled={claimingIds.includes(Number(item.id))}
+                        className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                      >
+                        {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                      </button>
+                    ) : (
+                      <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
+                        {statusBadgeLabel(item.status)}
+                      </span>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const FinanceView = ({ onBack, currentCareer }: any) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -3412,6 +3707,19 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
 
     onOpenInbox();
   };
+
+  if (!currentCareer?.id) {
+    return (
+      <div className="min-h-screen bg-[#121212] flex items-center justify-center p-6">
+        <MCOButton
+          onClick={() => navigateTo(LEGACY_ONBOARDING_CLUBE_URL)}
+          className="w-full max-w-xs py-5 text-sm"
+        >
+          ESCOLHER CONFEDERAÇÃO
+        </MCOButton>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32">
@@ -4103,6 +4411,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
     { id: 'esquema-tatico', title: 'ESQUEMA TÁTICO', icon: 'fa-chess-board', desc: 'POSICIONAMENTO EM CAMPO' },
     { id: 'squad', title: 'MEU ELENCO', icon: 'fa-users-line', desc: 'GESTÃO DE ATLETAS' },
     { id: 'achievements', title: 'CONQUISTAS', icon: 'fa-award', desc: 'OBJETIVOS E METAS' },
+    { id: 'patrocinios', title: 'PATROCÍNIO', icon: 'fa-handshake', desc: 'META DE FÃS E RESGATES' },
     { id: 'finance', title: 'FINANCEIRO', icon: 'fa-sack-dollar', desc: 'BALANÇO E PATROCÍNIOS' },
     { id: 'trophies', title: 'TROFÉUS', icon: 'fa-trophy', desc: 'GALERIA DE GLÓRIAS' }
   ];
@@ -5427,6 +5736,7 @@ const App = () => {
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'squad': return <SquadView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'achievements': return <AchievementsView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
+      case 'patrocinios': return <PatrociniosView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'finance': return <FinanceView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'trophies': return <TrophiesView onBack={() => setView('my-club')} userStats={userStats} />;
       case 'tournaments': return <TournamentsView onBack={() => setView('hub-global')} onSelectTournament={handleTournamentSelect} currentCareer={currentCareer} />;
@@ -5438,14 +5748,18 @@ const App = () => {
     }
   };
 
+  const hideBottomNav = view === 'hub-global' && !currentCareer?.id;
+
   return (
     <>
       {renderContent()}
-      <MCOBottomNav
-        activeView={view}
-        onViewChange={setView}
-        hasInboxNotifications={hasInboxNotifications}
-      />
+      {!hideBottomNav && (
+        <MCOBottomNav
+          activeView={view}
+          onViewChange={setView}
+          hasInboxNotifications={hasInboxNotifications}
+        />
+      )}
     </>
   );
 };
