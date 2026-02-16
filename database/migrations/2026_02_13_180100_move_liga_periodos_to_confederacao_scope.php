@@ -67,6 +67,14 @@ return new class extends Migration
         }
 
         if (Schema::hasColumn('liga_periodos', 'liga_id')) {
+            try {
+                Schema::table('liga_periodos', function (Blueprint $table): void {
+                    $table->dropIndex('liga_periodos_liga_id_inicio_fim_index');
+                });
+            } catch (\Throwable) {
+                // Ignora quando o índice não existir neste ambiente.
+            }
+
             Schema::table('liga_periodos', function (Blueprint $table): void {
                 $table->dropConstrainedForeignId('liga_id');
             });

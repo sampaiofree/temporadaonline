@@ -36,7 +36,7 @@
                         <x-sidebar-group
                             title="CADASTRO"
                             icon="plus-circle"
-                            :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*', 'admin.conquistas.*', 'admin.patrocinios.*', 'admin.premiacoes.*', 'admin.idioma-regiao.*'])"
+                            :active="request()->routeIs(['admin.jogos.*', 'admin.geracoes.*', 'admin.plataformas.*', 'admin.elenco-padrao.*', 'admin.confederacoes.*', 'admin.ligas.*', 'admin.conquistas.*', 'admin.patrocinios.*', 'admin.premiacoes.*', 'admin.idioma-regiao.*', 'admin.clube-tamanho.*'])"
                         >
                             <div class="space-y-1 py-1">
                                 <x-nav-link href="{{ route('admin.jogos.index') }}" :active="request()->routeIs('admin.jogos.*')">Jogos</x-nav-link>
@@ -49,6 +49,7 @@
                                 <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patrocínios</x-nav-link>
                                 <x-nav-link href="{{ route('admin.premiacoes.index') }}" :active="request()->routeIs('admin.premiacoes.*')">Premiações</x-nav-link>
                                 <x-nav-link href="{{ route('admin.idioma-regiao.index') }}" :active="request()->routeIs('admin.idioma-regiao.*')">Idiomas e Regiões</x-nav-link>
+                                <x-nav-link href="{{ route('admin.clube-tamanho.index') }}" :active="request()->routeIs('admin.clube-tamanho.*')">Clube Tamanho</x-nav-link>
                             </div>
                         </x-sidebar-group>
 

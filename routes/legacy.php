@@ -45,6 +45,16 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('squad.data');
         Route::get('/match-center-data', [LegacyController::class, 'matchCenterData'])
             ->name('match_center.data');
+        Route::get('/leaderboard-data', [LegacyController::class, 'leaderboardData'])
+            ->name('leaderboard.data');
+        Route::get('/league-table-data', [LegacyController::class, 'leagueTableData'])
+            ->name('league_table.data');
+        Route::get('/achievements-data', [LegacyController::class, 'achievementsData'])
+            ->name('achievements.data');
+        Route::post('/achievements/{conquista}/claim', [LegacyController::class, 'claimAchievement'])
+            ->name('achievements.claim');
+        Route::get('/season-stats-data', [LegacyController::class, 'seasonStatsData'])
+            ->name('season_stats.data');
         Route::get('/finance-data', [LegacyController::class, 'financeData'])
             ->name('finance.data');
         Route::get('/inbox-data', [LegacyController::class, 'inboxData'])

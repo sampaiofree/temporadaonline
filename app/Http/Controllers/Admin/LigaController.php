@@ -16,9 +16,14 @@ use Illuminate\View\View;
 
 class LigaController extends Controller
 {
-    private const STATUS_OPTIONS = [
+    private const CREATE_STATUS_OPTIONS = [
         'ativa' => 'Ativa',
         'aguardando' => 'Inativa',
+    ];
+
+    private const EDIT_STATUS_OPTIONS = [
+        'ativa' => 'Ativa',
+        'finalizada' => 'Finalizada',
     ];
 
     public function index(): View
@@ -37,7 +42,7 @@ class LigaController extends Controller
     {
         return view('admin.ligas.create', [
             'confederacoes' => Confederacao::with(['jogo', 'geracao', 'plataforma'])->orderBy('nome')->get(),
-            'statusOptions' => self::STATUS_OPTIONS,
+            'statusOptions' => self::CREATE_STATUS_OPTIONS,
             'whatsappGroups' => $this->resolveWhatsappGroups($evolutionService),
         ]);
     }
@@ -94,6 +99,10 @@ class LigaController extends Controller
 
     public function edit(Liga $liga, EvolutionService $evolutionService): View
     {
+        if ($liga->status === 'encerrada') {
+            $liga->status = 'finalizada';
+        }
+
         return view('admin.ligas.edit', [
             'liga' => $liga->loadMissing([
                 'jogo',
@@ -103,7 +112,7 @@ class LigaController extends Controller
                 'confederacao.geracao',
                 'confederacao.plataforma',
             ]),
-            'statusOptions' => self::STATUS_OPTIONS,
+            'statusOptions' => self::EDIT_STATUS_OPTIONS,
             'hasClubes' => $liga->clubes()->exists(),
             'hasUsers' => $liga->users()->exists(),
             'whatsappGroups' => $this->resolveWhatsappGroups($evolutionService),
@@ -121,9 +130,13 @@ class LigaController extends Controller
             'whatsapp_grupo_jid' => 'nullable|string|max:255',
             'descricao' => 'nullable|string|max:2000',
             'regras' => 'nullable|string|max:2000',
-            'status' => 'required|in:ativa,aguardando',
+            'status' => 'required|in:ativa,finalizada',
             'imagem' => 'nullable|image:allow_svg|max:2048',
         ]);
+
+        if (($data['status'] ?? null) === 'finalizada') {
+            $data['status'] = 'encerrada';
+        }
 
         if (! empty($data['whatsapp_grupo_jid'])) {
             $currentJid = $liga->whatsapp_grupo_jid;
@@ -162,6 +175,23 @@ class LigaController extends Controller
         $liga->update($data);
 
         return redirect()->route('admin.ligas.index')->with('success', 'Liga atualizada com sucesso.');
+    }
+
+    public function finalize(Liga $liga): RedirectResponse
+    {
+        if ($liga->status === 'encerrada') {
+            return redirect()
+                ->route('admin.ligas.index')
+                ->with('success', 'Liga ja esta finalizada.');
+        }
+
+        $liga->update([
+            'status' => 'encerrada',
+        ]);
+
+        return redirect()
+            ->route('admin.ligas.index')
+            ->with('success', 'Liga finalizada com sucesso.');
     }
 
     private function resolveWhatsappGroups(EvolutionService $evolutionService): array

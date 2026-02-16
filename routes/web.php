@@ -13,6 +13,7 @@ use App\Http\Controllers\Admin\PaisController as AdminPaisController;
 use App\Http\Controllers\Admin\ClubeController as AdminClubeController;
 use App\Http\Controllers\Admin\LigaEscudoController as AdminLigaEscudoController;
 use App\Http\Controllers\Admin\LigaJogadorController as AdminLigaJogadorController;
+use App\Http\Controllers\Admin\ClubeTamanhoController as AdminClubeTamanhoController;
 use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeController;
 use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
 use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
@@ -46,6 +47,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('confederacoes', AdminConfederacaoController::class, [
         'parameters' => ['confederacoes' => 'confederacao'],
     ])->except(['show']);
+    Route::patch('ligas/{liga}/finalizar', [AdminLigaController::class, 'finalize'])->name('ligas.finalize');
     Route::resource('ligas', AdminLigaController::class)->except(['show']);
     Route::resource('geracoes', AdminGeracaoController::class)->except(['show']);
     Route::resource('jogos', AdminJogoController::class)->except(['show']);
@@ -106,6 +108,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         'parameters' => ['escudos-clubes' => 'escudo_clube'],
     ])->except(['show', 'create']);
     Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+    Route::resource('clube-tamanho', AdminClubeTamanhoController::class, [
+        'parameters' => ['clube-tamanho' => 'clube_tamanho'],
+    ])->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);
     Route::get('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'index'])->name('users.horarios.index');
     Route::post('users/{user}/horarios', [AdminUserDisponibilidadeController::class, 'store'])->name('users.horarios.store');
     Route::put('users/{user}/horarios/{disponibilidade}', [AdminUserDisponibilidadeController::class, 'update'])->name('users.horarios.update');

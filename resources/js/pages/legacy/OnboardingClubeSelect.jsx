@@ -216,7 +216,7 @@ export default function OnboardingClubeSelect() {
                         Voce ja esta inscrito em todas as confederacoes disponiveis.
                     </p>
                     <p className="text-[9px] text-white/40 font-bold uppercase italic tracking-[0.08em] mt-2">
-                        Cada confederacao permite apenas uma liga por usuario.
+                        Cada confederacao permite apenas uma liga ativa por usuario.
                     </p>
                 </div>
             ) : null}

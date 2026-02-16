@@ -1,6 +1,5 @@
-﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import html2canvas from 'html2canvas';
 
 const LEGACY_CONFIG = (window as any).__LEGACY_CONFIG__ || {};
 const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
@@ -21,6 +20,10 @@ const LEGACY_MARKET_DATA_URL = String(LEGACY_CONFIG?.marketDataUrl || '/legacy/m
 const LEGACY_MY_CLUB_DATA_URL = String(LEGACY_CONFIG?.myClubDataUrl || '/legacy/my-club-data');
 const LEGACY_SQUAD_DATA_URL = String(LEGACY_CONFIG?.squadDataUrl || '/legacy/squad-data');
 const LEGACY_MATCH_CENTER_DATA_URL = String(LEGACY_CONFIG?.matchCenterDataUrl || '/legacy/match-center-data');
+const LEGACY_LEADERBOARD_DATA_URL = String(LEGACY_CONFIG?.leaderboardDataUrl || '/legacy/leaderboard-data');
+const LEGACY_LEAGUE_TABLE_DATA_URL = String(LEGACY_CONFIG?.leagueTableDataUrl || '/legacy/league-table-data');
+const LEGACY_ACHIEVEMENTS_DATA_URL = String(LEGACY_CONFIG?.achievementsDataUrl || '/legacy/achievements-data');
+const LEGACY_SEASON_STATS_DATA_URL = String(LEGACY_CONFIG?.seasonStatsDataUrl || '/legacy/season-stats-data');
 const LEGACY_FINANCE_DATA_URL = String(LEGACY_CONFIG?.financeDataUrl || '/legacy/finance-data');
 const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inbox-data');
 const LEGACY_PUBLIC_CLUB_PROFILE_DATA_URL = String(LEGACY_CONFIG?.publicClubProfileDataUrl || '/legacy/public-club-profile-data');
@@ -182,6 +185,20 @@ const multipartRequest = async (url: string, formData: FormData, options: Reques
   return payload;
 };
 
+const formatLegacyFansLabel = (rawValue: number) => {
+  const value = Number.isFinite(rawValue) ? Math.max(0, rawValue) : 0;
+
+  if (value >= 1_000_000) {
+    return `${(value / 1_000_000).toFixed(1)}M`;
+  }
+
+  if (value >= 1_000) {
+    return `${(value / 1_000).toFixed(1)}K`;
+  }
+
+  return String(Math.round(value));
+};
+
 // --- Configurações de Dados (Mock) ---
 const CONFED_CONFIG: any = {
   UEFA: { 
@@ -202,15 +219,6 @@ const MOCK_INBOX_MESSAGES = [
   { id: 2, type: 'SÚMULA', title: 'PLACAR REGISTRADO', sender: 'GOLIAS_FC', content: 'Seu adversário registrou a derrota (1x2) na Elite Division.', date: '12:05', urgent: false, action: 'MATCH' },
   { id: 3, type: 'CONVITE', title: 'COPA DO BRASIL LEGACY', sender: 'ADMIN MCO', content: 'Você foi pré-selecionado para o Draft da Temporada 26.', date: 'ONTEM', urgent: false, action: 'INVITE' },
   { id: 4, type: 'SISTEMA', title: 'PREMIAÇÃO DISPONÍVEL', sender: 'LEGACY XI', content: 'Seu bônus de Uber Score de 4.8 estrelas foi creditado: M$ 25M.', date: 'ONTEM', urgent: false, action: 'FINANCE' },
-];
-
-const MOCK_LEADERBOARD = [
-  { rank: 1, name: 'TREINADOR_ALPHA', club: 'PSG ESPORTS', skill: 98, trophies: 12, uber: 5.0 },
-  { rank: 2, name: 'GOLIAS_FC', club: 'REAL MADRID', skill: 95, trophies: 10, uber: 4.9 },
-  { rank: 3, name: 'SKILL_MASTER', club: 'MAN CITY', skill: 94, trophies: 8, uber: 4.7 },
-  { rank: 12, name: 'RODRIGO_MANAGER', club: 'CRUZEIRO EC', skill: 92, trophies: 3, uber: 4.8, isUser: true },
-  { rank: 4, name: 'THE_KING_XI', club: 'BAYERN', skill: 93, trophies: 7, uber: 4.5 },
-  { rank: 5, name: 'ULTIMATE_PRO', club: 'LIVERPOOL', skill: 91, trophies: 6, uber: 4.4 },
 ];
 
 const MOCK_RECENT_RESULTS = [
@@ -299,12 +307,6 @@ const MOCK_CONTINENTAL_BRACKET = [
     { home: 'BAYERN', away: 'MILAN', scoreH: 2, scoreA: 2, pensH: 4, pensA: 2, status: 'FINISHED' },
     { home: 'LIVERPOOL', away: 'MAN CITY', scoreH: 1, scoreA: 2, status: 'FINISHED' },
   ]}
-];
-
-const MOCK_HISTORICAL_STATS = [
-  { season: 'TEMP 24', league: 'ELITE DIVISION', pos: '4º', wins: 22, draws: 8, losses: 10, goalsFor: 85, goalsAgainst: 55, trophy: null },
-  { season: 'TEMP 23', league: 'ELITE DIVISION', pos: '1º', wins: 32, draws: 4, losses: 2, goalsFor: 110, goalsAgainst: 40, trophy: 'CHAMPION' },
-  { season: 'TEMP 22', league: 'PRO LEAGUE', pos: '1º', wins: 35, draws: 3, losses: 0, goalsFor: 125, goalsAgainst: 22, trophy: 'PRO CUP' },
 ];
 
 const MOCK_STATS_TEMPLATE = { PAC: 85, SHO: 80, PAS: 75, DRI: 85, DEF: 50, PHY: 70 };
@@ -406,7 +408,15 @@ const MCOCard = ({ children, title, className = "", onClick, active = false, acc
   </div>
 );
 
-const MCOBottomNav = ({ activeView, onViewChange }: { activeView: string, onViewChange: (v: string) => void }) => {
+const MCOBottomNav = ({
+  activeView,
+  onViewChange,
+  hasInboxNotifications = false,
+}: {
+  activeView: string,
+  onViewChange: (v: string) => void,
+  hasInboxNotifications?: boolean,
+}) => {
   const navItems = [
     { id: 'hub-global', icon: 'fa-house', label: 'INÍCIO' },
     { id: 'match-center', icon: 'fa-shield-halved', label: 'CONFRONTOS' },
@@ -422,7 +432,9 @@ const MCOBottomNav = ({ activeView, onViewChange }: { activeView: string, onView
                        (item.id === 'hub-global' && (activeView === 'tournaments' || isClubSubView || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
         return (
           <button key={item.id} onClick={() => onViewChange(item.id)} className={`relative flex flex-col items-center p-3 transition-all ${active ? 'text-[#FFD700]' : 'text-white/20'}`}>
-            {item.badge && <div className="absolute top-2 right-2 w-2 h-2 bg-[#B22222] shadow-[0_0_8px_#B22222] animate-pulse"></div>}
+            {item.badge && hasInboxNotifications && (
+              <div className="absolute top-2 right-2 w-2 h-2 bg-[#B22222] shadow-[0_0_8px_#B22222] animate-pulse"></div>
+            )}
             <i className={`fas ${item.icon} text-xl mb-1`}></i>
             <span className="text-[9px] font-black uppercase italic font-heading tracking-widest">{item.label}</span>
           </button>
@@ -432,7 +444,7 @@ const MCOBottomNav = ({ activeView, onViewChange }: { activeView: string, onView
   );
 };
 
-const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, skillRating = 88 }: any) => {
+const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRating = 0 }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÇÃO';
   
@@ -488,9 +500,9 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, uberScore = 4.5, sk
       <div className="ml-auto flex items-center gap-3 shrink-0 z-20 pr-1">
         <div className="flex flex-col items-end">
           <div className="flex gap-0.5 text-[8px] text-[#FFD700]">
-            {renderStars(uberScore)}
+            {renderStars(score)}
           </div>
-          <span className="text-[6px] font-black italic text-white/30 uppercase tracking-[0.2em] mt-0.5">UBER SCORE</span>
+          <span className="text-[6px] font-black italic text-white/30 uppercase tracking-[0.2em] mt-0.5">SCORE</span>
         </div>
         <div className="bg-[#121212] h-10 px-3 flex flex-col items-center justify-center border-l-[3px] border-[#FFD700] relative overflow-hidden" style={{ clipPath: "polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%)" }}>
            <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: SLANTED_PATTERN }}></div>
@@ -550,6 +562,159 @@ const normalizeLegacyInboxSummary = (summary: any) => ({
   detail: String(summary?.detail || LEGACY_INBOX_EMPTY_SUMMARY.detail),
   primaryAction: summary?.primary_action ? String(summary.primary_action) : null,
 });
+
+const LEGACY_SEASON_STATS_EMPTY_SUMMARY = {
+  matchesPlayed: 0,
+  wins: 0,
+  draws: 0,
+  losses: 0,
+  points: 0,
+  goalsFor: 0,
+  goalsAgainst: 0,
+  goalBalance: 0,
+  goals: 0,
+  assists: 0,
+  cleanSheets: 0,
+  aproveitamento: 0,
+  goalsPerMatch: 0,
+  assistsPerMatch: 0,
+  skillRating: 0,
+  score: 5,
+};
+
+const getLegacySeasonStatsDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_SEASON_STATS_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const normalizeLegacySeasonSummary = (summary: any) => ({
+  matchesPlayed: Math.max(0, Number(summary?.matches_played ?? 0) || 0),
+  wins: Math.max(0, Number(summary?.wins ?? 0) || 0),
+  draws: Math.max(0, Number(summary?.draws ?? 0) || 0),
+  losses: Math.max(0, Number(summary?.losses ?? 0) || 0),
+  points: Math.max(0, Number(summary?.points ?? 0) || 0),
+  goalsFor: Math.max(0, Number(summary?.goals_for ?? 0) || 0),
+  goalsAgainst: Math.max(0, Number(summary?.goals_against ?? 0) || 0),
+  goalBalance: Number(summary?.goal_balance ?? 0) || 0,
+  goals: Math.max(0, Number(summary?.goals ?? 0) || 0),
+  assists: Math.max(0, Number(summary?.assists ?? 0) || 0),
+  cleanSheets: Math.max(0, Number(summary?.clean_sheets ?? 0) || 0),
+  aproveitamento: Math.max(0, Math.min(100, Number(summary?.aproveitamento ?? 0) || 0)),
+  goalsPerMatch: Math.max(0, Number(summary?.goals_per_match ?? 0) || 0),
+  assistsPerMatch: Math.max(0, Number(summary?.assists_per_match ?? 0) || 0),
+  skillRating: Math.max(0, Math.min(100, Number(summary?.skill_rating ?? 0) || 0)),
+  score: Math.max(1, Math.min(5, Number(summary?.score ?? 5) || 5)),
+});
+
+const normalizeLegacySeasonHistory = (history: any) => {
+  const rows = Array.isArray(history) ? history : [];
+
+  return rows.map((entry: any) => ({
+    season: String(entry?.season || 'TEMPORADA'),
+    league: String(entry?.league || 'LIGA'),
+    pos: Number(entry?.pos ?? 0) || 0,
+    wins: Math.max(0, Number(entry?.wins ?? 0) || 0),
+    draws: Math.max(0, Number(entry?.draws ?? 0) || 0),
+    losses: Math.max(0, Number(entry?.losses ?? 0) || 0),
+    goalsFor: Math.max(0, Number(entry?.goals_for ?? 0) || 0),
+    goalsAgainst: Math.max(0, Number(entry?.goals_against ?? 0) || 0),
+    trophy: entry?.trophy ? String(entry.trophy) : null,
+  }));
+};
+
+const getLegacyLeaderboardDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_LEADERBOARD_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const getLegacyLeagueTableDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_LEAGUE_TABLE_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const getLegacyAchievementsDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_ACHIEVEMENTS_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const getLegacyAchievementClaimEndpoint = (achievementId: any, careerId: any) => {
+  const endpoint = new URL(`/legacy/achievements/${encodeURIComponent(String(achievementId))}/claim`, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
+const normalizeLegacyLeaderboardItems = (items: any) => {
+  const rows = Array.isArray(items) ? items : [];
+
+  return rows.map((item: any) => ({
+    rank: Math.max(1, Number(item?.rank ?? 0) || 1),
+    clubId: Number(item?.club_id ?? 0) || 0,
+    clubName: String(item?.club_name || 'CLUBE'),
+    userId: Number(item?.user_id ?? 0) || 0,
+    userName: String(item?.user_name || 'MANAGER'),
+    skillRating: Math.max(0, Math.min(100, Number(item?.skill_rating ?? 0) || 0)),
+    score: Math.max(1, Math.min(5, Number(item?.score ?? 5) || 5)),
+    wins: Math.max(0, Number(item?.wins ?? 0) || 0),
+    matchesPlayed: Math.max(0, Number(item?.matches_played ?? 0) || 0),
+    isUser: Boolean(item?.is_user),
+  }));
+};
+
+const normalizeLegacyLeagueTableRows = (rows: any) => {
+  const items = Array.isArray(rows) ? rows : [];
+
+  return items.map((row: any) => ({
+    pos: Math.max(1, Number(row?.pos ?? 0) || 1),
+    clubId: Number(row?.club_id ?? 0) || 0,
+    clubName: String(row?.club_name || 'CLUBE'),
+    played: Math.max(0, Number(row?.played ?? 0) || 0),
+    wins: Math.max(0, Number(row?.wins ?? 0) || 0),
+    points: Math.max(0, Number(row?.points ?? 0) || 0),
+    isUser: Boolean(row?.is_user),
+  }));
+};
+
+const normalizeLegacyAchievementGroups = (groups: any) => {
+  const rows = Array.isArray(groups) ? groups : [];
+
+  return rows.map((group: any) => ({
+    tipo: String(group?.tipo || 'tipo'),
+    tipoLabel: String(group?.tipo_label || 'Conquistas'),
+    current: Math.max(0, Number(group?.current ?? 0) || 0),
+    total: Math.max(0, Number(group?.total ?? 0) || 0),
+    claimedCount: Math.max(0, Number(group?.claimed_count ?? 0) || 0),
+    items: (Array.isArray(group?.items) ? group.items : []).map((item: any) => ({
+      id: Number(item?.id ?? 0) || 0,
+      nome: String(item?.nome || 'Conquista'),
+      descricao: String(item?.descricao || ''),
+      imagemUrl: item?.imagem_url ? String(item.imagem_url) : '',
+      quantidade: Math.max(0, Number(item?.quantidade ?? 0) || 0),
+      current: Math.max(0, Number(item?.current ?? 0) || 0),
+      fans: Math.max(0, Number(item?.fans ?? 0) || 0),
+      status: String(item?.status || 'locked'),
+      progressPercent: Math.max(0, Math.min(100, Number(item?.progress?.percent ?? 0) || 0)),
+    })),
+  }));
+};
 
 const InboxView = ({
   onBack,
@@ -664,7 +829,55 @@ const InboxView = ({
 
 // --- Leaderboard View ---
 
-const LeaderboardView = ({ onBack, onOpenProfile }: { onBack: () => void, onOpenProfile: (name: string) => void }) => {
+const LeaderboardView = ({
+  onBack,
+  onOpenProfile,
+  currentCareer,
+}: {
+  onBack: () => void,
+  onOpenProfile: (clubRef: any) => void,
+  currentCareer: any,
+}) => {
+  const [items, setItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLeaderboard = async () => {
+      if (!currentCareer?.id) {
+        setItems([]);
+        setError('Selecione uma confederacao para visualizar o ranking.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const endpoint = getLegacyLeaderboardDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setItems(normalizeLegacyLeaderboardItems(payload?.leaderboard?.items));
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setItems([]);
+        setError(currentError?.message || 'Não foi possível carregar o ranking.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadLeaderboard();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6 overflow-y-auto">
       <header className="mb-8">
@@ -676,22 +889,34 @@ const LeaderboardView = ({ onBack, onOpenProfile }: { onBack: () => void, onOpen
       </header>
 
       <div className="space-y-3">
-        {MOCK_LEADERBOARD.sort((a, b) => a.rank - b.rank).map((m, idx) => (
+        {loading ? (
+          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white/50">Carregando ranking...</p>
+          </div>
+        ) : error ? (
+          <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
+          </div>
+        ) : items.length === 0 ? (
+          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum clube encontrado para o ranking.</p>
+          </div>
+        ) : items.map((m) => (
           <div 
-            key={idx} 
-            onClick={() => onOpenProfile(m.name)}
-            className={`flex items-center gap-4 p-4 border-r-[3px] transition-all cursor-pointer active:scale-[0.98] ${m.isUser ? 'bg-[#FFD700] border-[#121212]' : 'bg-[#1E1E1E] border-[#FFD700]'}`} 
+            key={`${m.clubId}-${m.rank}`}
+            onClick={() => onOpenProfile({ id: m.clubId, name: m.clubName })}
+            className={`flex items-center gap-4 p-4 border-r-[3px] transition-all cursor-pointer active:scale-[0.98] ${m.isUser ? 'bg-[#FFD700] border-[#121212]' : 'bg-[#1E1E1E] border-[#FFD700]'}`}
             style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}
           >
             <div className={`w-10 h-10 flex items-center justify-center font-black italic text-xl ${m.isUser ? 'text-[#121212]' : 'text-[#FFD700]'}`}>
               #{m.rank}
             </div>
             <div className="flex-grow overflow-hidden">
-               <p className={`text-[12px] font-black italic uppercase truncate ${m.isUser ? 'text-[#121212]' : 'text-white'}`}>{m.name}</p>
-               <p className={`text-[8px] font-bold uppercase italic opacity-60 ${m.isUser ? 'text-[#121212]' : 'text-[#FFD700]'}`}>{m.club}</p>
+               <p className={`text-[12px] font-black italic uppercase truncate ${m.isUser ? 'text-[#121212]' : 'text-white'}`}>{m.userName}</p>
+               <p className={`text-[8px] font-bold uppercase italic opacity-60 ${m.isUser ? 'text-[#121212]' : 'text-[#FFD700]'}`}>{m.clubName}</p>
             </div>
             <div className="text-right shrink-0">
-               <div className={`text-lg font-black italic font-heading ${m.isUser ? 'text-[#121212]' : 'text-white'}`}>{m.skill}</div>
+               <div className={`text-lg font-black italic font-heading ${m.isUser ? 'text-[#121212]' : 'text-white'}`}>{m.skillRating}</div>
                <div className={`text-[7px] font-black uppercase ${m.isUser ? 'text-[#121212]/40' : 'text-white/20'}`}>SKILL RATING</div>
             </div>
           </div>
@@ -703,8 +928,65 @@ const LeaderboardView = ({ onBack, onOpenProfile }: { onBack: () => void, onOpen
 
 // --- Season Stats View ---
 
-const SeasonStatsView = ({ onBack, userStats }: { onBack: () => void, userStats: any }) => {
+const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, currentCareer: any }) => {
   const [tab, setTab] = useState<'current' | 'history'>('current');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [hasClub, setHasClub] = useState(false);
+  const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [summary, setSummary] = useState(LEGACY_SEASON_STATS_EMPTY_SUMMARY);
+  const [history, setHistory] = useState<any[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadSeasonStats = async () => {
+      if (!currentCareer?.id) {
+        setHasClub(false);
+        setSummary(LEGACY_SEASON_STATS_EMPTY_SUMMARY);
+        setHistory([]);
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setError('Selecione uma confederacao para visualizar as estatisticas.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const endpoint = getLegacySeasonStatsDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setHasClub(Boolean(payload?.clube?.id));
+        setSummary(normalizeLegacySeasonSummary(payload?.summary));
+        setHistory(normalizeLegacySeasonHistory(payload?.history));
+        setOnboardingUrl(
+          String(
+            payload?.onboarding_url ||
+              `${LEGACY_ONBOARDING_CLUBE_URL}?stage=confederacao&confederacao_id=${encodeURIComponent(String(currentCareer.id))}`,
+          ),
+        );
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setHasClub(false);
+        setSummary(LEGACY_SEASON_STATS_EMPTY_SUMMARY);
+        setHistory([]);
+        setError(currentError?.message || 'Nao foi possivel carregar as estatisticas da temporada.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadSeasonStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const aproveitamentoLabel = `${summary.aproveitamento.toFixed(1)}%`;
+  const aproveitamentoWidth = `${Math.max(0, Math.min(100, summary.aproveitamento || 0))}%`;
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6 overflow-y-auto">
@@ -716,86 +998,111 @@ const SeasonStatsView = ({ onBack, userStats }: { onBack: () => void, userStats:
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">ANÁLISE DE PERFORMANCE</p>
       </header>
 
-      <div className="flex gap-2 mb-10 bg-[#1E1E1E] p-1" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
-        <button 
-          onClick={() => setTab('current')}
-          className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'current' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
-          style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
-        >
-          TEMPORADA ATUAL
-        </button>
-        <button 
-          onClick={() => setTab('history')}
-          className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'history' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
-          style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
-        >
-          HISTÓRICO LEGACY
-        </button>
-      </div>
-
-      <div className="animate-in fade-in slide-in-from-right-4 duration-300">
-        {tab === 'current' ? (
-          <div className="space-y-6">
-             <div className="grid grid-cols-2 gap-4">
-               <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">GOLS REGISTRADOS</p>
-                  <p className="text-3xl font-black italic font-heading text-white">{userStats.goals}</p>
-               </div>
-               <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÓRIAS TOTAL</p>
-                  <p className="text-3xl font-black italic font-heading text-white">{userStats.wins}</p>
-               </div>
-             </div>
-
-             <div className="bg-[#1E1E1E] p-8 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                <div className="flex justify-between items-end mb-4">
-                  <div>
-                    <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">APROVEITAMENTO</p>
-                    <h3 className="text-4xl font-black italic uppercase font-heading text-white">78.5%</h3>
-                  </div>
-                  <i className="fas fa-arrow-trend-up text-[#008000] text-2xl"></i>
-                </div>
-                <div className="h-2 bg-[#121212] w-full" style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}>
-                  <div className="h-full bg-[#FFD700] shadow-[0_0_10px_#FFD700]" style={{ width: '78.5%' }}></div>
-                </div>
-             </div>
-
-             <div className="bg-[#1E1E1E] p-6 border-b-[3px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
-               <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÉTRICAS POR PARTIDA</h4>
-               <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-black italic uppercase">GOLS / JOGO</span>
-                    <span className="text-lg font-black italic font-heading text-[#FFD700]">3.2</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-black italic uppercase">ASSISTS / JOGO</span>
-                    <span className="text-lg font-black italic font-heading text-white">1.8</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-[11px] font-black italic uppercase">CLEAN SHEETS</span>
-                    <span className="text-lg font-black italic font-heading text-white">42</span>
-                  </div>
-               </div>
-             </div>
+      {loading ? (
+        <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO ESTATISTICAS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : !hasClub ? (
+        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+            Você ainda não possui clube nesta confederação.
+          </p>
+          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
+          </MCOButton>
+        </div>
+      ) : (
+        <>
+          <div className="flex gap-2 mb-10 bg-[#1E1E1E] p-1" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+            <button
+              onClick={() => setTab('current')}
+              className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'current' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
+              style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+            >
+              TEMPORADA ATUAL
+            </button>
+            <button
+              onClick={() => setTab('history')}
+              className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'history' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
+              style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+            >
+              HISTÓRICO LEGACY
+            </button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {MOCK_HISTORICAL_STATS.map((h, idx) => (
-              <div key={idx} className="bg-[#1E1E1E] p-6 flex justify-between items-center border-l-[4px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                <div>
-                   <p className="text-[10px] font-black text-[#FFD700] uppercase italic tracking-widest">{h.season}</p>
-                   <h4 className="text-lg font-black italic uppercase font-heading text-white">{h.league}</h4>
-                   <p className="text-[9px] font-bold text-white/30 uppercase mt-1 italic">{h.wins}V - {h.draws}E - {h.losses}D</p>
+
+          <div className="animate-in fade-in slide-in-from-right-4 duration-300">
+            {tab === 'current' ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">GOLS REGISTRADOS</p>
+                    <p className="text-3xl font-black italic font-heading text-white">{summary.goals}</p>
+                  </div>
+                  <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÓRIAS TOTAL</p>
+                    <p className="text-3xl font-black italic font-heading text-white">{summary.wins}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                   <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos}</div>
-                   {h.trophy && <i className="fas fa-trophy text-[#FFD700] text-lg drop-shadow-[0_0_8px_#FFD700]"></i>}
+
+                <div className="bg-[#1E1E1E] p-8 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <div className="flex justify-between items-end mb-4">
+                    <div>
+                      <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">APROVEITAMENTO</p>
+                      <h3 className="text-4xl font-black italic uppercase font-heading text-white">{aproveitamentoLabel}</h3>
+                    </div>
+                    <i className="fas fa-arrow-trend-up text-[#008000] text-2xl"></i>
+                  </div>
+                  <div className="h-2 bg-[#121212] w-full" style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}>
+                    <div className="h-full bg-[#FFD700] shadow-[0_0_10px_#FFD700]" style={{ width: aproveitamentoWidth }}></div>
+                  </div>
+                </div>
+
+                <div className="bg-[#1E1E1E] p-6 border-b-[3px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÉTRICAS POR PARTIDA</h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black italic uppercase">GOLS / JOGO</span>
+                      <span className="text-lg font-black italic font-heading text-[#FFD700]">{summary.goalsPerMatch.toFixed(1)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black italic uppercase">ASSISTS / JOGO</span>
+                      <span className="text-lg font-black italic font-heading text-white">{summary.assistsPerMatch.toFixed(1)}</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[11px] font-black italic uppercase">CLEAN SHEETS</span>
+                      <span className="text-lg font-black italic font-heading text-white">{summary.cleanSheets}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            ))}
+            ) : history.length > 0 ? (
+              <div className="space-y-4">
+                {history.map((h, idx) => (
+                  <div key={`${h.season}-${idx}`} className="bg-[#1E1E1E] p-6 flex justify-between items-center border-l-[4px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <div>
+                      <p className="text-[10px] font-black text-[#FFD700] uppercase italic tracking-widest">{h.season}</p>
+                      <h4 className="text-lg font-black italic uppercase font-heading text-white">{h.league}</h4>
+                      <p className="text-[9px] font-bold text-white/30 uppercase mt-1 italic">{h.wins}V - {h.draws}E - {h.losses}D</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos > 0 ? `${h.pos}º` : '--'}</div>
+                      {h.trophy && <i className="fas fa-trophy text-[#FFD700] text-lg drop-shadow-[0_0_8px_#FFD700]"></i>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#1E1E1E] p-8 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhum histórico disponível para esta confederação.</p>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 };
@@ -822,10 +1129,11 @@ const PublicClubProfileView = ({
   const profile = {
     clubName: String(clubData?.clubName ?? 'CLUBE'),
     fans: Number(clubData?.fans ?? 0),
+    clubSizeName: String(clubData?.clubSizeName ?? 'SEM CLASSIFICACAO'),
     wins: Number(clubData?.wins ?? 0),
     goals: Number(clubData?.goals ?? 0),
     assists: Number(clubData?.assists ?? 0),
-    uberScore: Number(clubData?.uberScore ?? 0),
+    score: Number(clubData?.score ?? clubData?.uberScore ?? 5),
     skillRating: Number(clubData?.skillRating ?? 0),
     escudoUrl: clubData?.escudoUrl ? String(clubData.escudoUrl) : null,
     wonTrophies: Array.isArray(clubData?.wonTrophies) ? clubData.wonTrophies : [],
@@ -867,7 +1175,7 @@ const PublicClubProfileView = ({
             <h2 className="text-4xl font-black italic uppercase font-heading text-white tracking-tighter leading-none mb-2">{profile.clubName}</h2>
             <div className="flex items-center gap-3">
                <div className="flex gap-0.5 text-[10px]">
-                 {renderStars(profile.uberScore)}
+                 {renderStars(profile.score)}
                </div>
                <span className="w-1 h-1 bg-white/20 rounded-full"></span>
                <span className="text-[10px] font-black text-[#FFD700] italic uppercase tracking-widest">{profile.skillRating} SKILL RATING</span>
@@ -911,11 +1219,11 @@ const PublicClubProfileView = ({
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÇÃO ATUAL</p>
-                    <h3 className="text-4xl font-black italic uppercase font-heading text-white">GIGANTE</h3>
+                    <h3 className="text-4xl font-black italic uppercase font-heading text-white">{profile.clubSizeName}</h3>
                   </div>
                   <div className="text-right">
                     <p className="text-[9px] text-white/30 font-black uppercase italic tracking-widest mb-1">TORCIDA</p>
-                    <p className="text-2xl font-black italic font-heading text-white">{(profile.fans / 1000000).toFixed(1)}M</p>
+                    <p className="text-2xl font-black italic font-heading text-white">{formatLegacyFansLabel(profile.fans)}</p>
                   </div>
                 </div>
               </div>
@@ -1341,7 +1649,7 @@ const MatchCenterView = ({
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32">
-      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <header className="px-6 mb-8 mt-4">
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÚMULAS E CONFRONTOS</p>
@@ -1818,10 +2126,10 @@ const ReportMatchView = ({
 // --- Confirm Result View ---
 
 const ConfirmResultView = ({ onBack, match }: any) => {
-  const [uberScore, setUberScore] = useState(0);
+  const [scoreValue, setScoreValue] = useState(0);
 
   const handleConfirm = () => {
-    if (uberScore === 0) {
+    if (scoreValue === 0) {
       alert("ERRO: VOCÊ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
       return;
     }
@@ -1874,10 +2182,10 @@ const ConfirmResultView = ({ onBack, match }: any) => {
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button 
                     key={star}
-                    onClick={() => setUberScore(star)}
-                    className={`text-2xl transition-all ${uberScore >= star ? 'text-[#FFD700]' : 'text-white/10'}`}
+                    onClick={() => setScoreValue(star)}
+                    className={`text-2xl transition-all ${scoreValue >= star ? 'text-[#FFD700]' : 'text-white/10'}`}
                   >
-                    <i className={`fas fa-star ${uberScore >= star ? 'drop-shadow-[0_0_8px_#FFD700]' : ''}`}></i>
+                    <i className={`fas fa-star ${scoreValue >= star ? 'drop-shadow-[0_0_8px_#FFD700]' : ''}`}></i>
                   </button>
                 ))}
              </div>
@@ -1897,7 +2205,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
 
 // --- Widgets ---
 
-const FanProgressWidget = ({ fans }: { fans: number }) => {
+const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?: string | null }) => {
   const tiers = [
     { name: 'PEQUENO', min: 0, max: 500000 },
     { name: 'EMERGENTE', min: 500000, max: 2000000 },
@@ -1908,13 +2216,14 @@ const FanProgressWidget = ({ fans }: { fans: number }) => {
   const currentTier = tiers.find(t => fans >= t.min && fans < t.max) || tiers[tiers.length - 1];
   const progress = Math.min(((fans - currentTier.min) / (currentTier.max - currentTier.min)) * 100, 100);
   const formatFans = (n: number) => n >= 1000000 ? (n / 1000000).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : n.toString();
+  const currentTierLabel = String(clubSizeName || '').trim() || currentTier.name;
 
   return (
     <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
       <div className="flex justify-between items-end mb-4">
         <div>
           <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÇÃO DO CLUBE</p>
-          <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTier.name}</h3>
+          <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTierLabel}</h3>
         </div>
         <div className="text-right">
           <p className="text-[9px] text-white/30 font-black uppercase italic tracking-widest">TORCIDA TOTAL</p>
@@ -2199,33 +2508,223 @@ const SquadView = ({ onBack, currentCareer }: any) => {
   );
 };
 
-const AchievementsView = ({ onBack, userStats }: any) => {
-  const achievementGroups = [
-    { id: 'goals', title: 'ARTILHEIRO NATO', icon: 'fa-futbol', current: userStats.goals, milestones: [50, 100, 500, 1000] },
-    { id: 'assists', title: 'MESTRE DO PASSE', icon: 'fa-hand-holding-heart', current: userStats.assists, milestones: [25, 50, 150, 300] },
-    { id: 'matches', title: 'LEGADO EM CAMPO', icon: 'fa-stopwatch', current: userStats.wins + 40, milestones: [20, 50, 100, 200] }
-  ];
+const AchievementsView = ({
+  onBack,
+  currentCareer,
+}: {
+  onBack: () => void,
+  currentCareer: any,
+}) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [groups, setGroups] = useState<any[]>([]);
+  const [clubData, setClubData] = useState<any>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [claimingIds, setClaimingIds] = useState<number[]>([]);
+  const [claimNotice, setClaimNotice] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAchievements = async () => {
+      if (!currentCareer?.id) {
+        setClubData(null);
+        setGroups([]);
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setError('Selecione uma confederacao para visualizar as conquistas.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+      setClaimNotice('');
+
+      try {
+        const endpoint = getLegacyAchievementsDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setClubData(payload?.clube ?? null);
+        setGroups(normalizeLegacyAchievementGroups(payload?.groups));
+        setOnboardingUrl(
+          String(
+            payload?.onboarding_url ||
+              `${LEGACY_ONBOARDING_CLUBE_URL}?stage=confederacao&confederacao_id=${encodeURIComponent(String(currentCareer.id))}`,
+          ),
+        );
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setClubData(null);
+        setGroups([]);
+        setError(currentError?.message || 'Nao foi possivel carregar as conquistas.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadAchievements();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const hasClub = Boolean(clubData?.id);
+
+  const statusBadgeClass = (status: string) => {
+    if (status === 'claimed') return 'bg-[#008000] text-white';
+    if (status === 'available') return 'bg-[#FFD700] text-[#121212]';
+    return 'bg-white/10 text-white/50';
+  };
+
+  const statusBadgeLabel = (status: string) => {
+    if (status === 'claimed') return 'RESGATADA';
+    if (status === 'available') return 'DISPONIVEL';
+    return 'BLOQUEADA';
+  };
+
+  const handleClaim = async (item: any) => {
+    const achievementId = Number(item?.id ?? 0);
+    if (!achievementId || item?.status !== 'available') {
+      return;
+    }
+
+    setClaimingIds((prev) => (prev.includes(achievementId) ? prev : [...prev, achievementId]));
+    setClaimNotice('');
+    setError('');
+
+    try {
+      const endpoint = getLegacyAchievementClaimEndpoint(achievementId, currentCareer?.id);
+      const payload = await jsonRequest(endpoint, { method: 'POST' });
+
+      setGroups((prevGroups) =>
+        prevGroups.map((group: any) => {
+          const nextItems = (Array.isArray(group?.items) ? group.items : []).map((groupItem: any) =>
+            Number(groupItem?.id ?? 0) === achievementId
+              ? {
+                  ...groupItem,
+                  status: 'claimed',
+                }
+              : groupItem,
+          );
+
+          if (nextItems.length === (group?.items || []).length) {
+            return {
+              ...group,
+              items: nextItems,
+              claimedCount: nextItems.filter((groupItem: any) => groupItem?.status === 'claimed').length,
+            };
+          }
+
+          return group;
+        }),
+      );
+
+      setClaimNotice(String(payload?.message || 'Conquista resgatada com sucesso.'));
+    } catch (currentError: any) {
+      setError(currentError?.message || 'Nao foi possivel resgatar a conquista.');
+    } finally {
+      setClaimingIds((prev) => prev.filter((id) => id !== achievementId));
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#121212] p-6 pb-32">
-      <header className="mb-10"><MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton><h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONQUISTAS</h2></header>
-      <div className="space-y-8">
-        {achievementGroups.map((group) => (
-          <div key={group.id} className="bg-[#1E1E1E] p-8 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="flex justify-between items-end mb-6"><div><h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.title}</h4><p className="text-xl font-black italic uppercase font-heading text-white">{group.current} REGISTRADOS</p></div><i className={`fas ${group.icon} text-white/5 text-3xl`}></i></div>
-            <div className="flex justify-between items-center gap-2">
-              {group.milestones.map((m, idx) => {
-                const isAchieved = group.current >= m;
-                return (
-                  <div key={m} className="flex-1 flex flex-col items-center gap-2">
-                    <div className={`w-full aspect-square flex items-center justify-center transition-all ${isAchieved ? 'bg-[#FFD700] text-[#121212] shadow-[0_0_10px_#FFD700]' : 'bg-[#121212] text-white/10'}`} style={{ clipPath: "polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)" }}><i className={`fas ${idx === 3 ? 'fa-crown' : 'fa-trophy'} text-xs`}></i></div>
-                    <span className={`text-[8px] font-black italic ${isAchieved ? 'text-[#FFD700]' : 'text-white/20'}`}>{m}</span>
-                  </div>
-                );
-              })}
+    <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
+      <header className="mb-10">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONQUISTAS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic mt-2">
+          {clubData?.nome || 'SEM CLUBE'}
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="text-center py-14 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO CONQUISTAS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : !hasClub ? (
+        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+            Você ainda não possui clube nesta confederação.
+          </p>
+          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
+          </MCOButton>
+        </div>
+      ) : groups.length === 0 ? (
+        <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white/40">
+            Nenhuma conquista cadastrada.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-8">
+          {!!claimNotice && (
+            <div className="bg-[#008000]/20 border border-[#008000] p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black uppercase italic text-white">{claimNotice}</p>
             </div>
-          </div>
-        ))}
-      </div>
+          )}
+
+          {groups.map((group) => (
+            <section key={group.tipo} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="flex justify-between items-end mb-5">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
+                  <p className="text-xl font-black italic uppercase font-heading text-white">{group.current} REGISTRADOS</p>
+                </div>
+                <p className="text-[9px] font-black italic uppercase text-white/40">
+                  {group.claimedCount}/{group.total} RESGATADAS
+                </p>
+              </div>
+
+              <div className="space-y-3">
+                {group.items.map((item: any) => (
+                  <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                    <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                      {item.imagemUrl ? (
+                        <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
+                      ) : (
+                        <i className="fas fa-award text-[#FFD700]/50"></i>
+                      )}
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
+                      <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
+                        QUANTIDADE: {item.current}/{item.quantidade}
+                      </p>
+                      <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
+                        <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
+                      </div>
+                    </div>
+                    {item.status === 'available' ? (
+                      <button
+                        type="button"
+                        onClick={() => void handleClaim(item)}
+                        disabled={claimingIds.includes(Number(item.id))}
+                        className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                      >
+                        {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                      </button>
+                    ) : (
+                      <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
+                        {statusBadgeLabel(item.status)}
+                      </span>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
     </div>
   );
 };
@@ -2412,23 +2911,40 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 };
 
 const TrophiesView = ({ onBack, userStats }: any) => {
-  const trophyGallery = [
-    { id: 'elite-23', name: 'ELITE DIVISION', season: 'TEMP 23', icon: 'fa-shield-halved', category: 'LIGA NACIONAL' },
-    { id: 'champions-22', name: 'CHAMPIONS CUP', season: 'TEMP 22', icon: 'fa-trophy', category: 'COPA CONTINENTAL' },
-    { id: 'g4-24', name: 'COPA G4', season: 'TEMP 24', icon: 'fa-crown', category: 'META-GAME ELITE' }
-  ];
+  const latest = userStats?.latestFinalizedLeagueResult ?? null;
+  const hasLatest = Boolean(latest?.liga_nome);
+  const position = Number(latest?.position ?? 0) || null;
+  const positionLabel = String(
+    latest?.position_label ||
+    (position && position > 0 ? `${position} LUGAR` : 'SEM POSICAO')
+  );
+  const trophyIcon = position === 1
+    ? 'fa-trophy'
+    : position === 2
+      ? 'fa-medal'
+      : position === 3
+        ? 'fa-award'
+        : 'fa-shield-halved';
+
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32">
-      <header className="mb-10"><MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton><h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TROFÉUS</h2></header>
+      <header className="mb-10"><MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton><h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TROFEUS</h2></header>
       <div className="grid grid-cols-1 gap-6">
-        {trophyGallery.map((t) => (
-          <div key={t.id} className="relative p-8 text-center bg-[#1E1E1E] border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-             <p className="text-[9px] text-[#FFD700]/40 font-black uppercase italic mb-4 tracking-widest leading-none">{t.category}</p>
-             <i className={`fas ${t.icon} text-6xl text-[#FFD700] mb-6 drop-shadow-[0_0_15px_#FFD700]`}></i>
-             <p className="text-xl font-black italic uppercase font-heading text-white leading-tight">{t.name}</p>
-             <div className="mt-4"><span className="text-[10px] font-black bg-[#FFD700] text-[#121212] px-4 py-1 italic tracking-widest">{t.season}</span></div>
+        {hasLatest ? (
+          <div className="relative p-8 text-center bg-[#1E1E1E] border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+             <p className="text-[9px] text-[#FFD700]/40 font-black uppercase italic mb-4 tracking-widest leading-none">ULTIMA LIGA FINALIZADA</p>
+             <i className={`fas ${trophyIcon} text-6xl text-[#FFD700] mb-6 drop-shadow-[0_0_15px_#FFD700]`}></i>
+             <p className="text-xl font-black italic uppercase font-heading text-white leading-tight">{String(latest?.liga_nome || 'LIGA')}</p>
+             <div className="mt-4"><span className="text-[10px] font-black bg-[#FFD700] text-[#121212] px-4 py-1 italic tracking-widest">{positionLabel}</span></div>
           </div>
-        ))}
+        ) : (
+          <div className="relative p-8 text-center bg-[#1E1E1E] border-b-[3px] border-white/15" style={{ clipPath: AGGRESSIVE_CLIP }}>
+             <p className="text-[9px] text-white/35 font-black uppercase italic mb-4 tracking-widest leading-none">ULTIMA LIGA FINALIZADA</p>
+             <i className="fas fa-shield-halved text-6xl text-white/20 mb-6"></i>
+             <p className="text-xl font-black italic uppercase font-heading text-white/70 leading-tight">SEM TROFEU DE LIGA</p>
+             <div className="mt-4"><span className="text-[10px] font-black bg-white/10 text-white/65 px-4 py-1 italic tracking-widest">SEM POSICAO</span></div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -2436,12 +2952,64 @@ const TrophiesView = ({ onBack, userStats }: any) => {
 
 // --- Tournament Sub Views ---
 
-const LeagueTableView = ({ onBack, onOpenClub }: { onBack: () => void, onOpenClub: (name: string) => void }) => {
+const LeagueTableView = ({
+  onBack,
+  onOpenClub,
+  currentCareer,
+}: {
+  onBack: () => void,
+  onOpenClub: (clubRef: any) => void,
+  currentCareer: any,
+}) => {
+  const [rows, setRows] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [leagueName, setLeagueName] = useState('LIGA NACIONAL');
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLeagueTable = async () => {
+      if (!currentCareer?.id) {
+        setRows([]);
+        setLeagueName('LIGA NACIONAL');
+        setError('Selecione uma confederação para visualizar a tabela.');
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const endpoint = getLegacyLeagueTableDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        setRows(normalizeLegacyLeagueTableRows(payload?.table?.rows));
+        setLeagueName(String(payload?.liga?.nome || 'LIGA NACIONAL').toUpperCase());
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setRows([]);
+        setLeagueName('LIGA NACIONAL');
+        setError(currentError?.message || 'Não foi possível carregar a tabela da liga.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadLeagueTable();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 flex flex-col">
       <header className="mb-8">
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">LIGA NACIONAL</h2>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{leagueName}</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÇÃO</p>
       </header>
       <div className="flex-grow overflow-y-auto">
@@ -2453,22 +3021,36 @@ const LeagueTableView = ({ onBack, onOpenClub }: { onBack: () => void, onOpenClu
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">V</span>
               <span className="text-[8px] font-black text-[#FFD700] italic uppercase text-right">PTS</span>
            </div>
-           <div className="space-y-1">
-              {MOCK_LEAGUE_TABLE.map((row) => (
-                <div 
-                  key={row.pos} 
-                  onClick={() => onOpenClub(row.club)}
-                  className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`} 
+           {loading ? (
+            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificação...</p>
+            </div>
+           ) : error ? (
+            <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
+            </div>
+           ) : rows.length === 0 ? (
+            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum clube encontrado na liga.</p>
+            </div>
+           ) : (
+            <div className="space-y-1">
+              {rows.map((row) => (
+                <div
+                  key={`${row.clubId}-${row.pos}`}
+                  onClick={() => onOpenClub({ id: row.clubId, name: row.clubName })}
+                  className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
                   style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                 >
                   <span className="text-[10px] font-black italic font-heading">{row.pos}º</span>
-                  <span className={`text-[11px] font-black italic uppercase truncate`}>{row.club}</span>
-                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.p}</span>
-                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.v}</span>
-                  <span className="text-xs font-black italic font-heading text-right">{row.pts}</span>
+                  <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
+                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
+                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
+                  <span className="text-xs font-black italic font-heading text-right">{row.points}</span>
                 </div>
               ))}
-           </div>
+            </div>
+           )}
         </div>
       </div>
     </div>
@@ -2819,7 +3401,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
     ? 'CARREGANDO CONTEXTO DA INBOX...'
     : hasPendingActions
     ? inboxSummary.detail
-    : 'SEM AÇÕES PENDENTES NO MOMENTO.';
+    : 'SEM NOTIFICAÇÕES PENDENTES NO MOMENTO.';
   const handlePendingActionsClick = () => {
     if (hasPendingActions && inboxSummary.primaryAction === 'SCHEDULE') {
       if (typeof onOpenSchedulePending === 'function') {
@@ -2833,7 +3415,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32">
-      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       
       <div className="p-4 space-y-6">
         <header className="px-4 mb-4 flex justify-between items-end">
@@ -3110,22 +3692,6 @@ const buildLegacyTaticoInitialPlacements = (layout: any, availablePlayers: any[]
   return placements;
 };
 
-const createLegacyCanvasBlob = async (canvas: HTMLCanvasElement): Promise<Blob | null> =>
-  new Promise((resolve) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
-        return;
-      }
-
-      const dataUrl = canvas.toDataURL('image/png', 0.92);
-      fetch(dataUrl)
-        .then((response) => response.blob())
-        .then(resolve)
-        .catch(() => resolve(null));
-    }, 'image/png', 0.92);
-  });
-
 const LegacyTaticoPlayerChip = ({
   player,
   position,
@@ -3176,8 +3742,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
   const [players, setPlayers] = useState<any[]>([]);
   const [placements, setPlacements] = useState<Record<string, { x: number; y: number }>>({});
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
-  const [savedImageUrl, setSavedImageUrl] = useState<string | null>(null);
-  const [isCapturing, setIsCapturing] = useState(false);
+  const [fieldBackgroundUrl, setFieldBackgroundUrl] = useState<string | null>(null);
   const fieldRef = useRef<HTMLDivElement | null>(null);
   const draggingRef = useRef<{ id: string | null; pointerId: number | null }>({ id: null, pointerId: null });
 
@@ -3213,7 +3778,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setClubData(payload?.clube ?? null);
         setPlayers(nextPlayers);
         setPlacements(nextPlacements);
-        setSavedImageUrl(payload?.esquema?.image_url ? String(payload.esquema.image_url) : null);
+        setFieldBackgroundUrl(payload?.esquema?.field_background_url ? String(payload.esquema.field_background_url) : null);
         setOnboardingUrl(String(payload?.onboarding_url || fallbackOnboarding));
       } catch (currentError: any) {
         if (cancelled) return;
@@ -3221,7 +3786,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setClubData(null);
         setPlayers([]);
         setPlacements({});
-        setSavedImageUrl(null);
+        setFieldBackgroundUrl(null);
         setError(currentError?.message || 'Não foi possível carregar o esquema tático.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -3344,11 +3909,6 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
       return;
     }
 
-    if (!fieldRef.current) {
-      setSaveError('Campo indisponível para captura.');
-      return;
-    }
-
     const payloadPlayers = Object.entries(placements).map(([id, pos]) => ({
       id: Number(id),
       x: Number(pos.x.toFixed(4)),
@@ -3361,42 +3921,45 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
     }
 
     setSaving(true);
-    setIsCapturing(true);
     setSaveError('');
     setSaveSuccess('');
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 60));
-      const canvas = await html2canvas(fieldRef.current, {
-        backgroundColor: null,
-        scale: 2,
-        useCORS: true,
-      });
-
-      const blob = await createLegacyCanvasBlob(canvas);
-      if (!blob) {
-        throw new Error('Não foi possível gerar a imagem do esquema.');
-      }
-
-      const formData = new FormData();
-      formData.append('layout', JSON.stringify({ players: payloadPlayers }));
-      formData.append('imagem', blob, 'esquema-tatico.png');
-
       const saveUrl = new URL(LEGACY_ESQUEMA_TATICO_SAVE_URL, window.location.origin);
       if (currentCareer?.id) {
         saveUrl.searchParams.set('confederacao_id', String(currentCareer.id));
       }
 
-      const payload = await multipartRequest(saveUrl.toString(), formData);
+      const payload = await jsonRequest(saveUrl.toString(), {
+        method: 'POST',
+        body: JSON.stringify({
+          layout: {
+            players: payloadPlayers,
+          },
+        }),
+      });
+
       setSaveSuccess(payload?.message || 'Esquema tático salvo com sucesso.');
-      setSavedImageUrl(payload?.image_url ? String(payload.image_url) : savedImageUrl);
     } catch (currentError: any) {
       setSaveError(currentError?.message || 'Não foi possível salvar o esquema tático.');
     } finally {
       setSaving(false);
-      setIsCapturing(false);
     }
   };
+
+  const fieldStyle = fieldBackgroundUrl
+    ? {
+        clipPath: AGGRESSIVE_CLIP,
+        backgroundImage: `url(${fieldBackgroundUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : {
+        clipPath: AGGRESSIVE_CLIP,
+        background:
+          'linear-gradient(180deg, rgba(28,89,40,1) 0%, rgba(43,120,59,1) 50%, rgba(28,89,40,1) 100%)',
+      };
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -3439,10 +4002,10 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
               </p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">
-              <MCOButton onClick={handleSave} disabled={saving || isCapturing} className="w-full !py-4 !text-[10px]">
+              <MCOButton onClick={handleSave} disabled={saving} className="w-full !py-4 !text-[10px]">
                 {saving ? 'SALVANDO...' : 'SALVAR ESQUEMA'}
               </MCOButton>
-              <MCOButton variant="outline" onClick={handleClear} disabled={saving || isCapturing} className="w-full !py-4 !text-[10px]">
+              <MCOButton variant="outline" onClick={handleClear} disabled={saving} className="w-full !py-4 !text-[10px]">
                 LIMPAR CAMPO
               </MCOButton>
             </div>
@@ -3457,20 +4020,9 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
           <section className="bg-[#1E1E1E] p-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div
               ref={fieldRef}
-              className={`relative w-full aspect-[9/14] max-h-[72vh] mx-auto overflow-hidden border-2 border-[#FFD700]/45 ${isCapturing ? 'opacity-90' : ''}`}
-              style={{
-                clipPath: AGGRESSIVE_CLIP,
-                background:
-                  'linear-gradient(180deg, rgba(28,89,40,1) 0%, rgba(43,120,59,1) 50%, rgba(28,89,40,1) 100%)',
-              }}
+              className="relative w-full aspect-[9/14] max-h-[72vh] mx-auto overflow-hidden border-2 border-[#FFD700]/45"
+              style={fieldStyle}
             >
-              <div className="absolute inset-y-0 left-1/2 w-[2px] bg-white/25 -translate-x-1/2"></div>
-              <div className="absolute left-1/2 top-1/2 w-28 h-28 border-2 border-white/20 rounded-full -translate-x-1/2 -translate-y-1/2"></div>
-              <div className="absolute left-1/2 top-[7%] w-40 h-16 border-2 border-white/20 -translate-x-1/2"></div>
-              <div className="absolute left-1/2 bottom-[7%] w-40 h-16 border-2 border-white/20 -translate-x-1/2"></div>
-              <div className="absolute left-1/2 top-0 w-20 h-8 border-x-2 border-b-2 border-white/20 -translate-x-1/2"></div>
-              <div className="absolute left-1/2 bottom-0 w-20 h-8 border-x-2 border-t-2 border-white/20 -translate-x-1/2"></div>
-
               {Object.keys(placements).length === 0 && (
                 <div className="absolute inset-0 flex items-center justify-center px-8 text-center">
                   <p className="text-[10px] font-black uppercase italic text-white/60 tracking-[0.2em]">
@@ -3499,13 +4051,6 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
               Toque e arraste os jogadores para reposicionar
             </p>
           </section>
-
-          {savedImageUrl && (
-            <section className="bg-[#1E1E1E] p-4 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[9px] font-black uppercase italic text-white/40 mb-3 tracking-[0.2em]">ÚLTIMO ESQUEMA SALVO</p>
-              <img src={savedImageUrl} alt="Esquema tático salvo" className="w-full border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }} />
-            </section>
-          )}
 
           <section className="bg-[#1E1E1E] p-5 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">ELENCO DISPONÍVEL</h4>
@@ -3614,6 +4159,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const hasClub = Boolean(clubData?.id);
   const clubName = hasClub ? String(clubData.nome || 'MEU CLUBE') : 'SEM CLUBE';
   const clubFans = Number(clubData?.fans ?? 0);
+  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÇÃO') : 'SEM CLASSIFICAÇÃO';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -3642,7 +4188,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
           </MCOButton>
         </div>
       ) : (
-        <FanProgressWidget fans={clubFans} />
+        <FanProgressWidget fans={clubFans} clubSizeName={clubSizeName} />
       )}
       <div className={`grid grid-cols-2 gap-4 ${!hasClub ? 'opacity-40 pointer-events-none' : ''}`}>
         {menus.map((m) => (
@@ -3657,12 +4203,61 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   );
 };
 
-const TournamentsView = ({ onBack, onSelectTournament }: any) => {
-  const tournaments = [
-    { id: 'liga', title: 'LIGA NACIONAL', icon: 'fa-shield-halved', status: 'EM ANDAMENTO', accent: '#FFD700' },
-    { id: 'cup', title: 'COPA DA LIGA', icon: 'fa-trophy', status: 'OITAVAS DE FINAL', accent: '#FFD700' },
-    { id: 'continental', title: 'CHAMPIONS CUP', icon: 'fa-globe', status: 'QUARTAS DE FINAL', accent: '#0045e6' }
-  ];
+const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [ligaData, setLigaData] = useState<any>(null);
+  const [clubData, setClubData] = useState<any>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadTournamentData = async () => {
+      if (!currentCareer?.id) {
+        setLigaData(null);
+        setClubData(null);
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setError('Selecione uma confederação para visualizar seus torneios.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const endpoint = new URL(LEGACY_MY_CLUB_DATA_URL, window.location.origin);
+        endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+
+        const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
+        if (cancelled) return;
+
+        setLigaData(payload?.liga ?? null);
+        setClubData(payload?.clube ?? null);
+        setOnboardingUrl(
+          String(
+            payload?.onboarding_url ||
+              `${LEGACY_ONBOARDING_CLUBE_URL}?stage=confederacao&confederacao_id=${encodeURIComponent(String(currentCareer.id))}`,
+          ),
+        );
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setLigaData(null);
+        setClubData(null);
+        setError(currentError?.message || 'Não foi possível carregar os torneios desta confederação.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadTournamentData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const hasLeague = Boolean(ligaData?.id && clubData?.id);
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -3673,22 +4268,41 @@ const TournamentsView = ({ onBack, onSelectTournament }: any) => {
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TORNEIOS</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÇÕES ATIVAS</p>
       </header>
-      <div className="space-y-4">
-        {tournaments.map((t) => (
-          <MCOCard key={t.id} onClick={() => onSelectTournament(t.id)} accentColor={t.accent} active={true} className="p-8">
+      {loading ? (
+        <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO TORNEIOS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : !hasLeague ? (
+        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+            Você ainda não participa de uma liga nesta confederação.
+          </p>
+          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+            ENTRAR EM UMA LIGA
+          </MCOButton>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <MCOCard onClick={onSelectTournament} accentColor="#FFD700" active={true} className="p-8">
             <div className="flex justify-between items-center">
               <div className="flex items-center gap-6">
-                <i className={`fas ${t.icon} text-4xl`} style={{ color: t.accent }}></i>
+                <i className="fas fa-shield-halved text-4xl" style={{ color: '#FFD700' }}></i>
                 <div>
-                  <h4 className="text-xl font-black italic uppercase font-heading text-white">{t.title}</h4>
-                  <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>{t.status}</span>
+                  <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
+                  <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
+                  </span>
                 </div>
               </div>
               <i className="fas fa-chevron-right text-white/10"></i>
             </div>
           </MCOCard>
-        ))}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -4256,7 +4870,7 @@ const MarketView = ({
 
   const renderPlayerList = (title: string, subtitle: string) => (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
-      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-4">
         <header className="mb-6">
           <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
@@ -4405,12 +5019,14 @@ const MarketView = ({
                 style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
               >
                 <div className="flex justify-center">
-                  <div className="relative w-14 h-14 bg-[#121212] border-b-2 border-[#FFD700]/30" style={{ clipPath: SHIELD_CLIP }}>
-                    <img src={player.photo} className="w-full h-full object-cover object-top" />
-                    <div className="absolute bottom-0 right-0 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20">
+                  <div className="relative w-14 h-14 overflow-visible">
+                    <div className="relative z-10 w-14 h-14 bg-[#121212] border-b-2 border-[#FFD700]/30" style={{ clipPath: SHIELD_CLIP }}>
+                      <img src={player.photo} className="w-full h-full object-cover object-top" />
+                    </div>
+                    <div className="absolute bottom-0 right-0 z-30 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
                       {player.ovr}
                     </div>
-                    <div className="absolute bottom-0 left-0 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5">
+                    <div className="absolute bottom-0 left-0 z-30 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
                       {player.pos}
                     </div>
                   </div>
@@ -4517,7 +5133,7 @@ const MarketView = ({
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto">
-      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} uberScore={userStats.uberScore} skillRating={userStats.skillRating} />
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-6">
         <header className="mb-10">
           <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
@@ -4565,6 +5181,7 @@ const App = () => {
   const [clubProfileToView, setClubProfileToView] = useState<any>(null);
   const [clubProfileLoading, setClubProfileLoading] = useState(false);
   const [clubProfileError, setClubProfileError] = useState('');
+  const [hasInboxNotifications, setHasInboxNotifications] = useState(false);
 
   const [careers] = useState(getLegacyConfederacoes);
   const [currentCareerId, setCurrentCareerId] = useState(careers[0]?.id ?? 'none');
@@ -4585,25 +5202,141 @@ const App = () => {
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
-  const [userStats] = useState({ 
-    clubName: 'CRUZEIRO EC', 
-    activeConfed: 'UEFA', 
-    activeLeague: 'u-elite', 
-    fans: 3250000, 
-    wins: 142, 
-    goals: 430, 
-    assists: 145, 
-    wonTrophies: ['elite-23', 'champions-22', 'g4-24'],
-    totalPrizes: 850, 
-    prizeHistory: [{ name: 'ELITE DIVISION (1º LUGAR)', season: 'TEMP 23', value: 500 }, { name: 'CHAMPIONS CUP (WINNER)', season: 'TEMP 22', value: 300 }, { name: 'COPA G4 (SEMI-FINAL)', season: 'TEMP 24', value: 50 }],
-    uberScore: 4.8,
-    skillRating: 92
+  const [userStats, setUserStats] = useState({ 
+    clubName: 'SEM CLUBE',
+    activeConfed: '',
+    activeLeague: '',
+    fans: 0,
+    wins: 0,
+    goals: 0,
+    assists: 0,
+    wonTrophies: [],
+    totalPrizes: 0,
+    prizeHistory: [],
+    score: 5,
+    skillRating: 0,
+    latestFinalizedLeagueResult: null,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadLegacyUserStats = async () => {
+      if (!currentCareer?.id) {
+        setUserStats((current) => ({
+          ...current,
+          activeConfed: '',
+          activeLeague: '',
+          clubName: 'SEM CLUBE',
+          fans: 0,
+          wins: 0,
+          goals: 0,
+          assists: 0,
+          score: 5,
+          skillRating: 0,
+          latestFinalizedLeagueResult: null,
+        }));
+        return;
+      }
+
+      try {
+        const endpoint = new URL(LEGACY_MY_CLUB_DATA_URL, window.location.origin);
+        endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+
+        const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
+        if (cancelled) return;
+
+        const liga = payload?.liga ?? null;
+        const clube = payload?.clube ?? null;
+        const latestFinalizedLeagueResult = clube?.latest_finalized_league_result
+          ?? payload?.latest_finalized_league_result
+          ?? null;
+        if (!clube) {
+          setUserStats((current) => ({
+            ...current,
+            activeConfed: String(liga?.confederacao_nome || currentCareer?.name || ''),
+            activeLeague: String(liga?.nome || ''),
+            clubName: 'SEM CLUBE',
+            fans: 0,
+            wins: 0,
+            goals: 0,
+            assists: 0,
+            score: 5,
+            skillRating: 0,
+            latestFinalizedLeagueResult,
+          }));
+          return;
+        }
+
+        setUserStats((current) => ({
+          ...current,
+          clubName: String(clube?.nome || 'MEU CLUBE'),
+          activeConfed: String(liga?.confederacao_nome || currentCareer?.name || ''),
+          activeLeague: String(clube?.liga_nome || liga?.nome || ''),
+          fans: Math.max(0, Number(clube?.fans ?? 0) || 0),
+          wins: Math.max(0, Number(clube?.wins ?? 0) || 0),
+          goals: Math.max(0, Number(clube?.goals ?? 0) || 0),
+          assists: Math.max(0, Number(clube?.assists ?? 0) || 0),
+          score: Math.max(1, Math.min(5, Number(clube?.score ?? clube?.uber_score ?? 5) || 5)),
+          skillRating: Math.max(0, Math.min(100, Number(clube?.skill_rating ?? 0) || 0)),
+          latestFinalizedLeagueResult,
+        }));
+      } catch {
+        if (cancelled) return;
+        setUserStats((current) => ({
+          ...current,
+          activeConfed: String(currentCareer?.name || ''),
+          activeLeague: '',
+          clubName: 'SEM CLUBE',
+          fans: 0,
+          wins: 0,
+          goals: 0,
+          assists: 0,
+          score: 5,
+          skillRating: 0,
+          latestFinalizedLeagueResult: null,
+        }));
+      }
+    };
+
+    void loadLegacyUserStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshInboxNotifications = async () => {
+      if (!currentCareer?.id) {
+        setHasInboxNotifications(false);
+        return;
+      }
+
+      try {
+        const endpoint = getLegacyInboxDataEndpoint(currentCareer.id);
+        const payload = await jsonRequest(endpoint, { method: 'GET' });
+        if (cancelled) return;
+
+        const summary = normalizeLegacyInboxSummary(payload?.inbox?.summary);
+        setHasInboxNotifications(summary.hasPendingActions || summary.totalMessages > 0);
+      } catch {
+        if (cancelled) return;
+        setHasInboxNotifications(false);
+      }
+    };
+
+    void refreshInboxNotifications();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id, view, matchCenterReloadToken]);
   
-  const handleTournamentSelect = (id: string) => {
-    if (id === 'liga') setView('league-table');
-    else if (id === 'cup') setView('cup-detail');
-    else if (id === 'continental') setView('continental-detail');
+  const handleTournamentSelect = () => {
+    setView('league-table');
   };
 
   const handleConfirmResult = (match: any) => {
@@ -4646,10 +5379,11 @@ const App = () => {
         id: clube.id,
         clubName: clube.nome,
         fans: clube.fans ?? 0,
+        clubSizeName: clube.club_size_name ?? 'SEM CLASSIFICACAO',
         wins: clube.wins ?? 0,
         goals: clube.goals ?? 0,
         assists: clube.assists ?? 0,
-        uberScore: clube.uber_score ?? 0,
+        score: clube.score ?? clube.uber_score ?? 5,
         skillRating: clube.skill_rating ?? 0,
         escudoUrl: clube.escudo_url ?? null,
         wonTrophies: Array.isArray(clube.won_trophies) ? clube.won_trophies : [],
@@ -4673,8 +5407,8 @@ const App = () => {
     switch(view) {
       case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
-      case 'season-stats': return <SeasonStatsView userStats={userStats} onBack={() => setView('hub-global')} />;
-      case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} />;
+      case 'season-stats': return <SeasonStatsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
+      case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} currentCareer={currentCareer} />;
       case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t) => {
         if (t === 'SCHEDULE') {
           setSelectedScheduleMatch(null);
@@ -4692,11 +5426,11 @@ const App = () => {
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} currentCareer={currentCareer} />;
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'squad': return <SquadView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
-      case 'achievements': return <AchievementsView onBack={() => setView('my-club')} userStats={userStats} />;
+      case 'achievements': return <AchievementsView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'finance': return <FinanceView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'trophies': return <TrophiesView onBack={() => setView('my-club')} userStats={userStats} />;
-      case 'tournaments': return <TournamentsView onBack={() => setView('hub-global')} onSelectTournament={handleTournamentSelect} />;
-      case 'league-table': return <LeagueTableView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
+      case 'tournaments': return <TournamentsView onBack={() => setView('hub-global')} onSelectTournament={handleTournamentSelect} currentCareer={currentCareer} />;
+      case 'league-table': return <LeagueTableView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} currentCareer={currentCareer} />;
       case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'profile': return <ProfileView onBack={() => setView('hub-global')} />;
@@ -4704,7 +5438,16 @@ const App = () => {
     }
   };
 
-  return (<>{renderContent()}{!['report-match', 'confirm-match', 'schedule-matches', 'public-club-profile', 'season-stats', 'leaderboard', 'inbox'].includes(view) && <MCOBottomNav activeView={view} onViewChange={setView} />}</>);
+  return (
+    <>
+      {renderContent()}
+      <MCOBottomNav
+        activeView={view}
+        onViewChange={setView}
+        hasInboxNotifications={hasInboxNotifications}
+      />
+    </>
+  );
 };
 
 const rootElement = document.getElementById('legacy-app');

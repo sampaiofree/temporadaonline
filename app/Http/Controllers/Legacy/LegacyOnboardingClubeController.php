@@ -45,7 +45,7 @@ class LegacyOnboardingClubeController extends Controller
 
         if (! $ligaId) {
             if ($confederacaoId) {
-                $userLiga = $this->resolveUserLeagueForConfederacao($user, $confederacaoId);
+                $userLiga = $this->resolveUserActiveLeagueForConfederacao($user, $confederacaoId);
 
                 if ($userLiga) {
                     return redirect()->route('legacy.onboarding_clube', [
@@ -98,12 +98,18 @@ class LegacyOnboardingClubeController extends Controller
             ], 422);
         }
 
+        if ((string) $liga->status !== 'ativa') {
+            return response()->json([
+                'message' => 'Apenas ligas ativas podem receber inscrições.',
+            ], 422);
+        }
+
         if ($liga->confederacao_id) {
-            $existingLiga = $this->resolveUserLeagueForConfederacao($user, (int) $liga->confederacao_id);
+            $existingLiga = $this->resolveUserActiveLeagueForConfederacao($user, (int) $liga->confederacao_id);
 
             if ($existingLiga && (int) $existingLiga->id !== (int) $liga->id) {
                 return response()->json([
-                    'message' => 'Voce ja esta inscrito em outra liga desta confederacao.',
+                    'message' => 'Você já está inscrito em outra liga ativa desta confederação.',
                     'redirect' => route('legacy.onboarding_clube', [
                         'liga_id' => $existingLiga->id,
                         'stage' => 'clube',
@@ -234,7 +240,8 @@ class LegacyOnboardingClubeController extends Controller
     private function buildSelectorData(User $user): array
     {
         $registeredLeagueIds = $user->ligas()->pluck('ligas.id')->map(fn ($id) => (int) $id)->all();
-        $registeredConfederacaoIds = $user->ligas()
+        $activeConfederacaoIds = $user->ligas()
+            ->where('ligas.status', 'ativa')
             ->whereNotNull('ligas.confederacao_id')
             ->pluck('ligas.confederacao_id')
             ->map(fn ($id) => (int) $id)
@@ -243,13 +250,14 @@ class LegacyOnboardingClubeController extends Controller
             ->all();
 
         $confederacoesQuery = Confederacao::query();
-        if (! empty($registeredConfederacaoIds)) {
-            $confederacoesQuery->whereNotIn('id', $registeredConfederacaoIds);
+        if (! empty($activeConfederacaoIds)) {
+            $confederacoesQuery->whereNotIn('id', $activeConfederacaoIds);
         }
 
         $confederacoes = $confederacoesQuery
             ->with(['ligas' => function ($query) {
                 $query->with(['jogo:id,nome', 'geracao:id,nome', 'plataforma:id,nome'])
+                    ->where('status', 'ativa')
                     ->orderBy('nome');
             }])
             ->orderBy('nome')
@@ -289,11 +297,12 @@ class LegacyOnboardingClubeController extends Controller
         ];
     }
 
-    private function resolveUserLeagueForConfederacao(User $user, int $confederacaoId): ?Liga
+    private function resolveUserActiveLeagueForConfederacao(User $user, int $confederacaoId): ?Liga
     {
         return $user->ligas()
             ->where('ligas.confederacao_id', $confederacaoId)
-            ->orderBy('ligas.id')
+            ->where('ligas.status', 'ativa')
+            ->orderByDesc('ligas.id')
             ->first([
                 'ligas.id',
                 'ligas.nome',

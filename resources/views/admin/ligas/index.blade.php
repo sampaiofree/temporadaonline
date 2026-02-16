@@ -43,8 +43,14 @@
                             @php
                                 $statusLabel = match ($liga->status) {
                                     'ativa' => 'Ativa',
+                                    'finalizada', 'encerrada' => 'Finalizada',
                                     'aguardando' => 'Inativa',
                                     default => ucfirst($liga->status),
+                                };
+                                $statusClass = match ($liga->status) {
+                                    'ativa' => 'bg-emerald-100 text-emerald-700',
+                                    'finalizada', 'encerrada' => 'bg-slate-200 text-slate-700',
+                                    default => 'bg-amber-100 text-amber-700',
                                 };
                             @endphp
                             <tr class="hover:bg-slate-50 transition-colors">
@@ -58,7 +64,7 @@
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $liga->plataforma?->nome ?? '-' }}</td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $liga->max_times }}</td>
                                 <td class="px-4 py-4 align-top">
-                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $liga->status === 'ativa' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700' }}">
+                                    <span class="inline-flex rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass }}">
                                         {{ $statusLabel }}
                                     </span>
                                 </td>
@@ -72,6 +78,18 @@
                                         >
                                             Editar
                                         </a>
+                                        @if($liga->status !== 'finalizada' && $liga->status !== 'encerrada')
+                                            <form action="{{ route('admin.ligas.finalize', $liga) }}" method="POST" class="inline">
+                                                @csrf
+                                                @method('PATCH')
+                                                <button
+                                                    type="submit"
+                                                    class="inline-flex items-center rounded-xl border border-amber-200 px-3 py-1 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                                                >
+                                                    Finalizar
+                                                </button>
+                                            </form>
+                                        @endif
                                         @if($liga->clubes_count === 0 && $liga->users_count === 0)
                                             <form action="{{ route('admin.ligas.destroy', $liga) }}" method="POST" class="inline">
                                                 @csrf
