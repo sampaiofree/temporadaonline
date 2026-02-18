@@ -130,7 +130,11 @@ class LegacyController extends Controller
         $marketWindowService = app(MarketWindowService::class);
 
         if ($liga->confederacao_id) {
-            $auctionService->finalizeExpiredAuctions((int) $liga->confederacao_id);
+            try {
+                $auctionService->finalizeExpiredAuctions((int) $liga->confederacao_id);
+            } catch (\Throwable $exception) {
+                report($exception);
+            }
         }
 
         $marketWindow = $marketWindowService->resolveForLiga($liga);

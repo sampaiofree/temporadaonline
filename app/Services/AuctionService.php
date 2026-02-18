@@ -327,7 +327,12 @@ class AuctionService
                 return true;
             }
 
-            $this->assertRosterLimit($winnerLiga, (int) $leaderClub->id, (int) $leaderClub->liga_id);
+            try {
+                $this->assertRosterLimit($winnerLiga, (int) $leaderClub->id, (int) $leaderClub->liga_id);
+            } catch (\DomainException $exception) {
+                $this->cancelItemAndRefund($item, 'Leilao cancelado: elenco do clube lider esta cheio.', $now);
+                return true;
+            }
 
             LigaClubeElenco::create([
                 'confederacao_id' => (int) $item->confederacao_id,
