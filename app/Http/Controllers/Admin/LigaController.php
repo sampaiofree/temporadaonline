@@ -52,7 +52,7 @@ class LigaController extends Controller
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'confederacao_id' => 'required|exists:confederacoes,id',
-            'max_times' => 'required|integer|min:1',
+            'max_times' => 'required|integer|min:8|multiple_of:8',
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
@@ -61,6 +61,9 @@ class LigaController extends Controller
             'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
+        ], [
+            'max_times.min' => 'A quantidade maxima de clubes deve ser no minimo 8.',
+            'max_times.multiple_of' => 'A quantidade maxima de clubes deve ser multiplo de 8 (8, 16, 24...).',
         ]);
 
         $confederacao = Confederacao::with(['jogo', 'geracao', 'plataforma'])
@@ -123,7 +126,7 @@ class LigaController extends Controller
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
-            'max_times' => 'required|integer|min:1',
+            'max_times' => 'required|integer|min:8|multiple_of:8',
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
@@ -132,6 +135,9 @@ class LigaController extends Controller
             'regras' => 'nullable|string|max:2000',
             'status' => 'required|in:ativa,finalizada',
             'imagem' => 'nullable|image:allow_svg|max:2048',
+        ], [
+            'max_times.min' => 'A quantidade maxima de clubes deve ser no minimo 8.',
+            'max_times.multiple_of' => 'A quantidade maxima de clubes deve ser multiplo de 8 (8, 16, 24...).',
         ]);
 
         if (($data['status'] ?? null) === 'finalizada') {
