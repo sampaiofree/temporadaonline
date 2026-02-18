@@ -29,6 +29,7 @@ use App\Http\Controllers\Admin\UserDisponibilidadeController as AdminUserDisponi
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\WhatsappConnectionController as AdminWhatsappConnectionController;
 use App\Http\Controllers\Admin\TemporadaController as AdminTemporadaController;
+use App\Http\Controllers\Admin\LogController as AdminLogController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
 use App\Http\Controllers\LigaElencoController;
@@ -44,6 +45,13 @@ Route::redirect('/', '/legacy');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
+    Route::get('/logs', [AdminLogController::class, 'index'])->name('logs.index');
+    Route::get('/logs/{file}/view', [AdminLogController::class, 'view'])
+        ->where('file', '[^/]+')
+        ->name('logs.view');
+    Route::get('/logs/{file}/download', [AdminLogController::class, 'download'])
+        ->where('file', '[^/]+')
+        ->name('logs.download');
     Route::resource('confederacoes', AdminConfederacaoController::class, [
         'parameters' => ['confederacoes' => 'confederacao'],
     ])->except(['show']);

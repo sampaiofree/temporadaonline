@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Confederacao;
 use App\Models\Idioma;
 use App\Models\Plataforma;
 use App\Models\Profile;
@@ -18,6 +19,16 @@ class UserController extends Controller
     public function index(Request $request): View
     {
         $search = trim((string) $request->query('q', ''));
+        $confederacoes = Confederacao::query()
+            ->orderBy('nome')
+            ->get(['id', 'nome']);
+
+        $allowedConfederacoes = $confederacoes->pluck('id')->map(fn ($id): int => (int) $id)->all();
+        $selectedConfederacoes = collect((array) $request->query('confederacoes', []))
+            ->map(fn ($id): int => (int) $id)
+            ->filter(fn (int $id): bool => in_array($id, $allowedConfederacoes, true))
+            ->unique()
+            ->values();
 
         $users = User::with('profile.plataformaRegistro')
             ->withCount('disponibilidades')
@@ -27,6 +38,17 @@ class UserController extends Controller
                         ->orWhere('email', 'like', "%{$search}%");
                 });
             })
+            ->when($selectedConfederacoes->isNotEmpty(), function ($query) use ($selectedConfederacoes) {
+                $ids = $selectedConfederacoes->all();
+
+                $query->where(function ($query) use ($ids) {
+                    $query->whereHas('ligas', function ($ligasQuery) use ($ids) {
+                        $ligasQuery->whereIn('ligas.confederacao_id', $ids);
+                    })->orWhereHas('clubesLiga', function ($clubesQuery) use ($ids) {
+                        $clubesQuery->whereIn('liga_clubes.confederacao_id', $ids);
+                    });
+                });
+            })
             ->orderByDesc('created_at')
             ->paginate(15)
             ->withQueryString();
@@ -34,6 +56,8 @@ class UserController extends Controller
         return view('admin.users.index', [
             'users' => $users,
             'search' => $search,
+            'confederacoes' => $confederacoes,
+            'selectedConfederacoes' => $selectedConfederacoes,
         ]);
     }
 

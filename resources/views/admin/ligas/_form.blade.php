@@ -54,11 +54,12 @@
                 type="number"
                 id="max_times"
                 name="max_times"
-                min="1"
+                min="8"
                 value="{{ $currentMax }}"
                 required
                 class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
             >
+            <p class="mt-1 text-xs text-slate-500">Use apenas multiplos de 8 (ex.: 8, 16, 24, 32...).</p>
             @error('max_times')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
