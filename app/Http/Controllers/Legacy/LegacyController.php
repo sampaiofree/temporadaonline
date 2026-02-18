@@ -101,11 +101,12 @@ class LegacyController extends Controller
         $rawConfederacaoId = $request->query('confederacao_id');
         $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
 
-        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+        $liga = $this->resolveActiveMarketLiga($user, $confederacaoId);
 
         if (! $liga) {
             return response()->json([
-                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+                'message' => 'Você precisa estar em uma liga ativa para acessar o mercado.',
+                'reason' => 'sem_liga_ativa',
                 'liga' => null,
                 'clube' => null,
                 'mercado' => [
@@ -147,12 +148,42 @@ class LegacyController extends Controller
         } else {
             $elencosQuery->where('liga_id', $liga->id);
         }
+        $elencosQuery->where('ativo', true);
 
         $elencos = $elencosQuery->get()->keyBy('elencopadrao_id');
 
         $userClubQuery = $user->clubesLiga()->with('liga:id,nome');
         $userClubQuery->where('liga_id', $liga->id);
+        if ($scopeConfederacaoId) {
+            $userClubQuery->where('confederacao_id', $scopeConfederacaoId);
+        }
         $userClub = $userClubQuery->first();
+
+        if (! $userClub) {
+            return response()->json([
+                'message' => 'Você precisa criar um clube nesta confederação para acessar o mercado.',
+                'reason' => 'sem_clube',
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'confederacao_id' => $liga->confederacao_id,
+                    'confederacao_nome' => $liga->confederacao?->nome,
+                ],
+                'clube' => null,
+                'mercado' => [
+                    'players' => [],
+                    'pagination' => null,
+                    'closed' => false,
+                    'period' => null,
+                    'mode' => $marketMode,
+                    'auction_period' => $periodoLeilaoAtivo,
+                    'bid_increment_options' => $auctionService->getBidIncrementOptions(),
+                    'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
+                    'radar_ids' => [],
+                    'propostas_recebidas_count' => 0,
+                ],
+            ], 403);
+        }
 
         $walletSaldo = 0;
         $salaryPerRound = 0;
@@ -169,6 +200,8 @@ class LegacyController extends Controller
                 ->where('ativo', true)
                 ->sum('wage_eur');
         }
+
+        $marketJogoId = (int) ($liga->confederacao?->jogo_id ?? $liga->jogo_id);
 
         $playersCollection = Elencopadrao::query()
             ->select([
@@ -212,7 +245,7 @@ class LegacyController extends Controller
                 'mentality_aggression',
                 'player_face_url',
             ])
-            ->where('jogo_id', $liga->jogo_id)
+            ->where('jogo_id', $marketJogoId)
             ->orderByDesc('overall')
             ->get();
 
@@ -318,6 +351,7 @@ class LegacyController extends Controller
                         'enabled' => true,
                         'status' => (string) ($auction['status'] ?? 'aberto'),
                         'has_bid' => (bool) ($auction['has_bid'] ?? false),
+                        'has_user_bid' => (bool) ($auction['has_user_bid'] ?? false),
                         'base_value_eur' => (int) ($auction['base_value_eur'] ?? $baseValue),
                         'current_bid_eur' => (int) ($auction['current_bid_eur'] ?? $baseValue),
                         'leader_club_id' => isset($auction['leader_club_id']) ? (int) $auction['leader_club_id'] : null,
@@ -463,6 +497,13 @@ class LegacyController extends Controller
 
                     if ($filterStatus === 'CONTRATADO' && $clubStatus === 'livre') {
                         return false;
+                    }
+
+                    if ($filterStatus === 'MEUS_LANCES') {
+                        $isAuctionItem = is_array($player['auction'] ?? null);
+                        if ($isAuctionItem && ! (bool) ($player['auction']['has_user_bid'] ?? false)) {
+                            return false;
+                        }
                     }
                 }
 
@@ -766,7 +807,48 @@ class LegacyController extends Controller
             })
             ->values();
 
+        $proposalBaseQuery = LigaProposta::query()
+            ->with(['elencopadrao:id,short_name,long_name', 'clubeDestino:id,nome'])
+            ->where('status', 'aberta')
+            ->where('clube_origem_id', (int) $clube->id);
+
+        if ($scopeConfederacaoId) {
+            $proposalBaseQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $proposalBaseQuery->where('liga_origem_id', (int) $liga->id);
+        }
+
+        $proposalCount = (int) (clone $proposalBaseQuery)->count();
+        $latestProposal = (clone $proposalBaseQuery)
+            ->orderByDesc('created_at')
+            ->first();
+
         $messages = [];
+
+        if ($proposalCount > 0) {
+            $playerName = (string) (
+                $latestProposal?->elencopadrao?->short_name
+                ?: $latestProposal?->elencopadrao?->long_name
+                ?: 'ATLETA'
+            );
+            $senderClubName = (string) ($latestProposal?->clubeDestino?->nome ?: 'CLUBE RIVAL');
+
+            $messages[] = [
+                'id' => 'proposal-pending',
+                'type' => 'PROPOSTA',
+                'title' => $proposalCount === 1
+                    ? 'PROPOSTA RECEBIDA'
+                    : 'PROPOSTAS RECEBIDAS',
+                'sender' => $senderClubName,
+                'content' => $proposalCount === 1
+                    ? "Voce recebeu uma proposta por {$playerName}. Abra o mercado para decidir."
+                    : "Voce possui {$proposalCount} propostas abertas para analisar no mercado.",
+                'date' => $latestProposal?->created_at?->toIso8601String() ?: now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'MARKET_PROPOSALS',
+                'action_label' => 'ABRIR PROPOSTAS',
+            ];
+        }
 
         if ($scheduleMatches->isNotEmpty()) {
             $scheduleCount = (int) $scheduleMatches->count();
@@ -834,6 +916,7 @@ class LegacyController extends Controller
             (int) $scheduleMatches->count(),
             (int) $confirmationMatches->count(),
             (int) $evaluationMatches->count(),
+            $proposalCount,
         );
 
         return response()->json([
@@ -865,13 +948,19 @@ class LegacyController extends Controller
         return (string) ($opponent ?: 'ADVERSARIO');
     }
 
-    private function buildLegacyInboxSummary(int $scheduleCount, int $confirmationCount, int $evaluationCount): array
+    private function buildLegacyInboxSummary(
+        int $scheduleCount,
+        int $confirmationCount,
+        int $evaluationCount,
+        int $proposalCount = 0
+    ): array
     {
         $scheduleCount = max(0, $scheduleCount);
         $confirmationCount = max(0, $confirmationCount);
         $evaluationCount = max(0, $evaluationCount);
-        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount;
-        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
+        $proposalCount = max(0, $proposalCount);
+        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount + $proposalCount;
+        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + ($proposalCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
 
         if ($totalActions === 0) {
             return [
@@ -879,6 +968,7 @@ class LegacyController extends Controller
                 'total_actions' => 0,
                 'total_messages' => 0,
                 'schedule_count' => 0,
+                'proposal_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -893,6 +983,12 @@ class LegacyController extends Controller
             $segments[] = $scheduleCount === 1
                 ? '1 partida para agendar'
                 : "{$scheduleCount} partidas para agendar";
+        }
+
+        if ($proposalCount > 0) {
+            $segments[] = $proposalCount === 1
+                ? '1 proposta de transferencia'
+                : "{$proposalCount} propostas de transferencia";
         }
 
         if ($confirmationCount > 0) {
@@ -916,11 +1012,14 @@ class LegacyController extends Controller
             'total_actions' => $totalActions,
             'total_messages' => $totalMessages,
             'schedule_count' => $scheduleCount,
+            'proposal_count' => $proposalCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
             'detail' => implode(' e ', $segments).'.',
-            'primary_action' => $scheduleCount > 0 ? 'SCHEDULE' : 'MATCH',
+            'primary_action' => $scheduleCount > 0
+                ? 'SCHEDULE'
+                : ($proposalCount > 0 ? 'MARKET_PROPOSALS' : 'MATCH'),
         ];
     }
 
@@ -3312,6 +3411,29 @@ class LegacyController extends Controller
         return $query->first([
             'ligas.id',
             'ligas.nome',
+            'ligas.saldo_inicial',
+            'ligas.multa_multiplicador',
+            'ligas.jogo_id',
+            'ligas.confederacao_id',
+            'ligas.timezone',
+        ]);
+    }
+
+    private function resolveActiveMarketLiga(User $user, ?int $confederacaoId): ?Liga
+    {
+        $query = $user->ligas()
+            ->with(['jogo:id,nome', 'confederacao:id,nome,jogo_id'])
+            ->where('ligas.status', 'ativa')
+            ->orderByDesc('ligas.id');
+
+        if ($confederacaoId) {
+            $query->where('ligas.confederacao_id', $confederacaoId);
+        }
+
+        return $query->first([
+            'ligas.id',
+            'ligas.nome',
+            'ligas.status',
             'ligas.saldo_inicial',
             'ligas.multa_multiplicador',
             'ligas.jogo_id',

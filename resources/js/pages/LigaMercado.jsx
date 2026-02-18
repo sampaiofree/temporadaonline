@@ -205,6 +205,9 @@ export default function LigaMercado() {
     const marketMode = String(mercado?.mode || (mercado?.closed ? 'closed' : 'open')).toLowerCase();
     const isAuctionMode = marketMode === 'auction';
     const marketClosed = Boolean(mercado?.closed);
+    const marketBlockedReason = String(mercado?.blocked_reason ?? '').trim().toLowerCase();
+    const marketBlockedMessage = String(mercado?.blocked_message ?? '').trim();
+    const marketBlocked = marketBlockedReason !== '';
     const closedPeriod = mercado?.period ?? null;
     const auctionPeriod = mercado?.auction_period ?? null;
     const closedPeriodLabel =
@@ -1057,6 +1060,28 @@ export default function LigaMercado() {
         return (
             <main className="liga-mercado-screen">
                 <p className="ligas-empty">Liga indisponÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã¢â‚¬Â ÃƒÂ¢Ã¢â€šÂ¬Ã¢â€žÂ¢ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â‚¬Å¾Ã‚Â¢ÃƒÆ’Ã†â€™Ãƒâ€ Ã¢â‚¬â„¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã†â€™ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â­vel.</p>
+                <Navbar active="ligas" />
+            </main>
+        );
+    }
+
+    if (marketBlocked) {
+        return (
+            <main className="liga-mercado-screen">
+                <section className="liga-dashboard-hero">
+                    <p className="ligas-eyebrow">MERCADO</p>
+                    <h1 className="ligas-title">Jogadores da Confederação</h1>
+                    <p className="ligas-subtitle">
+                        {clube ? `Operando como ${clube.nome}` : 'Mercado temporariamente indisponível.'}
+                    </p>
+                </section>
+
+                <Alert
+                    variant="warning"
+                    title="Acesso bloqueado"
+                    description={marketBlockedMessage || 'Você não pode acessar o mercado neste momento.'}
+                />
+
                 <Navbar active="ligas" />
             </main>
         );

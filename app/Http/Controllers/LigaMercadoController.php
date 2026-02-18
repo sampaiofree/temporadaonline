@@ -20,7 +20,65 @@ class LigaMercadoController extends Controller
     public function index(Request $request): View
     {
         $liga = $this->resolveUserLiga($request);
+        $liga->loadMissing('confederacao:id,nome,jogo_id');
         $userClub = $this->resolveUserClub($request);
+
+        if ((string) ($liga->status ?? '') !== 'ativa') {
+            return view('liga_mercado', [
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'saldo_inicial' => (int) ($liga->saldo_inicial ?? 0),
+                    'jogo' => $liga->jogo?->nome,
+                    'multa_multiplicador' => $liga->multa_multiplicador !== null ? (float) $liga->multa_multiplicador : null,
+                ],
+                'clube' => null,
+                'players' => [],
+                'mercadoPayload' => [
+                    'players' => [],
+                    'closed' => false,
+                    'period' => null,
+                    'mode' => MarketWindowService::MODE_OPEN,
+                    'auction_period' => null,
+                    'bid_increment_options' => [],
+                    'bid_duration_seconds' => 0,
+                    'radar_ids' => [],
+                    'propostas_recebidas_count' => 0,
+                    'blocked_reason' => 'sem_liga_ativa',
+                    'blocked_message' => 'Você precisa estar em uma liga ativa para acessar o mercado.',
+                ],
+                'appContext' => $this->makeAppContext($liga, null, 'mercado'),
+            ]);
+        }
+
+        if (! $userClub) {
+            return view('liga_mercado', [
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'saldo_inicial' => (int) ($liga->saldo_inicial ?? 0),
+                    'jogo' => $liga->jogo?->nome,
+                    'multa_multiplicador' => $liga->multa_multiplicador !== null ? (float) $liga->multa_multiplicador : null,
+                ],
+                'clube' => null,
+                'players' => [],
+                'mercadoPayload' => [
+                    'players' => [],
+                    'closed' => false,
+                    'period' => null,
+                    'mode' => MarketWindowService::MODE_OPEN,
+                    'auction_period' => null,
+                    'bid_increment_options' => [],
+                    'bid_duration_seconds' => 0,
+                    'radar_ids' => [],
+                    'propostas_recebidas_count' => 0,
+                    'blocked_reason' => 'sem_clube',
+                    'blocked_message' => 'Você precisa criar um clube para acessar o mercado.',
+                ],
+                'appContext' => $this->makeAppContext($liga, null, 'mercado'),
+            ]);
+        }
+
         /** @var AuctionService $auctionService */
         $auctionService = app(AuctionService::class);
         /** @var MarketWindowService $marketWindowService */
@@ -45,6 +103,7 @@ class LigaMercadoController extends Controller
         } else {
             $elencosQuery->where('liga_id', $liga->id);
         }
+        $elencosQuery->where('ativo', true);
 
         $elencos = $elencosQuery->get()->keyBy('elencopadrao_id');
 
@@ -64,6 +123,8 @@ class LigaMercadoController extends Controller
                 ->sum('wage_eur');
         }
 
+        $marketJogoId = (int) ($liga->confederacao?->jogo_id ?? $liga->jogo_id);
+
         $players = Elencopadrao::query()
             ->select([
                 'id',
@@ -75,7 +136,7 @@ class LigaMercadoController extends Controller
                 'wage_eur',
                 'player_face_url',
             ])
-            ->where('jogo_id', $liga->jogo_id)
+            ->where('jogo_id', $marketJogoId)
             ->orderByDesc('overall')
             ->get()
             ->map(function (Elencopadrao $player) use ($elencos, $userClub) {
@@ -187,6 +248,8 @@ class LigaMercadoController extends Controller
                     ->where('status', 'aberta')
                     ->count()
                 : 0,
+            'blocked_reason' => null,
+            'blocked_message' => null,
         ];
 
         return view('liga_mercado', [
@@ -213,6 +276,14 @@ class LigaMercadoController extends Controller
     {
         $liga = $this->resolveUserLiga($request);
         $userClub = $this->resolveUserClub($request);
+
+        if ((string) ($liga->status ?? '') !== 'ativa') {
+            abort(403, 'Mercado disponível apenas para ligas ativas.');
+        }
+
+        if (! $userClub) {
+            abort(403, 'Crie um clube antes de acessar propostas.');
+        }
 
         return view('liga_mercado_propostas', [
             'liga' => [

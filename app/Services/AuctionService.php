@@ -46,7 +46,10 @@ class AuctionService
         $this->finalizeExpiredAuctions((int) $liga->confederacao_id);
 
         return DB::transaction(function () use ($liga, $clube, $elencopadraoId, $increment): array {
-            $lockedLiga = Liga::query()->lockForUpdate()->findOrFail($liga->id);
+            $lockedLiga = Liga::query()
+                ->with('confederacao:id,jogo_id')
+                ->lockForUpdate()
+                ->findOrFail($liga->id);
             $lockedClube = LigaClube::query()->lockForUpdate()->findOrFail($clube->id);
 
             if ((int) $lockedClube->liga_id !== (int) $lockedLiga->id) {
@@ -58,7 +61,8 @@ class AuctionService
             }
 
             $player = Elencopadrao::query()->lockForUpdate()->findOrFail($elencopadraoId);
-            if ((int) $player->jogo_id !== (int) $lockedLiga->jogo_id) {
+            $marketJogoId = (int) ($lockedLiga->confederacao?->jogo_id ?? $lockedLiga->jogo_id);
+            if ((int) $player->jogo_id !== $marketJogoId) {
                 throw new \DomainException('Jogador não pertence ao jogo desta liga.');
             }
 
@@ -113,7 +117,7 @@ class AuctionService
             if (! $hasLeader) {
                 $newValue = $baseValue;
             } else {
-                $step = (int) ($increment ?? 0);
+                $step = (int) ($increment ?? min(self::BID_INCREMENT_OPTIONS));
                 if (! in_array($step, self::BID_INCREMENT_OPTIONS, true)) {
                     throw new \DomainException('Incremento de lance inválido.');
                 }
@@ -216,6 +220,19 @@ class AuctionService
             ->whereIn('elencopadrao_id', $ids)
             ->get();
 
+        $userBidLookup = [];
+        if ($viewerClubId !== null && $viewerClubId > 0 && $items->isNotEmpty()) {
+            $bidItemIds = LigaLeilaoLance::query()
+                ->whereIn('liga_leilao_item_id', $items->pluck('id')->all())
+                ->where('clube_id', $viewerClubId)
+                ->distinct()
+                ->pluck('liga_leilao_item_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $userBidLookup = array_fill_keys($bidItemIds, true);
+        }
+
         $snapshot = [];
 
         foreach ($items as $item) {
@@ -240,6 +257,7 @@ class AuctionService
                 'item_id' => (int) $item->id,
                 'status' => (string) $item->status,
                 'has_bid' => $hasBid,
+                'has_user_bid' => isset($userBidLookup[(int) $item->id]),
                 'base_value_eur' => (int) ($item->valor_inicial ?? 0),
                 'current_bid_eur' => $currentBid,
                 'leader_club_id' => $leaderClubId,

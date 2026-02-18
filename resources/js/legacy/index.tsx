@@ -58,11 +58,56 @@ const submitLegacyLogout = () => {
   form.submit();
 };
 
-type LegacyMarketSubMode = 'menu' | 'list' | 'watchlist';
+type LegacyMarketSubMode = 'menu' | 'list' | 'watchlist' | 'proposals';
 
 type LegacyRouteState = {
   view: string;
   marketSubMode: LegacyMarketSubMode;
+};
+
+type LegacyToastVariant = 'info' | 'success' | 'warning' | 'error';
+
+type LegacyToastItem = {
+  id: number;
+  message: string;
+  variant: LegacyToastVariant;
+};
+
+const LEGACY_TOAST_META: Record<LegacyToastVariant, {
+  title: string;
+  icon: string;
+  accent: string;
+  glow: string;
+  progress: string;
+}> = {
+  info: {
+    title: 'Aviso',
+    icon: 'fa-circle-info',
+    accent: '#FFD700',
+    glow: 'rgba(255, 215, 0, 0.22)',
+    progress: '#FFD700',
+  },
+  success: {
+    title: 'Sucesso',
+    icon: 'fa-circle-check',
+    accent: '#16A34A',
+    glow: 'rgba(22, 163, 74, 0.24)',
+    progress: '#22C55E',
+  },
+  warning: {
+    title: 'Atenção',
+    icon: 'fa-triangle-exclamation',
+    accent: '#F59E0B',
+    glow: 'rgba(245, 158, 11, 0.24)',
+    progress: '#F59E0B',
+  },
+  error: {
+    title: 'Erro',
+    icon: 'fa-octagon-exclamation',
+    accent: '#B22222',
+    glow: 'rgba(178, 34, 34, 0.26)',
+    progress: '#DC2626',
+  },
 };
 
 const LEGACY_ALLOWED_VIEWS = new Set<string>([
@@ -90,7 +135,7 @@ const LEGACY_ALLOWED_VIEWS = new Set<string>([
   'profile',
 ]);
 
-const LEGACY_ALLOWED_MARKET_SUBMODES = new Set<LegacyMarketSubMode>(['menu', 'list', 'watchlist']);
+const LEGACY_ALLOWED_MARKET_SUBMODES = new Set<LegacyMarketSubMode>(['menu', 'list', 'watchlist', 'proposals']);
 
 const getLegacyRouteStateFromUrl = (): LegacyRouteState => {
   const params = new URLSearchParams(window.location.search);
@@ -171,7 +216,7 @@ const jsonRequest = async (url: string, options: RequestInit = {}) => {
         ? Object.values(errors).flat().find(Boolean)
         : null;
 
-    throw new Error((firstError as string) || payload?.message || 'Falha na requisiÃ§Ã£o.');
+    throw new Error((firstError as string) || payload?.message || 'Falha na requisição.');
   }
 
   return payload;
@@ -198,7 +243,7 @@ const multipartRequest = async (url: string, formData: FormData, options: Reques
         ? Object.values(errors).flat().find(Boolean)
         : null;
 
-    throw new Error((firstError as string) || payload?.message || 'Falha na requisiÃ§Ã£o.');
+    throw new Error((firstError as string) || payload?.message || 'Falha na requisição.');
   }
 
   return payload;
@@ -218,7 +263,7 @@ const formatLegacyFansLabel = (rawValue: number) => {
   return String(Math.round(value));
 };
 
-// --- ConfiguraÃ§Ãµes de Dados (Mock) ---
+// --- Configurações de Dados (Mock) ---
 const CONFED_CONFIG: any = {
   UEFA: { 
     name: 'UEFA Europe', 
@@ -234,10 +279,10 @@ const CONFED_CONFIG: any = {
 };
 
 const MOCK_INBOX_MESSAGES = [
-  { id: 1, type: 'NEGOCIAÃ‡ÃƒO', title: 'PROPOSTA POR VINÃCIUS JR.', sender: 'MANCHESTER CITY', content: 'O City ofereceu M$ 185M para fechar o negÃ³cio agora.', date: '14:20', urgent: true, action: 'TRANSFER' },
-  { id: 2, type: 'SÃšMULA', title: 'PLACAR REGISTRADO', sender: 'GOLIAS_FC', content: 'Seu adversÃ¡rio registrou a derrota (1x2) na Elite Division.', date: '12:05', urgent: false, action: 'MATCH' },
-  { id: 3, type: 'CONVITE', title: 'COPA DO BRASIL LEGACY', sender: 'ADMIN MCO', content: 'VocÃª foi prÃ©-selecionado para o Draft da Temporada 26.', date: 'ONTEM', urgent: false, action: 'INVITE' },
-  { id: 4, type: 'SISTEMA', title: 'PREMIAÃ‡ÃƒO DISPONÃVEL', sender: 'LEGACY XI', content: 'Seu bÃ´nus de Uber Score de 4.8 estrelas foi creditado: M$ 25M.', date: 'ONTEM', urgent: false, action: 'FINANCE' },
+  { id: 1, type: 'NEGOCIAÇÃO', title: 'PROPOSTA POR VINÍCIUS JR.', sender: 'MANCHESTER CITY', content: 'O City ofereceu M$ 185M para fechar o negócio agora.', date: '14:20', urgent: true, action: 'TRANSFER' },
+  { id: 2, type: 'SÚMULA', title: 'PLACAR REGISTRADO', sender: 'GOLIAS_FC', content: 'Seu adversário registrou a derrota (1x2) na Elite Division.', date: '12:05', urgent: false, action: 'MATCH' },
+  { id: 3, type: 'CONVITE', title: 'COPA DO BRASIL LEGACY', sender: 'ADMIN MCO', content: 'Você foi pré-selecionado para o Draft da Temporada 26.', date: 'ONTEM', urgent: false, action: 'INVITE' },
+  { id: 4, type: 'SISTEMA', title: 'PREMIAÇÃO DISPONÍVEL', sender: 'LEGACY XI', content: 'Seu bônus de Uber Score de 4.8 estrelas foi creditado: M$ 25M.', date: 'ONTEM', urgent: false, action: 'FINANCE' },
 ];
 
 const MOCK_RECENT_RESULTS = [
@@ -315,7 +360,7 @@ const MOCK_CONTINENTAL_GROUPS = {
     { pos: 1, club: 'LIVERPOOL', p: 6, v: 5, pts: 15 },
     { pos: 2, club: 'ARSENAL', p: 6, v: 4, pts: 12 },
     { pos: 3, club: 'DORTMUND', p: 6, v: 2, pts: 6 },
-    { pos: 4, club: 'ATLÃ‰TICO', p: 6, v: 0, pts: 1 },
+    { pos: 4, club: 'ATLÉTICO', p: 6, v: 0, pts: 1 },
   ],
 };
 
@@ -331,25 +376,25 @@ const MOCK_CONTINENTAL_BRACKET = [
 const MOCK_STATS_TEMPLATE = { PAC: 85, SHO: 80, PAS: 75, DRI: 85, DEF: 50, PHY: 70 };
 const MOCK_DETAILED_TEMPLATE = {
   PACE: { 'Velocidade': 85 },
-  SHOOTING: { 'FinalizaÃ§Ã£o': 80 },
-  PASSING: { 'VisÃ£o': 75 },
+  SHOOTING: { 'Finalização': 80 },
+  PASSING: { 'Visão': 75 },
   DRIBBLING: { 'Drible': 85 },
-  DEFENSE: { 'IntercepÃ§Ã£o': 50 },
-  PHYSICAL: { 'ForÃ§a': 70 }
+  DEFENSE: { 'Intercepção': 50 },
+  PHYSICAL: { 'Força': 70 }
 };
 
 const MOCK_SQUAD = [
   { 
-    id: 1, name: 'VINÃCIUS JR.', ovr: 90, pos: 'ATA', age: 23, salary: 12.5, marketValue: 150,
+    id: 1, name: 'VINÍCIUS JR.', ovr: 90, pos: 'ATA', age: 23, salary: 12.5, marketValue: 150,
     photo: 'https://img.asmedia.epimg.net/resizer/v2/LALQ7O7P2ZGVPL6J5H5A3X4V6E.jpg?auth=f8c5b0b1b1b1b1b1b1b1b1b1b1b1b1b1&width=1200&height=1200&smart=true',
     stats: { PAC: 95, SHO: 82, PAS: 78, DRI: 91, DEF: 34, PHY: 68 },
     detailedStats: {
-      PACE: { 'AceleraÃ§Ã£o': 96, 'Pique': 94 },
-      SHOOTING: { 'Posicionamento': 89, 'FinalizaÃ§Ã£o': 84, 'ForÃ§a do Chute': 76, 'Chute Longo': 70, 'Voleio': 75 },
-      PASSING: { 'VisÃ£o': 81, 'Cruzamento': 77, 'Passe Curto': 82, 'Passe Longo': 68, 'Curva': 84 },
-      DRIBBLING: { 'Agilidade': 94, 'EquilÃ­brio': 86, 'ReaÃ§Ã£o': 89, 'Controle': 90, 'Drible': 92, 'Compostura': 84 },
-      DEFENSE: { 'InterceptaÃ§Ã£o': 25, 'Cabeceio': 50, 'NoÃ§Ã£o Defensiva': 32, 'Dividida': 24 },
-      PHYSICAL: { 'Salto': 75, 'FÃ´lego': 84, 'ForÃ§a': 60, 'Agressividade': 65 }
+      PACE: { 'Aceleração': 96, 'Pique': 94 },
+      SHOOTING: { 'Posicionamento': 89, 'Finalização': 84, 'Força do Chute': 76, 'Chute Longo': 70, 'Voleio': 75 },
+      PASSING: { 'Visão': 81, 'Cruzamento': 77, 'Passe Curto': 82, 'Passe Longo': 68, 'Curva': 84 },
+      DRIBBLING: { 'Agilidade': 94, 'Equilíbrio': 86, 'Reação': 89, 'Controle': 90, 'Drible': 92, 'Compostura': 84 },
+      DEFENSE: { 'Interceptação': 25, 'Cabeceio': 50, 'Noção Defensiva': 32, 'Dividida': 24 },
+      PHYSICAL: { 'Salto': 75, 'Fôlego': 84, 'Força': 60, 'Agressividade': 65 }
     },
     skillMoves: 5, weakFoot: 4, 
     playstyles: ['FINESSE SHOT', 'QUICK STEP', 'TRIVELA', 'TECHNICAL']
@@ -359,12 +404,12 @@ const MOCK_SQUAD = [
     photo: 'https://publish.onefootball.com/wp-content/uploads/sites/10/2023/12/Real-Madrid-v-SSC-Napoli-Group-C-UEFA-Champions-League-202324-1701511242-1000x750.jpg',
     stats: { PAC: 78, SHO: 80, PAS: 85, DRI: 88, DEF: 78, PHY: 82 },
     detailedStats: {
-      PACE: { 'AceleraÃ§Ã£o': 76, 'Pique': 80 },
-      SHOOTING: { 'Posicionamento': 85, 'FinalizaÃ§Ã£o': 82, 'ForÃ§a do Chute': 81, 'Chute Longo': 79, 'Penalidade': 72 },
-      PASSING: { 'VisÃ£o': 88, 'Cruzamento': 76, 'Passe Curto': 89, 'Passe Longo': 84, 'Curva': 80 },
-      DRIBBLING: { 'Agilidade': 82, 'EquilÃ­brio': 78, 'ReaÃ§Ã£o': 90, 'Controle': 88, 'Drible': 88, 'Compostura': 90 },
-      DEFENSE: { 'InterceptaÃ§Ã£o': 80, 'Cabeceio': 75, 'NoÃ§Ã£o Defensiva': 78, 'Dividida': 81 },
-      PHYSICAL: { 'Salto': 79, 'FÃ´lego': 90, 'ForÃ§a': 82, 'Agressividade': 84 }
+      PACE: { 'Aceleração': 76, 'Pique': 80 },
+      SHOOTING: { 'Posicionamento': 85, 'Finalização': 82, 'Força do Chute': 81, 'Chute Longo': 79, 'Penalidade': 72 },
+      PASSING: { 'Visão': 88, 'Cruzamento': 76, 'Passe Curto': 89, 'Passe Longo': 84, 'Curva': 80 },
+      DRIBBLING: { 'Agilidade': 82, 'Equilíbrio': 78, 'Reação': 90, 'Controle': 88, 'Drible': 88, 'Compostura': 90 },
+      DEFENSE: { 'Interceptação': 80, 'Cabeceio': 75, 'Noção Defensiva': 78, 'Dividida': 81 },
+      PHYSICAL: { 'Salto': 79, 'Fôlego': 90, 'Força': 82, 'Agressividade': 84 }
     },
     skillMoves: 4, weakFoot: 4,
     playstyles: ['RELENTLESS', 'POWER SHOT', 'INTERCEPT', 'ANTICIPATE']
@@ -373,7 +418,7 @@ const MOCK_SQUAD = [
 
 const MOCK_MARKET_PLAYERS = [
   { id: 101, name: 'E. HAALAND', ovr: 91, pos: 'ATA', age: 23, value: 200, status: 'CONTRATADO', club: 'MAN CITY', photo: 'https://cdn.resfu.com/media/img_news/agencias/afp/2023/11/04/ea203b879a9f99e3f9a7b9e9e9e9e9e9.jpg?size=1000x', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['POWER SHOT'], skillMoves: 3, weakFoot: 3, salary: 25 },
-  { id: 102, name: 'K. MBAPPÃ‰', ovr: 91, pos: 'ATA', age: 25, value: 220, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://images2.minutemediacdn.com/image/upload/c_crop,w_4444,h_2499,x_0,y_156/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images%2FGettyImages%2Fmmsport%2F90min_en_international_web%2F01hznh0k0f4q9104b9p3.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['QUICK STEP'], skillMoves: 5, weakFoot: 4, salary: 30 },
+  { id: 102, name: 'K. MBAPPÉ', ovr: 91, pos: 'ATA', age: 25, value: 220, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://images2.minutemediacdn.com/image/upload/c_crop,w_4444,h_2499,x_0,y_156/c_fill,w_720,ar_16:9,f_auto,q_auto,g_auto/images%2FGettyImages%2Fmmsport%2F90min_en_international_web%2F01hznh0k0f4q9104b9p3.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['QUICK STEP'], skillMoves: 5, weakFoot: 4, salary: 30 },
   { id: 103, name: 'K. DE BRUYNE', ovr: 90, pos: 'MC', age: 32, value: 120, status: 'LIVRE', club: 'AGENTE LIVRE', photo: 'https://tmssl.akamaized.net/images/foto/galerie/kevin-de-bruyne-manchester-city-2023-24-1710497555-132338.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['INCISIVE PASS'], skillMoves: 4, weakFoot: 5, salary: 20 },
   { id: 106, name: 'SALAH', ovr: 89, pos: 'PD', age: 31, value: 90, status: 'CONTRATADO', club: 'LIVERPOOL', photo: 'https://tmssl.akamaized.net/images/foto/galerie/mohamed-salah-liverpool-2023-24-1701103043-122915.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['FINESSE SHOT'], skillMoves: 4, weakFoot: 3, salary: 22 },
   { id: 107, name: 'VANDIJK', ovr: 89, pos: 'ZAG', age: 32, value: 85, status: 'CONTRATADO', club: 'LIVERPOOL', photo: 'https://tmssl.akamaized.net/images/foto/galerie/virgil-van-dijk-liverpool-2023-24-1698759325-120713.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['ANTICIPATE'], skillMoves: 2, weakFoot: 3, salary: 19 },
@@ -384,7 +429,7 @@ const MOCK_WATCHLIST = [
   { id: 105, name: 'RODRYGO', ovr: 86, pos: 'ATA', age: 23, value: 110, status: 'CONTRATADO', club: 'REAL MADRID', photo: 'https://tmssl.akamaized.net/images/foto/galerie/rodrygo-real-madrid-2023-24-1712733934-134591.jpg', stats: MOCK_STATS_TEMPLATE, detailedStats: MOCK_DETAILED_TEMPLATE, playstyles: ['FINESSE SHOT'], skillMoves: 4, weakFoot: 4, salary: 18 },
 ];
 
-// --- UtilitÃ¡rios de Estilo ---
+// --- Utilitários de Estilo ---
 const AGGRESSIVE_CLIP = "polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)";
 const SHIELD_CLIP = "polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)";
 const SLANTED_PATTERN = "repeating-linear-gradient(45deg, rgba(255,215,0,0.05) 0, rgba(255,215,0,0.05) 1px, transparent 0, transparent 10px)";
@@ -437,7 +482,7 @@ const MCOBottomNav = ({
   hasInboxNotifications?: boolean,
 }) => {
   const navItems = [
-    { id: 'hub-global', icon: 'fa-house', label: 'INÃCIO' },
+    { id: 'hub-global', icon: 'fa-house', label: 'INÍCIO' },
     { id: 'match-center', icon: 'fa-shield-halved', label: 'CONFRONTOS' },
     { id: 'inbox', icon: 'fa-envelope', label: 'INBOX', badge: true },
     { id: 'profile', icon: 'fa-user', label: 'PERFIL' }
@@ -463,10 +508,127 @@ const MCOBottomNav = ({
   );
 };
 
+const LegacyToastCard = ({
+  toast,
+  onClose,
+  autoCloseMs = 5500,
+}: {
+  toast: LegacyToastItem,
+  onClose: (id: number) => void,
+  autoCloseMs?: number,
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
+  const [progressWidth, setProgressWidth] = useState(100);
+
+  useEffect(() => {
+    const raf = window.requestAnimationFrame(() => {
+      setIsVisible(true);
+      setProgressWidth(0);
+    });
+
+    return () => {
+      window.cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const handleClose = () => {
+    if (isClosing) return;
+    setIsClosing(true);
+    window.setTimeout(() => onClose(toast.id), 140);
+  };
+
+  const meta = LEGACY_TOAST_META[toast.variant] ?? LEGACY_TOAST_META.info;
+
+  return (
+    <div
+      className={`relative overflow-hidden pointer-events-auto border-l-[5px] px-3 py-3 pr-11 transition-all duration-200 ease-out ${
+        isVisible && !isClosing
+          ? 'opacity-100 translate-y-0 scale-100'
+          : 'opacity-0 translate-y-3 scale-[0.985]'
+      }`}
+      style={{
+        borderLeftColor: meta.accent,
+        clipPath: AGGRESSIVE_CLIP,
+        background: 'linear-gradient(160deg, #242424 0%, #171717 58%, #121212 100%)',
+        boxShadow: `0 12px 32px rgba(0,0,0,0.52), 0 0 0 1px rgba(255,255,255,0.05), 0 0 18px ${meta.glow}`,
+      }}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3">
+        <div
+          className="w-7 h-7 shrink-0 flex items-center justify-center border border-white/10"
+          style={{ clipPath: SHIELD_CLIP, backgroundColor: 'rgba(0,0,0,0.26)', color: meta.accent }}
+        >
+          <i className={`fas ${meta.icon} text-[11px]`}></i>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[8px] font-black uppercase italic tracking-[0.24em] text-white/55 mb-1">
+            {meta.title}
+          </p>
+          <p className="text-[10px] font-black uppercase italic tracking-[0.08em] text-white/95 leading-snug break-words">
+            {toast.message}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleClose}
+        className="absolute top-2 right-2 bg-white/10 hover:bg-white/20 text-white text-[8px] font-black uppercase italic px-2 py-1 transition-colors"
+        style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}
+        aria-label="Fechar aviso"
+      >
+        FECHAR
+      </button>
+
+      <div className="absolute left-0 right-0 bottom-0 h-[2px] bg-white/10">
+        <div
+          className="h-full"
+          style={{
+            width: `${progressWidth}%`,
+            backgroundColor: meta.progress,
+            transition: `width ${autoCloseMs}ms linear`,
+          }}
+        ></div>
+      </div>
+    </div>
+  );
+};
+
+const LegacyToastStack = ({
+  toasts,
+  hasBottomNav,
+  onClose,
+}: {
+  toasts: LegacyToastItem[],
+  hasBottomNav: boolean,
+  onClose: (id: number) => void,
+}) => {
+  if (!Array.isArray(toasts) || toasts.length === 0) {
+    return null;
+  }
+
+  const bottomOffset = hasBottomNav
+    ? 'calc(90px + env(safe-area-inset-bottom))'
+    : '16px';
+
+  return (
+    <div className="fixed left-0 right-0 px-4 z-[70] pointer-events-none" style={{ bottom: bottomOffset }}>
+      <div className="mx-auto w-full max-w-md space-y-2">
+        {toasts.map((toast) => (
+          <LegacyToastCard key={toast.id} toast={toast} onClose={onClose} />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRating = 0 }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
-  const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÃ‡ÃƒO';
+  const currentCareerName = currentCareer?.name || 'SEM CONFEDERAÇÃO';
   
   const renderStars = (score: number) => {
     const stars = [];
@@ -567,6 +729,7 @@ const LEGACY_INBOX_EMPTY_SUMMARY = {
   totalActions: 0,
   totalMessages: 0,
   scheduleCount: 0,
+  proposalCount: 0,
   confirmationCount: 0,
   evaluationCount: 0,
   headline: 'SEM ACOES PENDENTES',
@@ -588,6 +751,7 @@ const normalizeLegacyInboxSummary = (summary: any) => ({
   totalActions: Math.max(0, Number(summary?.total_actions ?? 0) || 0),
   totalMessages: Math.max(0, Number(summary?.total_messages ?? 0) || 0),
   scheduleCount: Math.max(0, Number(summary?.schedule_count ?? 0) || 0),
+  proposalCount: Math.max(0, Number(summary?.proposal_count ?? 0) || 0),
   confirmationCount: Math.max(0, Number(summary?.confirmation_count ?? 0) || 0),
   evaluationCount: Math.max(0, Number(summary?.evaluation_count ?? 0) || 0),
   headline: String(summary?.headline || LEGACY_INBOX_EMPTY_SUMMARY.headline),
@@ -840,7 +1004,7 @@ const InboxView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setMessages([]);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as mensagens.');
+        setError(currentError?.message || 'Não foi possível carregar as mensagens.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -860,7 +1024,7 @@ const InboxView = ({
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MCO INBOX</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÃ“CIOS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÓCIOS</p>
       </header>
 
       <div className="space-y-4">
@@ -892,7 +1056,7 @@ const InboxView = ({
               className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
               style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
             >
-              {String(msg.actionLabel || 'ACESSAR PENDÃŠNCIA')}
+              {String(msg.actionLabel || 'ACESSAR PENDÊNCIA')}
             </button>
           </div>
         ))}
@@ -939,7 +1103,7 @@ const LeaderboardView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setItems([]);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o ranking.');
+        setError(currentError?.message || 'Não foi possível carregar o ranking.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1068,8 +1232,8 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESTATÃSTICAS</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">ANÃLISE DE PERFORMANCE</p>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESTATÍSTICAS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">ANÁLISE DE PERFORMANCE</p>
       </header>
 
       {loading ? (
@@ -1083,10 +1247,10 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : (
@@ -1104,7 +1268,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
               className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'history' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
               style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
             >
-              HISTÃ“RICO LEGACY
+              HISTÓRICO LEGACY
             </button>
           </div>
 
@@ -1117,7 +1281,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                     <p className="text-3xl font-black italic font-heading text-white">{summary.goals}</p>
                   </div>
                   <div className="bg-[#1E1E1E] p-6 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÃ“RIAS TOTAL</p>
+                    <p className="text-[8px] font-black text-white/30 uppercase italic mb-1">VITÓRIAS TOTAL</p>
                     <p className="text-3xl font-black italic font-heading text-white">{summary.wins}</p>
                   </div>
                 </div>
@@ -1136,7 +1300,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                 </div>
 
                 <div className="bg-[#1E1E1E] p-6 border-b-[3px] border-white/5" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÃ‰TRICAS POR PARTIDA</h4>
+                  <h4 className="text-[10px] font-black text-white/40 uppercase italic mb-4 tracking-widest">MÉTRICAS POR PARTIDA</h4>
                   <div className="space-y-4">
                     <div className="flex justify-between items-center">
                       <span className="text-[11px] font-black italic uppercase">GOLS / JOGO</span>
@@ -1163,7 +1327,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
                       <p className="text-[9px] font-bold text-white/30 uppercase mt-1 italic">{h.wins}V - {h.draws}E - {h.losses}D</p>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos > 0 ? `${h.pos}Âº` : '--'}</div>
+                      <div className="text-2xl font-black italic font-heading text-white mb-1">{h.pos > 0 ? `${h.pos}o` : '--'}</div>
                       {h.trophy && <i className="fas fa-trophy text-[#FFD700] text-lg drop-shadow-[0_0_8px_#FFD700]"></i>}
                     </div>
                   </div>
@@ -1171,7 +1335,7 @@ const SeasonStatsView = ({ onBack, currentCareer }: { onBack: () => void, curren
               </div>
             ) : (
               <div className="bg-[#1E1E1E] p-8 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhum histÃ³rico disponÃ­vel para esta confederaÃ§Ã£o.</p>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhum histórico disponível para esta confederação.</p>
               </div>
             )}
           </div>
@@ -1288,11 +1452,11 @@ const PublicClubProfileView = ({
         ) : activeTab === 'status' ? (
           <>
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">NÃVEL DE PRESTÃGIO</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">NÍVEL DE PRESTÍGIO</h4>
               <div className="bg-[#1E1E1E] p-8 border-l-[6px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÃ‡ÃƒO ATUAL</p>
+                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÇÃO ATUAL</p>
                     <h3 className="text-4xl font-black italic uppercase font-heading text-white">{profile.clubSizeName}</h3>
                   </div>
                   <div className="text-right">
@@ -1304,27 +1468,27 @@ const PublicClubProfileView = ({
             </section>
 
             <section className="space-y-4">
-               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÃ‰US</h4>
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÉUS</h4>
                <div className="grid grid-cols-2 gap-4">
                  {profile.wonTrophies.map((trophy: any, index: number) => (
                    <div key={String(trophy?.id ?? index)} className="bg-[#1E1E1E] p-6 text-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                       <i className="fas fa-trophy text-3xl text-[#FFD700] mb-3"></i>
-                      <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÃ‰U')}</p>
+                      <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÉU')}</p>
                    </div>
                  ))}
                  {profile.wonTrophies.length === 0 && (
                     <div className="col-span-2 py-10 bg-[#1E1E1E] text-center opacity-20" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÃ‡A REGISTRADA</p>
+                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÇA REGISTRADA</p>
                     </div>
                  )}
                </div>
             </section>
 
             <section className="space-y-4">
-               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">MÃ‰TRICAS COMPETITIVAS</h4>
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">MÉTRICAS COMPETITIVAS</h4>
                <div className="grid grid-cols-3 gap-3">
                  <div className="bg-[#1E1E1E] p-4 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">VITÃ“RIAS</p>
+                    <p className="text-[8px] font-black text-[#FFD700] uppercase italic mb-1">VITÓRIAS</p>
                     <p className="text-xl font-black italic font-heading text-white">{profile.wins}</p>
                  </div>
                  <div className="bg-[#1E1E1E] p-4 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -1340,7 +1504,7 @@ const PublicClubProfileView = ({
           </>
         ) : (
           <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÃ‡Ã•ES ATIVAS</h4>
+             <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÇÕES ATIVAS</h4>
              <div className="space-y-3">
                {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
                  <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -1353,7 +1517,7 @@ const PublicClubProfileView = ({
                     </div>
                     <div className="flex-grow">
                       <p className="text-[12px] font-black italic uppercase text-white leading-none">{String(player?.nome ?? 'ATLETA')}</p>
-                      <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} â€¢ OVR {Number(player?.ovr ?? 0)}</p>
+                      <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} • OVR {Number(player?.ovr ?? 0)}</p>
                     </div>
                     <div className="text-right">
                        <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
@@ -1375,20 +1539,20 @@ const PublicClubProfileView = ({
 
 const LEGACY_MATCH_STATUS_LABELS: Record<string, string> = {
   agendada: 'Agendada',
-  confirmacao_necessaria: 'ConfirmaÃ§Ã£o pendente',
+  confirmacao_necessaria: 'Confirmação pendente',
   confirmada: 'Confirmada',
   placar_registrado: 'Placar registrado',
   placar_confirmado: 'Placar confirmado',
-  em_reclamacao: 'Em reclamaÃ§Ã£o',
+  em_reclamacao: 'Em reclamação',
   finalizada: 'Finalizada',
   wo: 'W.O.',
   cancelada: 'Cancelada',
 };
 
 const formatLegacyMatchDate = (iso: string | null | undefined) => {
-  if (!iso) return 'Aguardando confirmaÃ§Ã£o';
+  if (!iso) return 'Aguardando confirmação';
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return 'Aguardando confirmaÃ§Ã£o';
+  if (Number.isNaN(date.getTime())) return 'Aguardando confirmação';
 
   return date.toLocaleString('pt-BR', {
     weekday: 'short',
@@ -1439,7 +1603,7 @@ const ScheduleMatchesView = ({
     const loadMatches = async () => {
       if (!currentCareer?.id) {
         setMatches([]);
-        setError('Selecione uma confederaÃ§Ã£o para carregar as partidas.');
+        setError('Selecione uma confederação para carregar as partidas.');
         return;
       }
 
@@ -1456,7 +1620,7 @@ const ScheduleMatchesView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setMatches([]);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as partidas.');
+        setError(currentError?.message || 'Não foi possível carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1490,7 +1654,7 @@ const ScheduleMatchesView = ({
       } catch (currentError: any) {
         if (cancelled) return;
         setCalendarDays([]);
-        setScheduleNotice(currentError?.message || 'NÃ£o foi possÃ­vel carregar os horÃ¡rios.');
+        setScheduleNotice(currentError?.message || 'Não foi possível carregar os horários.');
       } finally {
         if (!cancelled) setCalendarLoading(false);
       }
@@ -1527,9 +1691,9 @@ const ScheduleMatchesView = ({
             : partida,
         ),
       );
-      setScheduleNotice('HorÃ¡rio confirmado com sucesso.');
+      setScheduleNotice('Horário confirmado com sucesso.');
     } catch (currentError: any) {
-      setScheduleNotice(currentError?.message || 'NÃ£o foi possÃ­vel confirmar o horÃ¡rio.');
+      setScheduleNotice(currentError?.message || 'Não foi possível confirmar o horário.');
     } finally {
       setSubmitting(false);
     }
@@ -1585,16 +1749,16 @@ const ScheduleMatchesView = ({
           {selectedPartida && (
             <section className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] mb-4">
-                HorÃ¡rios disponÃ­veis
+                Horários disponíveis
               </h4>
               <p className="text-[9px] font-bold uppercase italic text-white/40 mb-4">
                 {selectedPartida.is_visitante ? selectedPartida.mandante : selectedPartida.visitante}
               </p>
 
               {calendarLoading ? (
-                <p className="text-[10px] text-white/40 font-black uppercase italic">CARREGANDO HORÃRIOS...</p>
+                <p className="text-[10px] text-white/40 font-black uppercase italic">CARREGANDO HORÁRIOS...</p>
               ) : calendarDays.length === 0 ? (
-                <p className="text-[10px] text-white/50 font-black uppercase italic">Sem horÃ¡rios disponÃ­veis no momento.</p>
+                <p className="text-[10px] text-white/50 font-black uppercase italic">Sem horários disponíveis no momento.</p>
               ) : (
                 <div className="space-y-4">
                   {calendarDays.map((day) => (
@@ -1628,7 +1792,7 @@ const ScheduleMatchesView = ({
                   disabled={submitting || !selectedSlot}
                   onClick={handleSchedule}
                 >
-                  {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR HORÃRIO'}
+                  {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR HORÁRIO'}
                 </MCOButton>
               </div>
             </section>
@@ -1672,7 +1836,7 @@ const MatchCenterView = ({
       if (!currentCareer?.id) {
         setPartidas([]);
         setClube(null);
-        setError('Selecione uma confederaÃ§Ã£o para visualizar os confrontos.');
+        setError('Selecione uma confederação para visualizar os confrontos.');
         return;
       }
 
@@ -1691,7 +1855,7 @@ const MatchCenterView = ({
         if (cancelled) return;
         setPartidas([]);
         setClube(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar as partidas.');
+        setError(currentError?.message || 'Não foi possível carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1726,7 +1890,7 @@ const MatchCenterView = ({
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <header className="px-6 mb-8 mt-4">
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÃšMULAS E CONFRONTOS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÚMULAS E CONFRONTOS</p>
       </header>
       <div className="px-4 space-y-8">
         {loading ? (
@@ -1792,19 +1956,19 @@ const MatchCenterView = ({
                       className="!py-5 !px-2 !text-[9px]"
                       disabled={!isLegacySchedulingAllowed(activeMatch)}
                     >
-                      AGENDAR / REAGENDAR HORÃRIO
+                      AGENDAR / REAGENDAR HORÁRIO
                     </MCOButton>
                   </div>
                 </div>
               ) : (
                 <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederaÃ§Ã£o.</p>
+                  <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederação.</p>
                 </div>
               )}
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃƒO DE AGENDA</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃO DE AGENDA</h4>
               <MCOCard onClick={() => onOpenSchedule(activeMatch)} className="p-6" active={true} accentColor="#FFD700">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center gap-5">
@@ -1824,7 +1988,7 @@ const MatchCenterView = ({
             </section>
 
             <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÃšMULAS PENDENTES</h4>
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÚMULAS PENDENTES</h4>
               {pendingSummaries.length > 0 ? pendingSummaries.map((match) => (
                 <div
                   key={match.id}
@@ -1839,12 +2003,12 @@ const MatchCenterView = ({
                   </div>
                   <div className="text-right">
                     <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
-                    <p className="text-xs font-black italic text-white">CONFIRMAÃ‡ÃƒO</p>
+                    <p className="text-xs font-black italic text-white">CONFIRMAÇÃO</p>
                   </div>
                 </div>
               )) : (
                 <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma sÃºmula pendente.</p>
+                  <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma súmula pendente.</p>
                 </div>
               )}
             </section>
@@ -1914,7 +2078,7 @@ const ReportMatchView = ({
           <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">FINALIZAR PARTIDA</h2>
         </header>
         <div className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] text-white/60 font-black uppercase italic">Partida nÃ£o selecionada.</p>
+          <p className="text-[10px] text-white/60 font-black uppercase italic">Partida não selecionada.</p>
         </div>
       </div>
     );
@@ -1994,7 +2158,7 @@ const ReportMatchView = ({
       });
       setHasPreview(true);
     } catch (currentError: any) {
-      setError(currentError?.message || 'NÃ£o foi possÃ­vel analisar as imagens.');
+      setError(currentError?.message || 'Não foi possível analisar as imagens.');
     } finally {
       setLoading(false);
     }
@@ -2007,7 +2171,7 @@ const ReportMatchView = ({
     const placarVisitante = Number(resolvedPlacar.visitante ?? 0);
 
     if (!Number.isFinite(placarMandante) || !Number.isFinite(placarVisitante)) {
-      setError('Placar invÃ¡lido. FaÃ§a uma nova anÃ¡lise.');
+      setError('Placar inválido. Faça uma nova análise.');
       return;
     }
 
@@ -2033,10 +2197,10 @@ const ReportMatchView = ({
         }),
       });
 
-      setSuccess('SÃºmula registrada com sucesso.');
+      setSuccess('Súmula registrada com sucesso.');
       onCompleted();
     } catch (currentError: any) {
-      setError(currentError?.message || 'NÃ£o foi possÃ­vel confirmar os dados.');
+      setError(currentError?.message || 'Não foi possível confirmar os dados.');
     } finally {
       setSaving(false);
     }
@@ -2057,7 +2221,7 @@ const ReportMatchView = ({
     }));
   };
 
-  const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : 'â€”';
+  const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
@@ -2068,13 +2232,13 @@ const ReportMatchView = ({
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">FINALIZAR PARTIDA</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">{partida?.mandante} VS {partida?.visitante}</p>
         <p className="text-[9px] text-white/40 font-bold uppercase italic tracking-[0.1em] mt-2">
-          {LEGACY_MATCH_STATUS_LABELS[String(partida?.estado)] || partida?.estado} â€¢ {formatLegacyMatchDate(partida?.scheduled_at)}
+          {LEGACY_MATCH_STATUS_LABELS[String(partida?.estado)] || partida?.estado} • {formatLegacyMatchDate(partida?.scheduled_at)}
         </p>
       </header>
 
       <section className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar extraÃ­do</p>
+          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar extraído</p>
           <p className="text-2xl font-black italic font-heading text-[#FFD700]">{placarLabel}</p>
         </div>
         {hasPreview && (
@@ -2158,7 +2322,7 @@ const ReportMatchView = ({
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">{partida?.mandante}</h4>
             {unknownMandante.length > 0 && (
               <p className="text-[8px] font-black uppercase italic text-[#B22222] mb-3">
-                NÃ£o identificados: {unknownMandante.join(', ')}
+                Não identificados: {unknownMandante.join(', ')}
               </p>
             )}
             <div className="space-y-2">
@@ -2177,7 +2341,7 @@ const ReportMatchView = ({
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">{partida?.visitante}</h4>
             {unknownVisitante.length > 0 && (
               <p className="text-[8px] font-black uppercase italic text-[#B22222] mb-3">
-                NÃ£o identificados: {unknownVisitante.join(', ')}
+                Não identificados: {unknownVisitante.join(', ')}
               </p>
             )}
             <div className="space-y-2">
@@ -2204,7 +2368,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
 
   const handleConfirm = () => {
     if (scoreValue === 0) {
-      alert("ERRO: VOCÃŠ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
+      alert("ERRO: VOCÊ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
       return;
     }
     alert("RESULTADO CONFIRMADO! O LEGADO DO CLUBE FOI ATUALIZADO.");
@@ -2212,7 +2376,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
   };
 
   const handleDispute = () => {
-    alert("DISPUTA ABERTA. UM ADMINISTRADOR DA LIGA IRÃ ANALISAR O CASO.");
+    alert("DISPUTA ABERTA. UM ADMINISTRADOR DA LIGA IRÁ ANALISAR O CASO.");
     onBack();
   };
 
@@ -2225,7 +2389,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONFIRMAR RESULTADO</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÃ‡ÃƒO DO OPONENTE</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÇÃO DO OPONENTE</p>
       </header>
       <div className="space-y-8">
         <div className="bg-[#1E1E1E] p-10 relative overflow-hidden text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -2251,7 +2415,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
              </div>
            </div>
            <div className="mt-8 pt-8 border-t border-white/5">
-             <p className="text-[11px] font-black italic text-white/40 uppercase mb-4">AVALIE A CONDUTA DO ADVERSÃRIO</p>
+             <p className="text-[11px] font-black italic text-white/40 uppercase mb-4">AVALIE A CONDUTA DO ADVERSÁRIO</p>
              <div className="flex justify-center gap-3">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button 
@@ -2270,7 +2434,7 @@ const ConfirmResultView = ({ onBack, match }: any) => {
           <MCOButton variant="outline" onClick={handleDispute} className="w-full py-5 !text-[10px] text-[#B22222] border-[#B22222]/30">DISCORDAR / ABRIR DISPUTA</MCOButton>
         </div>
         <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest text-center px-4 leading-relaxed">
-           * AO CONFIRMAR, VOCÃŠ CONCORDA QUE O PLACAR ACIMA Ã‰ VERÃDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
+           * AO CONFIRMAR, VOCÊ CONCORDA QUE O PLACAR ACIMA É VERÍDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
         </p>
       </div>
     </div>
@@ -2296,7 +2460,7 @@ const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?
     <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
       <div className="flex justify-between items-end mb-4">
         <div>
-          <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÃ‡ÃƒO DO CLUBE</p>
+          <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÇÃO DO CLUBE</p>
           <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTierLabel}</h3>
         </div>
         <div className="text-right">
@@ -2361,13 +2525,13 @@ const DetailedAttributes = ({ player }: { player: any }) => {
           <div className="w-12 h-12 bg-[#FFD700] text-[#121212] flex items-center justify-center font-black italic font-heading text-2xl" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>{player.ovr}</div>
           <div className="flex-grow">
             <p className="text-2xl font-black italic uppercase font-heading text-white leading-none">{player.name}</p>
-            <p className="text-[10px] font-bold text-[#FFD700] uppercase italic tracking-[0.2em]">{player.pos} â€¢ {player.age || '??'} ANOS</p>
+            <p className="text-[10px] font-bold text-[#FFD700] uppercase italic tracking-[0.2em]">{player.pos} • {player.age || '??'} ANOS</p>
           </div>
         </div>
         
         <div className="grid grid-cols-2 gap-4">
            <div className="bg-[#121212] p-4 border-l-[3px] border-[#FFD700]/30" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
-             <p className="text-[8px] font-black text-white/30 uppercase italic mb-1 tracking-widest">SALÃRIO MENSAL</p>
+             <p className="text-[8px] font-black text-white/30 uppercase italic mb-1 tracking-widest">SALÁRIO MENSAL</p>
              <p className="text-xl font-black italic font-heading text-white">M$ {player.salary || '0'}M</p>
            </div>
            <div className="bg-[#121212] p-4 border-r-[3px] border-[#FFD700]/30 text-right" style={{ clipPath: "polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%)" }}>
@@ -2433,7 +2597,7 @@ const DetailedAttributes = ({ player }: { player: any }) => {
 
 // --- Views: Club Subs ---
 
-const SquadView = ({ onBack, currentCareer }: any) => {
+const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showDetailed, setShowDetailed] = useState(false);
   const [squadPlayersRaw, setSquadPlayersRaw] = useState<any[]>([]);
@@ -2441,9 +2605,52 @@ const SquadView = ({ onBack, currentCareer }: any) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [sellPlayer, setSellPlayer] = useState<any>(null);
+  const [sellingEntryId, setSellingEntryId] = useState<number | null>(null);
+  const [sellNotice, setSellNotice] = useState('');
 
   const squadPlayers = useMemo(() => squadPlayersRaw.map(mapLegacySquadPlayer), [squadPlayersRaw]);
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
+  const closeSellModal = () => {
+    if (sellingEntryId !== null) return;
+    setSellPlayer(null);
+    setSellNotice('');
+  };
+  const openSellModal = (player: any) => {
+    if (!player?.isActive) return;
+    setSellNotice('');
+    setSellPlayer(player);
+  };
+  const handleSellPlayer = async () => {
+    const entryId = Number(sellPlayer?.id ?? 0);
+    if (!entryId || sellingEntryId !== null) return;
+
+    setSellingEntryId(entryId);
+    setSellNotice('');
+
+    try {
+      const payload = await jsonRequest(`/elenco/${entryId}/vender-mercado`, { method: 'POST' });
+      const successMessage = String(payload?.message || 'Jogador vendido com sucesso.');
+
+      setSquadPlayersRaw((current) => current.filter((entry) => Number(entry?.id ?? 0) !== entryId));
+      if (Number(selectedPlayer?.id ?? 0) === entryId) {
+        closePlayer();
+      }
+
+      setSellPlayer(null);
+      if (typeof onNotify === 'function') {
+        onNotify(successMessage, 'success');
+      }
+    } catch (currentError: any) {
+      const message = String(currentError?.message || 'Nao foi possivel vender o jogador.');
+      setSellNotice(message);
+      if (typeof onNotify === 'function') {
+        onNotify(message, 'error');
+      }
+    } finally {
+      setSellingEntryId(null);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -2452,7 +2659,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setSquadPlayersRaw([]);
         setClubData(null);
-        setError('Selecione uma confederaÃ§Ã£o para visualizar seu elenco.');
+        setError('Selecione uma confederação para visualizar seu elenco.');
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
         return;
       }
@@ -2479,7 +2686,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
         if (cancelled) return;
         setSquadPlayersRaw([]);
         setClubData(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o elenco.');
+        setError(currentError?.message || 'Não foi possível carregar o elenco.');
       } finally {
         if (!cancelled) {
           setLoading(false);
@@ -2503,6 +2710,16 @@ const SquadView = ({ onBack, currentCareer }: any) => {
     }
   }, [selectedPlayer, squadPlayers]);
 
+  useEffect(() => {
+    if (!sellPlayer) return;
+
+    const stillExists = squadPlayers.some((player) => Number(player.id) === Number(sellPlayer.id));
+    if (!stillExists && sellingEntryId === null) {
+      setSellPlayer(null);
+      setSellNotice('');
+    }
+  }, [sellPlayer, squadPlayers, sellingEntryId]);
+
   const hasClub = Boolean(clubData?.id);
 
   return (
@@ -2513,7 +2730,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MEU ELENCO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic mt-2">
-          {clubData?.nome ? String(clubData.nome).toUpperCase() : 'CLUBE NÃƒO DEFINIDO'}
+          {clubData?.nome ? String(clubData.nome).toUpperCase() : 'CLUBE NÃO DEFINIDO'}
         </p>
       </header>
 
@@ -2528,16 +2745,16 @@ const SquadView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : squadPlayers.length === 0 ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Nenhum atleta cadastrado no elenco desta confederaÃ§Ã£o.
+            Nenhum atleta cadastrado no elenco desta confederação.
           </p>
         </div>
       ) : (
@@ -2553,7 +2770,7 @@ const SquadView = ({ onBack, currentCareer }: any) => {
               <div className="flex-grow overflow-hidden">
                 <p className="text-lg font-black italic font-heading text-white uppercase truncate">{player.name}</p>
                 <p className="text-[10px] text-[#FFD700] font-bold uppercase italic">
-                  {player.pos} â€¢ OVR {player.ovr}
+                  {player.pos} • OVR {player.ovr}
                 </p>
               </div>
               <div className="text-right shrink-0">
@@ -2562,6 +2779,23 @@ const SquadView = ({ onBack, currentCareer }: any) => {
                 <p className={`text-[8px] font-black uppercase italic mt-1 ${player.isActive ? 'text-[#008000]' : 'text-white/30'}`}>
                   {player.isActive ? 'ATIVO' : 'INATIVO'}
                 </p>
+                <button
+                  type="button"
+                  className={`mt-2 text-[8px] font-black italic uppercase px-3 py-2 leading-none ${
+                    !player.isActive || sellingEntryId === Number(player.id)
+                      ? 'bg-white/10 text-white/25 cursor-not-allowed'
+                      : 'bg-[#B22222] text-white'
+                  }`}
+                  style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}
+                  disabled={!player.isActive || sellingEntryId === Number(player.id)}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (!player.isActive || sellingEntryId === Number(player.id)) return;
+                    openSellModal(player);
+                  }}
+                >
+                  {sellingEntryId === Number(player.id) ? 'VENDENDO...' : 'VENDER'}
+                </button>
               </div>
             </div>
           ))}
@@ -2574,10 +2808,91 @@ const SquadView = ({ onBack, currentCareer }: any) => {
           <div className="relative w-full max-w-sm flex flex-col items-center">
             <div className="w-full flex justify-end mb-4"><button onClick={closePlayer} className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}><i className="fas fa-times text-xl"></i></button></div>
             {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
-            <div className="mt-8 w-full"><MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5" onClick={() => setShowDetailed(!showDetailed)}>{showDetailed ? "VER CARD ULTIMATE" : "FICHA TÃ‰CNICA COMPLETA"}</MCOButton></div>
+            <div className="mt-8 w-full">
+              <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5" onClick={() => setShowDetailed(!showDetailed)}>
+                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}
+              </MCOButton>
+            </div>
+            <div className="mt-3 w-full">
+              <MCOButton
+                variant="danger"
+                className="w-full py-4"
+                disabled={!selectedPlayer?.isActive || sellingEntryId === Number(selectedPlayer?.id)}
+                onClick={() => openSellModal(selectedPlayer)}
+              >
+                {sellingEntryId === Number(selectedPlayer?.id) ? 'VENDENDO...' : 'VENDER AO MERCADO'}
+              </MCOButton>
+            </div>
           </div>
         </div>
       )}
+      {sellPlayer && (() => {
+        const entryId = Number(sellPlayer?.id ?? 0);
+        const isBusy = sellingEntryId === entryId;
+        const baseValueEur = Math.max(0, Number(sellPlayer?.value_eur ?? 0));
+        const taxPercent = 20;
+        const taxValueEur = Math.round((baseValueEur * taxPercent) / 100);
+        const netCreditEur = Math.max(0, baseValueEur - taxValueEur);
+
+        return (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={closeSellModal}></div>
+            <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#B22222] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">VENDA AO MERCADO</p>
+              <h4 className="text-lg font-black italic uppercase text-white leading-tight">
+                {String(sellPlayer?.name || 'ATLETA')}
+              </h4>
+              <p className="text-[8px] font-black italic uppercase text-white/40 mt-1">
+                Confirme a venda do atleta para o mercado livre.
+              </p>
+
+              <div className="mt-4 bg-[#121212]/75 border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[8px] font-black uppercase italic text-white/45">VALOR BASE</span>
+                  <span className="text-[9px] font-black italic uppercase text-white">EUR {toLegacyMoneyCompact(baseValueEur)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[8px] font-black uppercase italic text-white/45">TAXA ({taxPercent}%)</span>
+                  <span className="text-[9px] font-black italic uppercase text-[#B22222]">- EUR {toLegacyMoneyCompact(taxValueEur)}</span>
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-2">
+                  <span className="text-[8px] font-black uppercase italic text-[#FFD700]">CREDITO ESTIMADO</span>
+                  <span className="text-[10px] font-black italic uppercase text-[#FFD700]">EUR {toLegacyMoneyCompact(netCreditEur)}</span>
+                </div>
+              </div>
+
+              {!!sellNotice && (
+                <p className="text-[8px] font-black italic uppercase text-[#B22222] mt-3">
+                  {sellNotice}
+                </p>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`text-[8px] font-black italic uppercase py-3 ${isBusy ? 'bg-white/10 text-white/25' : 'bg-white/10 text-white/60'}`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={closeSellModal}
+                  disabled={isBusy}
+                >
+                  CANCELAR
+                </button>
+                <button
+                  type="button"
+                  className={`text-[8px] font-black italic uppercase py-3 ${
+                    isBusy || !entryId ? 'bg-white/10 text-white/25' : 'bg-[#B22222] text-white'
+                  }`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && !!entryId && void handleSellPlayer()}
+                  disabled={isBusy || !entryId}
+                >
+                  {isBusy ? 'VENDENDO...' : 'CONFIRMAR VENDA'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
@@ -2725,10 +3040,10 @@ const AchievementsView = ({
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : groups.length === 0 ? (
@@ -3038,7 +3353,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setClubData(null);
         setFinanceData(null);
-        setError('Selecione uma confederaÃ§Ã£o para visualizar o financeiro.');
+        setError('Selecione uma confederação para visualizar o financeiro.');
         return;
       }
 
@@ -3063,7 +3378,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
         if (cancelled) return;
         setClubData(null);
         setFinanceData(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados financeiros.');
+        setError(currentError?.message || 'Não foi possível carregar os dados financeiros.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -3109,10 +3424,10 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : (
@@ -3122,7 +3437,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
               <p className="text-[9px] text-[#FFD700] font-black uppercase italic mb-1 tracking-widest">SALDO EM CAIXA</p>
               <p className="text-4xl font-black italic font-heading text-white">M$ {totalBalance}M</p>
               <p className="text-[8px] text-white/30 font-black uppercase italic mt-2 tracking-widest">
-                {rodadasRestantes === null ? 'SEM CUSTO SALARIAL' : `${rodadasRestantes} RODADAS DE FÃ”LEGO`}
+                {rodadasRestantes === null ? 'SEM CUSTO SALARIAL' : `${rodadasRestantes} RODADAS DE FÔLEGO`}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -3139,19 +3454,19 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
-              RECEITAS DE PATROCÃNIO
+              RECEITAS DE PATROCÍNIO
             </h4>
             <div className="space-y-3">
               {patrocinioResgatados.length > 0 ? patrocinioResgatados.map((item: any) => (
                 <div key={String(item.id)} className="bg-[#181818] p-5 flex justify-between items-center border-r-[2px] border-[#FFD700]/30" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
                   <div>
-                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{item.observacao || 'PatrocÃ­nio'}</p>
+                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{item.observacao || 'Patrocínio'}</p>
                     <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest">{String(item.created_at || '').slice(0, 10)}</p>
                   </div>
                   <p className="text-xl font-black italic font-heading text-[#FFD700]">M$ {toMValue(item.valor)}M</p>
                 </div>
               )) : (
-                <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum patrocÃ­nio resgatado.</p>
+                <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum patrocínio resgatado.</p>
               )}
             </div>
           </div>
@@ -3181,7 +3496,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 
           <div className="space-y-6">
             <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
-              MOVIMENTAÃ‡Ã•ES RECENTES
+              MOVIMENTAÇÕES RECENTES
             </h4>
             <div className="space-y-3">
               {movimentos.length > 0 ? movimentos.map((movement: any) => (
@@ -3195,7 +3510,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
                   </p>
                 </div>
               )) : (
-                <p className="text-[10px] font-black italic uppercase text-white/40">Sem movimentaÃ§Ãµes recentes.</p>
+                <p className="text-[10px] font-black italic uppercase text-white/40">Sem movimentações recentes.</p>
               )}
             </div>
           </div>
@@ -3268,7 +3583,7 @@ const LeagueTableView = ({
       if (!currentCareer?.id) {
         setRows([]);
         setLeagueName('LIGA NACIONAL');
-        setError('Selecione uma confederaÃ§Ã£o para visualizar a tabela.');
+        setError('Selecione uma confederação para visualizar a tabela.');
         setLoading(false);
         return;
       }
@@ -3287,7 +3602,7 @@ const LeagueTableView = ({
         if (cancelled) return;
         setRows([]);
         setLeagueName('LIGA NACIONAL');
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar a tabela da liga.');
+        setError(currentError?.message || 'Não foi possível carregar a tabela da liga.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -3305,7 +3620,7 @@ const LeagueTableView = ({
       <header className="mb-8">
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{leagueName}</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÃ‡ÃƒO</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÇÃO</p>
       </header>
       <div className="flex-grow overflow-y-auto">
         <div className="min-w-full">
@@ -3318,7 +3633,7 @@ const LeagueTableView = ({
            </div>
            {loading ? (
             <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificaÃ§Ã£o...</p>
+              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificação...</p>
             </div>
            ) : error ? (
             <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -3337,7 +3652,7 @@ const LeagueTableView = ({
                   className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
                   style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                 >
-                  <span className="text-[10px] font-black italic font-heading">{row.pos}Âº</span>
+                  <span className="text-[10px] font-black italic font-heading">{row.pos}o</span>
                   <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
@@ -3367,7 +3682,7 @@ const LeagueCupView = ({ onBack, onOpenClub }: { onBack: () => void, onOpenClub:
             </div>
             {match.pensH !== undefined && (
               <div className="bg-[#121212]/50 p-5 mt-4 border border-white/5 relative z-10" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                 <p className="text-[9px] font-black italic text-[#FFD700] uppercase text-center mb-4 tracking-[0.2em]">DISPUTA DE PÃŠNALTIS</p>
+                 <p className="text-[9px] font-black italic text-[#FFD700] uppercase text-center mb-4 tracking-[0.2em]">DISPUTA DE PÊNALTIS</p>
                  <div className="flex justify-between items-center px-4">
                     <div className="flex gap-2">{[...Array(5)].map((_, i) => (<div key={i} className={`w-3 h-3 rotate-45 border ${i < (match.pensH || 0) ? 'bg-[#FFD700] border-[#FFD700]' : 'border-white/10'}`}></div>))}</div>
                     <div className="flex flex-col items-center"><span className="text-2xl font-black italic font-heading text-[#FFD700] leading-none">{match.pensH}</span><span className="text-[8px] text-white/20 font-black italic">VS</span><span className="text-2xl font-black italic font-heading text-white leading-none">{match.pensA}</span></div>
@@ -3438,7 +3753,7 @@ const ContinentalTournamentView = ({ onBack, onOpenClub }: { onBack: () => void,
                 <div className="space-y-1">
                   {teams.map((row) => (
                     <div key={row.club} onClick={() => onOpenClub(row.club)} className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-3 items-center transition-all cursor-pointer active:opacity-70 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : (row.pos <= 2 ? 'bg-[#1E1E1E] border-l-[3px] border-[#008000]' : 'bg-[#1E1E1E] border-l-[3px] border-transparent opacity-60')}`} style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                      <span className="text-[9px] font-black italic font-heading">{row.pos}Âº</span>
+                      <span className="text-[9px] font-black italic font-heading">{row.pos}o</span>
                       <span className="text-[10px] font-black italic uppercase truncate">{row.club}</span>
                       <span className="text-[9px] font-black italic text-center opacity-40">{row.p}</span>
                       <span className="text-[9px] font-black italic text-center opacity-40">{row.v}</span>
@@ -3548,7 +3863,7 @@ const ProfileGameWidget = ({ data, onChange }: any) => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
       <div className="space-y-2">
-        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">GERAÃ‡ÃƒO DO CONSOLE</label>
+        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">GERAÇÃO DO CONSOLE</label>
         <select
           value={data.geracao_id || ''}
           onChange={(e) => onChange('geracao_id', e.target.value ? Number(e.target.value) : null)}
@@ -3576,7 +3891,7 @@ const ProfileGameWidget = ({ data, onChange }: any) => {
         </select>
       </div>
       <div className="space-y-2">
-        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">VERSÃƒO DO JOGO</label>
+        <label className="text-[9px] font-black text-white/30 uppercase italic tracking-widest">VERSÃO DO JOGO</label>
         <select
           value={data.jogo_id || ''}
           onChange={(e) => onChange('jogo_id', e.target.value ? Number(e.target.value) : null)}
@@ -3597,7 +3912,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
   const daysOfWeek = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB', 'DOM'];
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-      <p className="text-[10px] text-white/30 uppercase italic tracking-widest leading-relaxed">CADASTRAR MÃšLTIPLOS HORÃRIOS PARA CADA DIA DA SEMANA.</p>
+      <p className="text-[10px] text-white/30 uppercase italic tracking-widest leading-relaxed">CADASTRAR MÚLTIPLOS HORÁRIOS PARA CADA DIA DA SEMANA.</p>
       <div className="space-y-4">
         {daysOfWeek.map((day) => {
           const daySlots = availability[day] || [];
@@ -3607,7 +3922,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
               <div className="flex justify-between items-center mb-3">
                 <div className="flex items-center gap-2">
                   <span className={`w-10 h-10 flex items-center justify-center font-black italic text-xs ${hasSlots ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#121212] text-white/20'}`} style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>{day}</span>
-                  <span className="text-[10px] font-black text-white uppercase italic tracking-widest">{hasSlots ? `${daySlots.length} SLOT(S)` : 'INDISPONÃVEL'}</span>
+                  <span className="text-[10px] font-black text-white uppercase italic tracking-widest">{hasSlots ? `${daySlots.length} SLOT(S)` : 'INDISPONÍVEL'}</span>
                 </div>
                 <button 
                   onClick={() => onAddSlot(day)}
@@ -3627,7 +3942,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
                         onChange={(e) => onTimeChange(day, idx, 'from', e.target.value)}
                         className="flex-1 bg-transparent text-white font-black italic text-xs outline-none"
                       />
-                      <span className="text-[8px] text-[#FFD700] font-black italic">ATÃ‰</span>
+                      <span className="text-[8px] text-[#FFD700] font-black italic">ATÉ</span>
                       <input 
                         type="time" 
                         value={slot.to}
@@ -3696,7 +4011,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
     ? 'CARREGANDO CONTEXTO DA INBOX...'
     : hasPendingActions
     ? inboxSummary.detail
-    : 'SEM NOTIFICAÃ‡Ã•ES PENDENTES NO MOMENTO.';
+    : 'SEM NOTIFICAÇÕES PENDENTES NO MOMENTO.';
   const handlePendingActionsClick = () => {
     if (hasPendingActions && inboxSummary.primaryAction === 'SCHEDULE') {
       if (typeof onOpenSchedulePending === 'function') {
@@ -3715,7 +4030,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           onClick={() => navigateTo(LEGACY_ONBOARDING_CLUBE_URL)}
           className="w-full max-w-xs py-5 text-sm"
         >
-          ESCOLHER CONFEDERAÃ‡ÃƒO
+          ESCOLHER CONFEDERAÇÃO
         </MCOButton>
       </div>
     );
@@ -3744,7 +4059,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <i className={`fas ${hasPendingActions ? 'fa-triangle-exclamation' : 'fa-inbox'} text-white text-xl`}></i>
           <div className="flex-grow">
             <p className="text-[10px] font-black italic uppercase text-white leading-none">
-              AÃ‡Ã•ES PENDENTES{pendingCountLabel}
+              AÇÕES PENDENTES{pendingCountLabel}
             </p>
             <p className="text-[8px] font-bold text-white/60 uppercase italic">
               {pendingText}
@@ -3757,7 +4072,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÃ‡Ã•ES</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3769,7 +4084,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÃ“CIOS</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3793,8 +4108,8 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÃ“RICO</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÃSTICAS</p>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
+                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
                 <i className="fas fa-chart-line"></i>
@@ -3805,7 +4120,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="relative z-10 flex justify-between items-center">
               <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃƒO DE CLUBE</h4>
+                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
                 <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
               </div>
               <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -3829,9 +4144,9 @@ const ProfileView = ({ onBack }: any) => {
   const [availability, setAvailability] = useState<any>(buildEmptyAvailability());
 
   const widgets = [
-    { id: 'user', icon: 'fa-user-gear', label: 'USUÃRIO' },
+    { id: 'user', icon: 'fa-user-gear', label: 'USUÁRIO' },
     { id: 'game', icon: 'fa-gamepad', label: 'JOGO' },
-    { id: 'schedule', icon: 'fa-calendar-days', label: 'HORÃRIOS' }
+    { id: 'schedule', icon: 'fa-calendar-days', label: 'HORÁRIOS' }
   ];
 
   useEffect(() => {
@@ -3872,7 +4187,7 @@ const ProfileView = ({ onBack }: any) => {
         });
         setAvailability(currentAvailability);
       } catch (error: any) {
-        alert(error?.message || 'Falha ao carregar configuraÃ§Ãµes.');
+        alert(error?.message || 'Falha ao carregar configurações.');
       } finally {
         setLoading(false);
       }
@@ -3883,7 +4198,7 @@ const ProfileView = ({ onBack }: any) => {
 
   const handleSave = async () => {
     if (!LEGACY_CONFIG.profileUpdateUrl || !LEGACY_CONFIG.profileDisponibilidadesSyncUrl) {
-      alert('ConfiguraÃ§Ã£o legacy ausente para salvar dados.');
+      alert('Configuração legacy ausente para salvar dados.');
       return;
     }
 
@@ -3917,9 +4232,9 @@ const ProfileView = ({ onBack }: any) => {
         body: JSON.stringify({ entries }),
       });
 
-      alert('ALTERAÃ‡Ã•ES SALVAS!');
+      alert('ALTERAÇÕES SALVAS!');
     } catch (error: any) {
-      alert(error?.message || 'Falha ao salvar configuraÃ§Ãµes.');
+      alert(error?.message || 'Falha ao salvar configurações.');
     } finally {
       setSaving(false);
     }
@@ -3943,7 +4258,7 @@ const ProfileView = ({ onBack }: any) => {
       <div className="mb-12">
         {loading && (
           <div className="text-center py-16 text-white/40 text-xs font-black italic uppercase tracking-[0.2em]">
-            CARREGANDO CONFIGURAÃ‡Ã•ES...
+            CARREGANDO CONFIGURAÇÕES...
           </div>
         )}
         {activeWidget === 'user' && <ProfileUserWidget data={userData} onChange={(f: any, v: any) => setUserData({...userData, [f]: v})} />}
@@ -3952,7 +4267,7 @@ const ProfileView = ({ onBack }: any) => {
       </div>
       <div className="fixed bottom-24 left-6 right-6 z-40">
         <MCOButton variant="primary" className="w-full py-5 text-lg" onClick={handleSave} disabled={saving}>
-          {saving ? 'SALVANDO...' : 'SALVAR ALTERAÃ‡Ã•ES'}
+          {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
         </MCOButton>
       </div>
     </div>
@@ -4033,7 +4348,7 @@ const LegacyTaticoPlayerChip = ({
         )}
       </span>
       <span className="block mt-1 px-2 py-1 bg-[#1E1E1E]/90 border border-white/10 text-[8px] font-black italic uppercase text-white leading-none whitespace-nowrap" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-        {overall || '--'} â€¢ {positionLabel}
+        {overall || '--'} • {positionLabel}
       </span>
     </button>
   );
@@ -4063,7 +4378,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setClubData(null);
         setPlayers([]);
         setPlacements({});
-        setError('Selecione uma confederaÃ§Ã£o para montar seu esquema tÃ¡tico.');
+        setError('Selecione uma confederação para montar seu esquema tático.');
         return;
       }
 
@@ -4095,7 +4410,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         setPlayers([]);
         setPlacements({});
         setFieldBackgroundUrl(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar o esquema tÃ¡tico.');
+        setError(currentError?.message || 'Não foi possível carregar o esquema tático.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4205,7 +4520,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
     try {
       event.currentTarget.releasePointerCapture(dragging.pointerId);
     } catch (currentError) {
-      // Ignora ponteiro jÃ¡ liberado.
+      // Ignora ponteiro já liberado.
     }
 
     draggingRef.current = { id: null, pointerId: null };
@@ -4213,7 +4528,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
 
   const handleSave = async () => {
     if (!hasClub) {
-      setSaveError('Crie um clube nesta confederaÃ§Ã£o antes de salvar o esquema.');
+      setSaveError('Crie um clube nesta confederação antes de salvar o esquema.');
       return;
     }
 
@@ -4247,9 +4562,9 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         }),
       });
 
-      setSaveSuccess(payload?.message || 'Esquema tÃ¡tico salvo com sucesso.');
+      setSaveSuccess(payload?.message || 'Esquema tático salvo com sucesso.');
     } catch (currentError: any) {
-      setSaveError(currentError?.message || 'NÃ£o foi possÃ­vel salvar o esquema tÃ¡tico.');
+      setSaveError(currentError?.message || 'Não foi possível salvar o esquema tático.');
     } finally {
       setSaving(false);
     }
@@ -4275,9 +4590,9 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
         <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESQUEMA TÃTICO</h2>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">ESQUEMA TÁTICO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic">
-          {clubData?.nome ? `${clubData.nome} â€¢ ${ligaData?.nome || ''}` : 'MONTAGEM DE TIME'}
+          {clubData?.nome ? `${clubData.nome} • ${ligaData?.nome || ''}` : 'MONTAGEM DE TIME'}
         </p>
       </header>
 
@@ -4292,10 +4607,10 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : (
@@ -4361,7 +4676,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
           </section>
 
           <section className="bg-[#1E1E1E] p-5 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">ELENCO DISPONÃVEL</h4>
+            <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">ELENCO DISPONÍVEL</h4>
             <div className="space-y-2">
               {sortedRoster.length > 0 ? (
                 sortedRoster.map((player) => {
@@ -4376,7 +4691,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                       <div className="min-w-0">
                         <p className="text-[11px] font-black italic uppercase text-white truncate">{name}</p>
                         <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.15em]">
-                          OVR {overall || '--'} â€¢ {posLabel}
+                          OVR {overall || '--'} • {posLabel}
                         </p>
                       </div>
                       <button
@@ -4395,7 +4710,7 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                 })
               ) : (
                 <p className="text-[10px] font-black uppercase italic text-white/40">
-                  Nenhum jogador ativo disponÃ­vel. Atualize seu elenco.
+                  Nenhum jogador ativo disponível. Atualize seu elenco.
                 </p>
               )}
             </div>
@@ -4408,12 +4723,12 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
 
 const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const menus = [
-    { id: 'esquema-tatico', title: 'ESQUEMA TÃTICO', icon: 'fa-chess-board', desc: 'POSICIONAMENTO EM CAMPO' },
-    { id: 'squad', title: 'MEU ELENCO', icon: 'fa-users-line', desc: 'GESTÃƒO DE ATLETAS' },
+    { id: 'esquema-tatico', title: 'ESQUEMA TÁTICO', icon: 'fa-chess-board', desc: 'POSICIONAMENTO EM CAMPO' },
+    { id: 'squad', title: 'MEU ELENCO', icon: 'fa-users-line', desc: 'GESTÃO DE ATLETAS' },
     { id: 'achievements', title: 'CONQUISTAS', icon: 'fa-award', desc: 'OBJETIVOS E METAS' },
-    { id: 'patrocinios', title: 'PATROCÃNIO', icon: 'fa-handshake', desc: 'META DE FÃƒS E RESGATES' },
-    { id: 'finance', title: 'FINANCEIRO', icon: 'fa-sack-dollar', desc: 'BALANÃ‡O E PATROCÃNIOS' },
-    { id: 'trophies', title: 'TROFÃ‰US', icon: 'fa-trophy', desc: 'GALERIA DE GLÃ“RIAS' }
+    { id: 'patrocinios', title: 'PATROCÍNIO', icon: 'fa-handshake', desc: 'META DE FÃS E RESGATES' },
+    { id: 'finance', title: 'FINANCEIRO', icon: 'fa-sack-dollar', desc: 'BALANÇO E PATROCÍNIOS' },
+    { id: 'trophies', title: 'TROFÉUS', icon: 'fa-trophy', desc: 'GALERIA DE GLÓRIAS' }
   ];
 
   const [loading, setLoading] = useState(false);
@@ -4428,7 +4743,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setClubData(null);
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
-        setError('Selecione uma confederaÃ§Ã£o para visualizar seu clube.');
+        setError('Selecione uma confederação para visualizar seu clube.');
         return;
       }
 
@@ -4452,7 +4767,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       } catch (currentError: any) {
         if (cancelled) return;
         setClubData(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados do clube.');
+        setError(currentError?.message || 'Não foi possível carregar os dados do clube.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4468,7 +4783,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const hasClub = Boolean(clubData?.id);
   const clubName = hasClub ? String(clubData.nome || 'MEU CLUBE') : 'SEM CLUBE';
   const clubFans = Number(clubData?.fans ?? 0);
-  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÃ‡ÃƒO') : 'SEM CLASSIFICAÃ‡ÃƒO';
+  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÇÃO') : 'SEM CLASSIFICAÇÃO';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -4490,10 +4805,10 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
       ) : !hasClub ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o possui clube nesta confederaÃ§Ã£o.
+            Você ainda não possui clube nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÃ‡ÃƒO
+            CRIAR CLUBE NESTA CONFEDERAÇÃO
           </MCOButton>
         </div>
       ) : (
@@ -4527,7 +4842,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
         setLigaData(null);
         setClubData(null);
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
-        setError('Selecione uma confederaÃ§Ã£o para visualizar seus torneios.');
+        setError('Selecione uma confederação para visualizar seus torneios.');
         return;
       }
 
@@ -4553,7 +4868,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
         if (cancelled) return;
         setLigaData(null);
         setClubData(null);
-        setError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os torneios desta confederaÃ§Ã£o.');
+        setError(currentError?.message || 'Não foi possível carregar os torneios desta confederação.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -4575,7 +4890,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
           <i className="fas fa-arrow-left mr-2"></i> VOLTAR
         </MCOButton>
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TORNEIOS</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÃ‡Ã•ES ATIVAS</p>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÇÕES ATIVAS</p>
       </header>
       {loading ? (
         <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
@@ -4588,7 +4903,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
       ) : !hasLeague ? (
         <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            VocÃª ainda nÃ£o participa de uma liga nesta confederaÃ§Ã£o.
+            Você ainda não participa de uma liga nesta confederação.
           </p>
           <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
             ENTRAR EM UMA LIGA
@@ -4603,7 +4918,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
                 <div>
                   <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
                   <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÃ‡ÃƒO')}
+                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
                   </span>
                 </div>
               </div>
@@ -4711,6 +5026,7 @@ const mapLegacyMarketPlayer = (player: any) => {
       enabled: auctionEnabled,
       status: String(auctionRaw?.status || ''),
       hasBid: auctionHasBid,
+      hasUserBid: Boolean(auctionRaw?.has_user_bid),
       currentBidEur: Number.isFinite(auctionCurrentBidEur) ? auctionCurrentBidEur : valueEur,
       baseValueEur: Number(auctionRaw?.base_value_eur ?? valueEur),
       leaderClubId: auctionRaw?.leader_club_id ? Number(auctionRaw.leader_club_id) : null,
@@ -4884,6 +5200,8 @@ const mapLegacySquadPlayer = (entry: any) => {
     value: toLegacyMoneyInMillions(valueEur),
     salary: toLegacyMoneyInMillions(wageEur),
     marketValue: toLegacyMoneyInMillions(valueEur),
+    value_eur: valueEur,
+    wage_eur: wageEur,
     photo: proxyFaceUrl(player?.player_face_url),
     skillMoves: toLegacyStarRating(player?.skill_moves, 3),
     weakFoot: toLegacyStarRating(player?.weak_foot, 3),
@@ -4959,6 +5277,7 @@ const MarketView = ({
   onCareerChange,
   initialSubMode = 'menu',
   onSubModeChange,
+  onNotify,
 }: any) => {
   const [subMode, setSubMode] = useState<LegacyMarketSubMode>(initialSubMode);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
@@ -4967,7 +5286,6 @@ const MarketView = ({
   const [marketPlayersRaw, setMarketPlayersRaw] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(false);
   const [marketError, setMarketError] = useState('');
-  const [marketNotice, setMarketNotice] = useState('');
   const [marketClosed, setMarketClosed] = useState(false);
   const [marketMode, setMarketMode] = useState<'open' | 'closed' | 'auction'>('open');
   const [marketAuctionPeriod, setMarketAuctionPeriod] = useState<any>(null);
@@ -4980,6 +5298,20 @@ const MarketView = ({
   const [radarBusyIds, setRadarBusyIds] = useState<number[]>([]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [auctionBidPlayer, setAuctionBidPlayer] = useState<any>(null);
+  const [auctionBidNotice, setAuctionBidNotice] = useState('');
+  const [proposalPlayer, setProposalPlayer] = useState<any>(null);
+  const [proposalValue, setProposalValue] = useState('');
+  const [proposalOfferPool, setProposalOfferPool] = useState<any[]>([]);
+  const [proposalOfferIds, setProposalOfferIds] = useState<number[]>([]);
+  const [proposalOfferLoading, setProposalOfferLoading] = useState(false);
+  const [proposalSubmitting, setProposalSubmitting] = useState(false);
+  const [proposalError, setProposalError] = useState('');
+  const [proposalUnreadCount, setProposalUnreadCount] = useState(0);
+  const [marketReceivedProposals, setMarketReceivedProposals] = useState<any[]>([]);
+  const [marketSentProposals, setMarketSentProposals] = useState<any[]>([]);
+  const [marketProposalsLoading, setMarketProposalsLoading] = useState(false);
+  const [marketProposalsError, setMarketProposalsError] = useState('');
+  const [marketProposalBusyIds, setMarketProposalBusyIds] = useState<number[]>([]);
   const [marketNowTs, setMarketNowTs] = useState(() => Date.now());
 
   const [filterStatus, setFilterStatus] = useState('TODOS');
@@ -4997,6 +5329,15 @@ const MarketView = ({
     to: 0,
     perPage: LEGACY_MARKET_PAGE_SIZE,
   });
+
+  const notifyMarket = (message: string, variant: LegacyToastVariant = 'info') => {
+    const normalized = String(message || '').trim();
+    if (normalized === '') return;
+
+    if (typeof onNotify === 'function') {
+      onNotify(normalized, variant);
+    }
+  };
 
   useEffect(() => {
     setSubMode(initialSubMode);
@@ -5023,7 +5364,7 @@ const MarketView = ({
   }, []);
 
   useEffect(() => {
-    if (marketMode !== 'auction' || (subMode !== 'list' && subMode !== 'watchlist')) {
+    if (marketMode !== 'auction' || (subMode !== 'list' && subMode !== 'watchlist') || auctionBidPlayer) {
       return;
     }
 
@@ -5034,19 +5375,55 @@ const MarketView = ({
     return () => {
       window.clearInterval(refreshInterval);
     };
-  }, [marketMode, subMode, currentCareer?.id]);
+  }, [marketMode, subMode, currentCareer?.id, auctionBidPlayer]);
 
   useEffect(() => {
     if (marketMode !== 'auction') {
       setAuctionBidPlayer(null);
+      setAuctionBidNotice('');
+    } else {
+      setProposalPlayer(null);
+      setProposalValue('');
+      setProposalOfferIds([]);
+      setProposalError('');
+      setProposalOfferLoading(false);
+      setProposalSubmitting(false);
     }
   }, [marketMode]);
+
+  useEffect(() => {
+    if (subMode === 'list' || subMode === 'watchlist') {
+      return;
+    }
+
+    setProposalPlayer(null);
+    setProposalValue('');
+    setProposalOfferIds([]);
+    setProposalError('');
+    setProposalSubmitting(false);
+  }, [subMode]);
+
+  useEffect(() => {
+    setProposalPlayer(null);
+    setProposalValue('');
+    setProposalOfferPool([]);
+    setProposalOfferIds([]);
+    setProposalOfferLoading(false);
+    setProposalError('');
+    setProposalSubmitting(false);
+    setProposalUnreadCount(0);
+    setMarketReceivedProposals([]);
+    setMarketSentProposals([]);
+    setMarketProposalsLoading(false);
+    setMarketProposalsError('');
+    setMarketProposalBusyIds([]);
+  }, [currentCareer?.id]);
 
   useEffect(() => {
     let cancelled = false;
 
     const loadMarket = async () => {
-      if (subMode !== 'list' && subMode !== 'watchlist') {
+      if (subMode !== 'list' && subMode !== 'watchlist' && subMode !== 'proposals' && subMode !== 'menu') {
         return;
       }
 
@@ -5060,6 +5437,19 @@ const MarketView = ({
         setMarketLigaId(null);
         setMarketClubId(null);
         setAuctionBidPlayer(null);
+        setProposalPlayer(null);
+        setProposalValue('');
+        setProposalOfferPool([]);
+        setProposalOfferIds([]);
+        setProposalOfferLoading(false);
+        setProposalError('');
+        setProposalSubmitting(false);
+        setProposalUnreadCount(0);
+        setMarketReceivedProposals([]);
+        setMarketSentProposals([]);
+        setMarketProposalsLoading(false);
+        setMarketProposalsError('');
+        setMarketProposalBusyIds([]);
         setMarketPagination({
           currentPage: 1,
           lastPage: 1,
@@ -5068,7 +5458,7 @@ const MarketView = ({
           to: 0,
           perPage: LEGACY_MARKET_PAGE_SIZE,
         });
-        setMarketError('Selecione uma confederaÃ§Ã£o para carregar o mercado.');
+        setMarketError('Selecione uma confederação para carregar o mercado.');
         return;
       }
 
@@ -5098,6 +5488,7 @@ const MarketView = ({
         const rawMode = String(payload?.mercado?.mode || (payload?.mercado?.closed ? 'closed' : 'open')).toLowerCase();
         const normalizedMode: 'open' | 'closed' | 'auction' =
           rawMode === 'auction' ? 'auction' : rawMode === 'closed' ? 'closed' : 'open';
+        const proposalCount = Math.max(0, Number(payload?.mercado?.propostas_recebidas_count ?? 0) || 0);
         const bidOptionsRaw = Array.isArray(payload?.mercado?.bid_increment_options)
           ? payload.mercado.bid_increment_options
               .map((value: any) => Number(value))
@@ -5125,6 +5516,7 @@ const MarketView = ({
         setMarketRadarIds(radarIds);
         setMarketLigaId(ligaId > 0 ? ligaId : null);
         setMarketClubId(clubeId > 0 ? clubeId : null);
+        setProposalUnreadCount(proposalCount);
         setMarketPagination({
           currentPage,
           lastPage,
@@ -5147,6 +5539,18 @@ const MarketView = ({
         setMarketLigaId(null);
         setMarketClubId(null);
         setAuctionBidPlayer(null);
+        setProposalPlayer(null);
+        setProposalValue('');
+        setProposalOfferIds([]);
+        setProposalOfferLoading(false);
+        setProposalError('');
+        setProposalSubmitting(false);
+        setProposalUnreadCount(0);
+        setMarketReceivedProposals([]);
+        setMarketSentProposals([]);
+        setMarketProposalsLoading(false);
+        setMarketProposalsError('');
+        setMarketProposalBusyIds([]);
         setMarketPagination({
           currentPage: 1,
           lastPage: 1,
@@ -5155,7 +5559,7 @@ const MarketView = ({
           to: 0,
           perPage: LEGACY_MARKET_PAGE_SIZE,
         });
-        setMarketError(error?.message || 'NÃ£o foi possÃ­vel carregar os registros do mercado.');
+        setMarketError(error?.message || 'Não foi possível carregar os registros do mercado.');
       } finally {
         if (!cancelled) {
           setMarketLoading(false);
@@ -5181,6 +5585,68 @@ const MarketView = ({
     sortBy,
   ]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMarketProposals = async () => {
+      if (subMode !== 'proposals') {
+        return;
+      }
+
+      if (!marketLigaId || !marketClubId) {
+        setMarketReceivedProposals([]);
+        setMarketSentProposals([]);
+        setProposalUnreadCount(0);
+        setMarketProposalsError('Crie um clube nesta confederacao para gerenciar propostas.');
+        return;
+      }
+
+      setMarketProposalsLoading(true);
+      setMarketProposalsError('');
+
+      try {
+        const payload = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/propostas`, {
+          method: 'GET',
+        });
+
+        if (cancelled) return;
+
+        const received = Array.isArray(payload?.recebidas) ? payload.recebidas : [];
+        const sent = Array.isArray(payload?.enviadas) ? payload.enviadas : [];
+
+        setMarketReceivedProposals(received);
+        setMarketSentProposals(sent);
+        setProposalUnreadCount(received.length);
+      } catch (error: any) {
+        if (cancelled) return;
+        setMarketReceivedProposals([]);
+        setMarketSentProposals([]);
+        setProposalUnreadCount(0);
+        setMarketProposalsError(error?.message || 'Nao foi possivel carregar as propostas.');
+      } finally {
+        if (!cancelled) {
+          setMarketProposalsLoading(false);
+        }
+      }
+    };
+
+    void loadMarketProposals();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [subMode, marketLigaId, marketClubId, marketReloadToken]);
+
+  useEffect(() => {
+    if (subMode === 'proposals') {
+      return;
+    }
+
+    setMarketProposalsLoading(false);
+    setMarketProposalsError('');
+    setMarketProposalBusyIds([]);
+  }, [subMode]);
+
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
   const marketPlayers = useMemo(() => marketPlayersRaw.map(mapLegacyMarketPlayer), [marketPlayersRaw]);
   const marketRadarSet = useMemo(() => new Set(marketRadarIds), [marketRadarIds]);
@@ -5201,7 +5667,6 @@ const MarketView = ({
     const playerId = Number(player?.id ?? 0);
     if (!marketLigaId || playerId <= 0) return;
 
-    setMarketNotice('');
     setBusyFlag(setRadarBusyIds as any, playerId, true);
 
     try {
@@ -5220,13 +5685,14 @@ const MarketView = ({
       });
 
       const playerName = String(player?.name || 'Jogador');
-      setMarketNotice(
+      notifyMarket(
         response?.status === 'removed'
-          ? `${playerName} removido da observaÃ§Ã£o.`
-          : `${playerName} adicionado na observaÃ§Ã£o.`,
+          ? `${playerName} removido da observação.`
+          : `${playerName} adicionado na observação.`,
+        'success',
       );
     } catch (error: any) {
-      setMarketNotice(error?.message || 'NÃ£o foi possÃ­vel atualizar a observaÃ§Ã£o.');
+      notifyMarket(error?.message || 'Não foi possível atualizar a observação.', 'error');
     } finally {
       setBusyFlag(setRadarBusyIds as any, playerId, false);
     }
@@ -5237,12 +5703,14 @@ const MarketView = ({
     if (playerId <= 0) return;
 
     if (!marketLigaId || !marketClubId) {
-      setMarketNotice('Crie um clube nesta confederacao para participar do leilao.');
+      const message = 'Crie um clube nesta confederacao para participar do leilao.';
+      notifyMarket(message, 'warning');
+      setAuctionBidNotice(message);
       return;
     }
 
     setBusyFlag(setMarketActionBusyIds as any, playerId, true);
-    setMarketNotice('');
+    setAuctionBidNotice('');
 
     try {
       const payload: any = { elencopadrao_id: playerId };
@@ -5255,13 +5723,243 @@ const MarketView = ({
         body: JSON.stringify(payload),
       });
 
-      setMarketNotice(response?.message || 'Lance registrado com sucesso.');
+      notifyMarket(response?.message || 'Lance registrado com sucesso.', 'success');
+      setAuctionBidNotice('');
       setAuctionBidPlayer(null);
       setMarketReloadToken((prev) => prev + 1);
     } catch (error: any) {
-      setMarketNotice(error?.message || 'Nao foi possivel registrar o lance.');
+      const message = error?.message || 'Nao foi possivel registrar o lance.';
+      notifyMarket(message, 'error');
+      setAuctionBidNotice(message);
+      if (
+        String(message).toLowerCase().includes('ja lidera')
+        || String(message).toLowerCase().includes('já lidera')
+      ) {
+        setMarketReloadToken((prev) => prev + 1);
+      }
     } finally {
       setBusyFlag(setMarketActionBusyIds as any, playerId, false);
+    }
+  };
+
+  const closeProposalModal = () => {
+    setProposalPlayer(null);
+    setProposalValue('');
+    setProposalOfferIds([]);
+    setProposalError('');
+    setProposalSubmitting(false);
+  };
+
+  const loadProposalOfferPool = async () => {
+    if (!currentCareer?.id) {
+      setProposalOfferPool([]);
+      return;
+    }
+
+    setProposalOfferLoading(true);
+
+    try {
+      const endpoint = new URL(LEGACY_SQUAD_DATA_URL, window.location.origin);
+      endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+
+      const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
+      const entries = Array.isArray(payload?.elenco?.players) ? payload.elenco.players : [];
+      const rawPlayers = entries
+        .map(mapLegacySquadPlayer)
+        .filter((entry: any) => Boolean(entry?.isActive) && Number(entry?.playerId ?? 0) > 0);
+
+      const dedupe = new Map<number, any>();
+      rawPlayers.forEach((entry: any) => {
+        const playerId = Number(entry?.playerId ?? 0);
+        if (playerId > 0 && !dedupe.has(playerId)) {
+          dedupe.set(playerId, {
+            id: playerId,
+            name: String(entry?.name || 'ATLETA'),
+            ovr: Number(entry?.ovr ?? 0),
+            pos: String(entry?.pos || '--'),
+          });
+        }
+      });
+
+      const normalizedPlayers = Array.from(dedupe.values()).sort((a, b) => {
+        const ovrDiff = Number(b?.ovr ?? 0) - Number(a?.ovr ?? 0);
+        if (ovrDiff !== 0) return ovrDiff;
+        return String(a?.name || '').localeCompare(String(b?.name || ''));
+      });
+
+      setProposalOfferPool(normalizedPlayers);
+    } catch (error: any) {
+      setProposalOfferPool([]);
+      notifyMarket(error?.message || 'Nao foi possivel carregar seu elenco para oferta.', 'error');
+    } finally {
+      setProposalOfferLoading(false);
+    }
+  };
+
+  const toggleProposalOfferPlayer = (offerPlayerId: number) => {
+    const normalizedId = Number(offerPlayerId ?? 0);
+    if (normalizedId <= 0 || proposalSubmitting) return;
+
+    setProposalOfferIds((current) => (
+      current.includes(normalizedId)
+        ? current.filter((id) => id !== normalizedId)
+        : [...current, normalizedId]
+    ));
+  };
+
+  const openProposalModal = async (player: any) => {
+    if (!player || Number(player?.id ?? 0) <= 0) return;
+
+    if (marketMode === 'auction') {
+      notifyMarket('Mercado em modo leilao. Propostas estao bloqueadas.', 'warning');
+      return;
+    }
+
+    if (marketClosed) {
+      notifyMarket('Mercado fechado para esta confederacao.', 'warning');
+      return;
+    }
+
+    if (!marketLigaId || !marketClubId) {
+      notifyMarket('Crie um clube nesta confederacao para enviar propostas.', 'warning');
+      return;
+    }
+
+    if (player?.club_status !== 'outro') {
+      notifyMarket('Proposta disponivel apenas para atletas de clube rival.', 'warning');
+      return;
+    }
+
+    setProposalPlayer(player);
+    setProposalValue('');
+    setProposalOfferIds([]);
+    setProposalError('');
+
+    await loadProposalOfferPool();
+  };
+
+  const submitProposal = async () => {
+    const playerId = Number(proposalPlayer?.id ?? 0);
+    if (playerId <= 0 || !marketLigaId || !marketClubId) {
+      return;
+    }
+
+    if (marketMode === 'auction') {
+      setProposalError('Mercado em modo leilao. Propostas estao bloqueadas.');
+      return;
+    }
+
+    if (marketClosed) {
+      setProposalError('Mercado fechado para esta confederacao.');
+      return;
+    }
+
+    const amount = Math.max(0, Math.floor(Number(proposalValue || 0)));
+    const offerIds = Array.from(
+      new Set(
+        proposalOfferIds
+          .map((id) => Number(id))
+          .filter((id) => Number.isFinite(id) && id > 0 && id !== playerId),
+      ),
+    );
+
+    if (amount <= 0 && offerIds.length === 0) {
+      setProposalError('Informe valor ou ao menos um jogador em oferta.');
+      return;
+    }
+
+    setProposalSubmitting(true);
+    setProposalError('');
+
+    try {
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/propostas`, {
+        method: 'POST',
+        body: JSON.stringify({
+          elencopadrao_id: playerId,
+          valor: amount,
+          oferta_elencopadrao_ids: offerIds,
+        }),
+      });
+
+      notifyMarket(response?.message || 'Proposta enviada com sucesso.', 'success');
+      closeProposalModal();
+    } catch (error: any) {
+      const message = error?.message || 'Nao foi possivel enviar a proposta.';
+      setProposalError(message);
+      notifyMarket(message, 'error');
+    } finally {
+      setProposalSubmitting(false);
+    }
+  };
+
+  const handleAcceptProposal = async (proposal: any) => {
+    const proposalId = Number(proposal?.id ?? 0);
+    if (proposalId <= 0 || !marketLigaId || !marketClubId) {
+      return;
+    }
+
+    setBusyFlag(setMarketProposalBusyIds as any, proposalId, true);
+
+    try {
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/propostas/${proposalId}/aceitar`, {
+        method: 'POST',
+      });
+
+      notifyMarket(response?.message || 'Proposta aceita com sucesso.', 'success');
+      setMarketReceivedProposals((current) => current.filter((item) => Number(item?.id ?? 0) !== proposalId));
+      setProposalUnreadCount((current) => Math.max(0, current - 1));
+      setMarketReloadToken((current) => current + 1);
+    } catch (error: any) {
+      notifyMarket(error?.message || 'Nao foi possivel aceitar a proposta.', 'error');
+    } finally {
+      setBusyFlag(setMarketProposalBusyIds as any, proposalId, false);
+    }
+  };
+
+  const handleRejectProposal = async (proposal: any) => {
+    const proposalId = Number(proposal?.id ?? 0);
+    if (proposalId <= 0 || !marketLigaId || !marketClubId) {
+      return;
+    }
+
+    setBusyFlag(setMarketProposalBusyIds as any, proposalId, true);
+
+    try {
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/propostas/${proposalId}/rejeitar`, {
+        method: 'POST',
+      });
+
+      notifyMarket(response?.message || 'Proposta rejeitada.', 'success');
+      setMarketReceivedProposals((current) => current.filter((item) => Number(item?.id ?? 0) !== proposalId));
+      setProposalUnreadCount((current) => Math.max(0, current - 1));
+      setMarketReloadToken((current) => current + 1);
+    } catch (error: any) {
+      notifyMarket(error?.message || 'Nao foi possivel rejeitar a proposta.', 'error');
+    } finally {
+      setBusyFlag(setMarketProposalBusyIds as any, proposalId, false);
+    }
+  };
+
+  const handleCancelProposal = async (proposal: any) => {
+    const proposalId = Number(proposal?.id ?? 0);
+    if (proposalId <= 0 || !marketLigaId || !marketClubId) {
+      return;
+    }
+
+    setBusyFlag(setMarketProposalBusyIds as any, proposalId, true);
+
+    try {
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/propostas/${proposalId}/cancelar`, {
+        method: 'POST',
+      });
+
+      notifyMarket(response?.message || 'Proposta cancelada.', 'success');
+      setMarketSentProposals((current) => current.filter((item) => Number(item?.id ?? 0) !== proposalId));
+      setMarketReloadToken((current) => current + 1);
+    } catch (error: any) {
+      notifyMarket(error?.message || 'Nao foi possivel cancelar a proposta.', 'error');
+    } finally {
+      setBusyFlag(setMarketProposalBusyIds as any, proposalId, false);
     }
   };
 
@@ -5271,37 +5969,37 @@ const MarketView = ({
 
     if (marketMode === 'auction') {
       if (!marketLigaId || !marketClubId) {
-        setMarketNotice('Crie um clube nesta confederacao para participar do leilao.');
+        notifyMarket('Crie um clube nesta confederacao para participar do leilao.', 'warning');
         return;
       }
 
       if (player?.club_status !== 'livre') {
-        setMarketNotice('Apenas jogadores livres podem receber lances.');
+        notifyMarket('Apenas jogadores livres podem receber lances.', 'warning');
         return;
       }
 
       if (player?.auction?.isLeader) {
-        setMarketNotice('Seu clube ja lidera este leilao.');
+        notifyMarket('Seu clube ja lidera este leilao.', 'warning');
         return;
       }
 
       setAuctionBidPlayer(player);
+      setAuctionBidNotice('');
       return;
     }
 
     if (marketClosed) {
-      setMarketNotice('Mercado fechado para esta confederaÃ§Ã£o.');
+      notifyMarket('Mercado fechado para esta confederação.', 'warning');
       return;
     }
 
     if (!marketLigaId || !marketClubId) {
-      setMarketNotice('Crie um clube nesta confederaÃ§Ã£o para negociar no mercado.');
+      notifyMarket('Crie um clube nesta confederação para negociar no mercado.', 'warning');
       return;
     }
 
     const endpoint = player?.club_status === 'outro' && player?.can_multa ? 'multa' : 'comprar';
     setBusyFlag(setMarketActionBusyIds as any, playerId, true);
-    setMarketNotice('');
 
     try {
       const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/${endpoint}`, {
@@ -5309,32 +6007,43 @@ const MarketView = ({
         body: JSON.stringify({ elencopadrao_id: playerId }),
       });
 
-      setMarketNotice(response?.message || 'AÃ§Ã£o concluÃ­da com sucesso.');
+      notifyMarket(response?.message || 'Ação concluída com sucesso.', 'success');
       setMarketReloadToken((prev) => prev + 1);
     } catch (error: any) {
-      setMarketNotice(error?.message || 'NÃ£o foi possÃ­vel concluir a aÃ§Ã£o.');
+      notifyMarket(error?.message || 'Não foi possível concluir a ação.', 'error');
     } finally {
       setBusyFlag(setMarketActionBusyIds as any, playerId, false);
     }
   };
 
-  const statusOptions = isMarketDataMode
-    ? marketMode === 'auction'
-      ? [
-        { value: 'TODOS', label: 'TODOS' },
-        { value: 'LIVRE', label: 'LIVRE' },
-      ]
+  const statusOptions = useMemo(
+    () => (isMarketDataMode
+      ? marketMode === 'auction'
+        ? [
+          { value: 'TODOS', label: 'TODOS' },
+          { value: 'LIVRE', label: 'LIVRE' },
+          { value: 'MEUS_LANCES', label: 'MEUS LANCES' },
+        ]
+        : [
+          { value: 'TODOS', label: 'TODOS' },
+          { value: 'LIVRE', label: 'LIVRE' },
+          { value: 'MEU', label: 'MEU CLUBE' },
+          { value: 'RIVAL', label: 'RIVAIS' },
+        ]
       : [
         { value: 'TODOS', label: 'TODOS' },
         { value: 'LIVRE', label: 'LIVRE' },
-        { value: 'MEU', label: 'MEU CLUBE' },
-        { value: 'RIVAL', label: 'RIVAIS' },
-      ]
-    : [
-      { value: 'TODOS', label: 'TODOS' },
-      { value: 'LIVRE', label: 'LIVRE' },
-      { value: 'CONTRATADO', label: 'CONTRATADO' },
-    ];
+        { value: 'CONTRATADO', label: 'CONTRATADO' },
+      ]),
+    [isMarketDataMode, marketMode],
+  );
+
+  useEffect(() => {
+    const hasCurrentFilter = statusOptions.some((option) => option.value === filterStatus);
+    if (!hasCurrentFilter) {
+      setFilterStatus('TODOS');
+    }
+  }, [statusOptions, filterStatus]);
 
   const filteredPlayers = useMemo(
     () => (isMarketDataMode ? marketPlayers : []),
@@ -5356,6 +6065,358 @@ const MarketView = ({
     ? Math.max(currentPageStart, Number(marketPagination.to ?? currentPageStart) || currentPageStart)
     : 0;
   const isAuctionMode = marketMode === 'auction';
+  const proposalBusySet = useMemo(() => new Set(marketProposalBusyIds), [marketProposalBusyIds]);
+  const marketPlayersById = useMemo(() => {
+    const byId = new Map<number, any>();
+    marketPlayers.forEach((player) => {
+      const playerId = Number(player?.id ?? 0);
+      if (playerId > 0 && !byId.has(playerId)) {
+        byId.set(playerId, player);
+      }
+    });
+    return byId;
+  }, [marketPlayers]);
+  const totalReceivedProposals = marketReceivedProposals.length;
+  const totalSentProposals = marketSentProposals.length;
+
+  const formatProposalDate = (value: any) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  };
+
+  const getProposalPlayerName = (player: any) => String(player?.short_name || player?.long_name || 'ATLETA');
+  const getProposalClubLabel = (club: any) => {
+    const clubName = String(club?.nome || 'CLUBE RIVAL');
+    const leagueName = String(club?.liga_nome || '').trim();
+    return leagueName !== '' ? `${clubName} (${leagueName})` : clubName;
+  };
+  const getProposalOfferSummary = (proposal: any) => {
+    const amount = Number(proposal?.valor ?? 0);
+    const offerPlayers = Array.isArray(proposal?.oferta_jogadores) ? proposal.oferta_jogadores : [];
+    const parts: string[] = [];
+
+    if (amount > 0) {
+      parts.push(`EUR ${toLegacyMoneyCompact(amount)}`);
+    }
+
+    if (offerPlayers.length > 0) {
+      parts.push(`${offerPlayers.length} JOGADOR${offerPlayers.length > 1 ? 'ES' : ''}`);
+    }
+
+    if (parts.length === 0) {
+      return 'SEM OFERTA REGISTRADA';
+    }
+
+    return parts.join(' + ');
+  };
+
+  const getProposalPlayerPhotoUrl = (player: any) => {
+    const directPhoto = String(player?.player_face_url || '').trim();
+    if (directPhoto !== '') {
+      return proxyFaceUrl(directPhoto);
+    }
+
+    const playerId = Number(player?.id ?? 0);
+    if (playerId > 0) {
+      const knownPlayer = marketPlayersById.get(playerId);
+      if (knownPlayer?.photo) {
+        return String(knownPlayer.photo);
+      }
+    }
+
+    return '';
+  };
+
+  const openProposalPlayerDetails = (player: any) => {
+    const playerId = Number(player?.id ?? 0);
+    if (playerId <= 0) return;
+
+    const knownPlayer = marketPlayersById.get(playerId);
+    if (knownPlayer) {
+      setSelectedPlayer(knownPlayer);
+      setShowDetailed(false);
+      return;
+    }
+
+    const fallbackRaw = {
+      elencopadrao_id: playerId,
+      short_name: player?.short_name ?? null,
+      long_name: player?.long_name ?? null,
+      player_positions: player?.player_positions ?? '',
+      overall: Number(player?.overall ?? 0) || 0,
+      value_eur: Number(player?.value_eur ?? 0) || 0,
+      wage_eur: Number(player?.wage_eur ?? 0) || 0,
+      age: Number(player?.age ?? 0) || null,
+      weak_foot: Number(player?.weak_foot ?? 3) || 3,
+      skill_moves: Number(player?.skill_moves ?? 3) || 3,
+      player_traits: player?.player_traits ?? '',
+      player_face_url: player?.player_face_url ?? '',
+      club_status: 'outro',
+      club_name: 'PROPOSTA',
+      can_buy: false,
+      can_multa: false,
+    };
+
+    setSelectedPlayer(mapLegacyMarketPlayer(fallbackRaw));
+    setShowDetailed(false);
+  };
+
+  const renderProposalsView = () => (
+    <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
+      <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
+      <div className="p-4 space-y-5">
+        <header className="mb-6">
+          <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
+            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+          </MCOButton>
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PROPOSTAS</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">RECEBIDAS E ENVIADAS</p>
+          {isAuctionMode && (
+            <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-2">
+              Durante o leilao, novas propostas ficam bloqueadas.
+            </p>
+          )}
+        </header>
+
+        {marketProposalsLoading ? (
+          <div className="text-center py-16 bg-[#1E1E1E]/30" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[9px] font-black italic uppercase text-white/40">CARREGANDO PROPOSTAS...</p>
+          </div>
+        ) : marketProposalsError ? (
+          <div className="text-center py-16 bg-[#B22222]/20 border border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[9px] font-black italic uppercase text-white">{marketProposalsError}</p>
+          </div>
+        ) : (
+          <>
+            <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-[11px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">RECEBIDAS</h3>
+                <span className="text-[9px] font-black italic uppercase px-2 py-1 bg-[#121212] text-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                  {totalReceivedProposals}
+                </span>
+              </div>
+
+              {totalReceivedProposals === 0 ? (
+                <p className="text-[8px] font-black italic uppercase text-white/35">NENHUMA PROPOSTA RECEBIDA NO MOMENTO.</p>
+              ) : (
+                <div className="space-y-3">
+                  {marketReceivedProposals.map((proposal) => {
+                    const proposalId = Number(proposal?.id ?? 0);
+                    const isBusy = proposalBusySet.has(proposalId);
+                    const targetName = getProposalPlayerName(proposal?.elencopadrao);
+                    const targetPos = getLegacyPrimaryPosition(proposal?.elencopadrao?.player_positions);
+                    const targetPhoto = getProposalPlayerPhotoUrl(proposal?.elencopadrao);
+                    const senderLabel = getProposalClubLabel(proposal?.clube_destino);
+                    const dateLabel = formatProposalDate(proposal?.created_at);
+                    const offerPlayers = Array.isArray(proposal?.oferta_jogadores) ? proposal.oferta_jogadores : [];
+
+                    return (
+                      <article key={proposalId} className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex items-start gap-3">
+                            <button
+                              type="button"
+                              onClick={() => openProposalPlayerDetails(proposal?.elencopadrao)}
+                              className="w-11 h-11 shrink-0 bg-[#1E1E1E] border border-white/10 overflow-hidden"
+                              style={{ clipPath: SHIELD_CLIP }}
+                            >
+                              {targetPhoto ? (
+                                <img src={targetPhoto} alt={targetName} className="w-full h-full object-cover object-top" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
+                                  <i className="fas fa-user text-[10px]"></i>
+                                </div>
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => openProposalPlayerDetails(proposal?.elencopadrao)}
+                                className="text-[10px] font-black italic uppercase text-white truncate text-left hover:text-[#FFD700] transition-colors"
+                              >
+                                {targetName}
+                              </button>
+                              <p className="text-[7px] font-black italic uppercase text-white/40 mt-0.5">
+                                {targetPos} - DE {senderLabel}{dateLabel ? ` - ${dateLabel}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[7px] font-black italic uppercase px-2 py-1 bg-[#FFD700]/15 text-[#FFD700] border border-[#FFD700]/30">
+                            RECEBIDA
+                          </span>
+                        </div>
+
+                        <p className="text-[8px] font-black italic uppercase text-white/70">
+                          OFERTA: {getProposalOfferSummary(proposal)}
+                        </p>
+
+                        {offerPlayers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {offerPlayers.map((player: any) => (
+                              <button
+                                key={Number(player?.id ?? 0)}
+                                type="button"
+                                onClick={() => openProposalPlayerDetails(player)}
+                                className="text-[7px] font-black italic uppercase px-2 py-1 bg-white/5 border border-white/10 text-white/55"
+                                style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                              >
+                                {getProposalPlayerName(player)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            className={`text-[8px] font-black italic uppercase py-2 ${
+                              isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                            }`}
+                            style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                            onClick={() => !isBusy && void handleAcceptProposal(proposal)}
+                            disabled={isBusy}
+                          >
+                            {isBusy ? 'PROCESSANDO...' : 'ACEITAR'}
+                          </button>
+                          <button
+                            type="button"
+                            className={`text-[8px] font-black italic uppercase py-2 ${
+                              isBusy ? 'bg-white/10 text-white/30' : 'bg-[#B22222]/15 text-[#FFB4B4] border border-[#B22222]/45'
+                            }`}
+                            style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                            onClick={() => !isBusy && void handleRejectProposal(proposal)}
+                            disabled={isBusy}
+                          >
+                            REJEITAR
+                          </button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700]/60 p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-[11px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">MINHAS PROPOSTAS</h3>
+                <span className="text-[9px] font-black italic uppercase px-2 py-1 bg-[#121212] text-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                  {totalSentProposals}
+                </span>
+              </div>
+
+              {totalSentProposals === 0 ? (
+                <p className="text-[8px] font-black italic uppercase text-white/35">NENHUMA PROPOSTA ENVIADA NO MOMENTO.</p>
+              ) : (
+                <div className="space-y-3">
+                  {marketSentProposals.map((proposal) => {
+                    const proposalId = Number(proposal?.id ?? 0);
+                    const isBusy = proposalBusySet.has(proposalId);
+                    const targetName = getProposalPlayerName(proposal?.elencopadrao);
+                    const targetPos = getLegacyPrimaryPosition(proposal?.elencopadrao?.player_positions);
+                    const targetPhoto = getProposalPlayerPhotoUrl(proposal?.elencopadrao);
+                    const targetClubLabel = getProposalClubLabel(proposal?.clube_origem);
+                    const dateLabel = formatProposalDate(proposal?.created_at);
+                    const offerPlayers = Array.isArray(proposal?.oferta_jogadores) ? proposal.oferta_jogadores : [];
+
+                    return (
+                      <article key={proposalId} className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex items-start gap-3">
+                            <button
+                              type="button"
+                              onClick={() => openProposalPlayerDetails(proposal?.elencopadrao)}
+                              className="w-11 h-11 shrink-0 bg-[#1E1E1E] border border-white/10 overflow-hidden"
+                              style={{ clipPath: SHIELD_CLIP }}
+                            >
+                              {targetPhoto ? (
+                                <img src={targetPhoto} alt={targetName} className="w-full h-full object-cover object-top" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
+                                  <i className="fas fa-user text-[10px]"></i>
+                                </div>
+                              )}
+                            </button>
+                            <div className="min-w-0">
+                              <button
+                                type="button"
+                                onClick={() => openProposalPlayerDetails(proposal?.elencopadrao)}
+                                className="text-[10px] font-black italic uppercase text-white truncate text-left hover:text-[#FFD700] transition-colors"
+                              >
+                                {targetName}
+                              </button>
+                              <p className="text-[7px] font-black italic uppercase text-white/40 mt-0.5">
+                                {targetPos} - PARA {targetClubLabel}{dateLabel ? ` - ${dateLabel}` : ''}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="text-[7px] font-black italic uppercase px-2 py-1 bg-white/10 text-white/65 border border-white/20">
+                            ENVIADA
+                          </span>
+                        </div>
+
+                        <p className="text-[8px] font-black italic uppercase text-white/70">
+                          OFERTA: {getProposalOfferSummary(proposal)}
+                        </p>
+
+                        {offerPlayers.length > 0 && (
+                          <div className="flex flex-wrap gap-1">
+                            {offerPlayers.map((player: any) => (
+                              <button
+                                key={Number(player?.id ?? 0)}
+                                type="button"
+                                onClick={() => openProposalPlayerDetails(player)}
+                                className="text-[7px] font-black italic uppercase px-2 py-1 bg-white/5 border border-white/10 text-white/55"
+                                style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                              >
+                                {getProposalPlayerName(player)}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        <button
+                          type="button"
+                          className={`w-full text-[8px] font-black italic uppercase py-2 ${
+                            isBusy ? 'bg-white/10 text-white/30' : 'bg-white/10 text-white/70 border border-white/20'
+                          }`}
+                          style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                          onClick={() => !isBusy && void handleCancelProposal(proposal)}
+                          disabled={isBusy}
+                        >
+                          {isBusy ? 'PROCESSANDO...' : 'CANCELAR'}
+                        </button>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </div>
+      {selectedPlayer && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
+          <div className="absolute inset-0" onClick={closePlayer}></div>
+          <div className="relative w-full max-w-sm flex flex-col items-center">
+            <div className="w-full flex justify-end mb-4">
+              <button onClick={closePlayer} className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
+            <div className="mt-8 w-full">
+              <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={() => setShowDetailed(!showDetailed)}>
+                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TECNICA COMPLETA"}
+              </MCOButton>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 
   const renderPlayerList = (title: string, subtitle: string) => (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
@@ -5369,7 +6430,7 @@ const MarketView = ({
           <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{subtitle}</p>
           {isMarketDataMode && marketClosed && (
             <p className="text-[9px] text-[#B22222] font-black uppercase italic tracking-[0.2em] mt-2">
-              Mercado fechado para esta confederaÃ§Ã£o
+              Mercado fechado para esta confederação
             </p>
           )}
           {isMarketDataMode && isAuctionMode && (
@@ -5380,11 +6441,6 @@ const MarketView = ({
           {isMarketDataMode && isAuctionMode && marketAuctionPeriod?.inicio_label && marketAuctionPeriod?.fim_label && (
             <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-1">
               Leilao: {marketAuctionPeriod.inicio_label} ate {marketAuctionPeriod.fim_label}
-            </p>
-          )}
-          {!!marketNotice && (
-            <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.08em] mt-2">
-              {marketNotice}
             </p>
           )}
         </header>
@@ -5427,7 +6483,7 @@ const MarketView = ({
                 </div>
               </div>
               <div className="space-y-1">
-                <label className="text-[7px] font-black text-white/30 uppercase italic">POSIÃ‡ÃƒO</label>
+                <label className="text-[7px] font-black text-white/30 uppercase italic">POSIÇÃO</label>
                 <select value={filterPos} onChange={(e) => setFilterPos(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase">
                   <option value="TODAS">TODAS</option>
                   <option value="ATACANTES">CATEGORIA: ATACANTES</option>
@@ -5447,11 +6503,11 @@ const MarketView = ({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÃNIMO</label>
+                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÍNIMO</label>
                   <input type="number" placeholder="M$ MIN" value={filterValMin} onChange={(e) => setFilterValMin(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÃXIMO</label>
+                  <label className="text-[7px] font-black text-white/30 uppercase italic">VALOR MÁXIMO</label>
                   <input type="number" placeholder="M$ MAX" value={filterValMax} onChange={(e) => setFilterValMax(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase" />
                 </div>
               </div>
@@ -5468,11 +6524,11 @@ const MarketView = ({
           )}
         </div>
         <div className="min-w-full space-y-3">
-          <div className="grid grid-cols-[70px_1fr_80px_100px] gap-2 px-2 py-3 bg-[#1E1E1E] border-b border-white/5 opacity-50">
+          <div className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] border-b border-white/5 opacity-50">
             <span className="text-[8px] font-black italic uppercase text-center">ATLETA</span>
             <span className="text-[8px] font-black italic uppercase">NOME</span>
             <span className="text-[8px] font-black italic uppercase text-right pr-2">VALOR</span>
-            <span className="text-[8px] font-black italic uppercase text-center">AÃ‡Ã•ES</span>
+            <span className="text-[8px] font-black italic uppercase text-center">AÇÕES</span>
           </div>
           {!marketLoading && !marketError && totalFilteredPlayers > 0 && (
             <div className="flex items-center justify-between gap-2 px-2 py-2 bg-[#1E1E1E]/50 border-l-[2px] border-[#FFD700]/40">
@@ -5497,6 +6553,12 @@ const MarketView = ({
             const isRadarBusy = radarBusyIds.includes(player.id);
             const isObserved = marketRadarSet.has(player.id);
             const playerIsAuctionLeader = Boolean(player?.auction?.isLeader);
+            const proposalBusy = proposalSubmitting && Number(proposalPlayer?.id ?? 0) === Number(player.id);
+            const canCreateProposal = !isAuctionMode
+              && !marketClosed
+              && !!marketClubId
+              && player?.club_status === 'outro';
+            const proposalDisabled = !canCreateProposal || proposalBusy || isPrimaryBusy;
             const primaryActionLabel =
               isPrimaryBusy
                 ? 'OPERANDO...'
@@ -5524,7 +6586,7 @@ const MarketView = ({
             return (
               <div
                 key={player.id}
-                className="grid grid-cols-[70px_1fr_80px_100px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
+                className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
                 style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
               >
                 <div className="flex justify-center">
@@ -5570,6 +6632,18 @@ const MarketView = ({
                     onClick={() => !primaryDisabled && handlePrimaryAction(player)}
                   >
                     {primaryActionLabel}
+                  </button>
+                  <button
+                    className={`text-[8px] font-black italic uppercase py-2 px-1 border leading-none transition-transform active:scale-95 ${
+                      proposalDisabled
+                        ? 'bg-white/10 text-white/25 border-white/10 cursor-not-allowed'
+                        : 'bg-[#121212] text-[#FFD700] border-[#FFD700]/45'
+                    }`}
+                    style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}
+                    onClick={() => !proposalDisabled && void openProposalModal(player)}
+                    disabled={proposalDisabled}
+                  >
+                    {proposalBusy ? 'ENVIANDO...' : 'PROPOSTA'}
                   </button>
                   <button
                     className={`text-[8px] font-black italic uppercase py-2 px-1 border leading-none transition-transform active:scale-95 ${
@@ -5636,7 +6710,7 @@ const MarketView = ({
 
         return (
           <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
-            <div className="absolute inset-0" onClick={() => !isBusy && setAuctionBidPlayer(null)}></div>
+            <div className="absolute inset-0" onClick={() => { if (!isBusy) { setAuctionBidPlayer(null); setAuctionBidNotice(''); } }}></div>
             <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">LEILAO</p>
               <h4 className="text-lg font-black italic uppercase text-white leading-tight">
@@ -5648,6 +6722,11 @@ const MarketView = ({
               {auctionBidPlayer?.auction?.leaderClubName && (
                 <p className="text-[8px] font-black italic uppercase text-[#FFD700]/80 mt-1">
                   Lider: {auctionBidPlayer.auction.leaderClubName}
+                </p>
+              )}
+              {!!auctionBidNotice && (
+                <p className="text-[8px] font-black italic uppercase text-[#B22222] mt-2">
+                  {auctionBidNotice}
                 </p>
               )}
 
@@ -5688,11 +6767,134 @@ const MarketView = ({
                 type="button"
                 className="w-full mt-3 text-[8px] font-black italic uppercase py-2 bg-white/10 text-white/50"
                 style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
-                onClick={() => !isBusy && setAuctionBidPlayer(null)}
+                onClick={() => { if (!isBusy) { setAuctionBidPlayer(null); setAuctionBidNotice(''); } }}
                 disabled={isBusy}
               >
                 FECHAR
               </button>
+            </div>
+          </div>
+        );
+      })()}
+      {proposalPlayer && (() => {
+        const currentValue = Number(proposalPlayer?.value_eur ?? 0);
+        const proposalTargetId = Number(proposalPlayer?.id ?? 0);
+        const availableOfferPlayers = proposalOfferPool.filter((entry) => Number(entry?.id ?? 0) !== proposalTargetId);
+        const selectedOffersCount = proposalOfferIds.filter((id) => Number.isFinite(Number(id))).length;
+        const isBusy = proposalSubmitting;
+
+        return (
+          <div className="fixed inset-0 z-[112] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => !isBusy && closeProposalModal()}></div>
+            <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">PROPOSTA</p>
+              <h4 className="text-lg font-black italic uppercase text-white leading-tight">
+                {String(proposalPlayer?.name || 'ATLETA')}
+              </h4>
+              <p className="text-[8px] font-black italic uppercase text-white/50 mt-1">
+                Clube alvo: {String(proposalPlayer?.club || 'CLUBE RIVAL')}
+              </p>
+              <p className="text-[8px] font-black italic uppercase text-white/40 mt-1">
+                Valor de mercado: {toLegacyMoneyCompact(currentValue)}
+              </p>
+
+              <div className="mt-4 space-y-1">
+                <label className="text-[8px] font-black uppercase italic text-white/40">VALOR DA PROPOSTA (EUR)</label>
+                <input
+                  type="number"
+                  min={1}
+                  step={1000}
+                  value={proposalValue}
+                  onChange={(event) => setProposalValue(String(event.target.value || '').replace(/[^\d]/g, ''))}
+                  disabled={isBusy}
+                  placeholder="Ex: 25000000"
+                  className="w-full bg-[#121212] text-white text-[10px] p-3 outline-none border border-white/10 italic font-black"
+                />
+              </div>
+
+              <div className="mt-4 bg-[#121212]/75 border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.14em]">
+                    JOGADORES EM OFERTA ({selectedOffersCount})
+                  </p>
+                  <button
+                    type="button"
+                    className="text-[7px] font-black uppercase italic text-white/50 hover:text-white/80 disabled:opacity-30"
+                    onClick={() => setProposalOfferIds([])}
+                    disabled={isBusy || selectedOffersCount === 0}
+                  >
+                    LIMPAR
+                  </button>
+                </div>
+
+                {proposalOfferLoading ? (
+                  <p className="text-[8px] font-black uppercase italic text-white/45">
+                    CARREGANDO ELENCO...
+                  </p>
+                ) : availableOfferPlayers.length === 0 ? (
+                  <p className="text-[8px] font-black uppercase italic text-white/35">
+                    SEM JOGADORES ATIVOS DISPONIVEIS PARA OFERTA.
+                  </p>
+                ) : (
+                  <div className="max-h-32 overflow-y-auto space-y-1 pr-1">
+                    {availableOfferPlayers.map((offerPlayer) => {
+                      const offerId = Number(offerPlayer?.id ?? 0);
+                      const isSelected = proposalOfferIds.includes(offerId);
+
+                      return (
+                        <button
+                          key={offerId}
+                          type="button"
+                          onClick={() => toggleProposalOfferPlayer(offerId)}
+                          disabled={isBusy}
+                          className={`w-full flex items-center justify-between gap-2 text-left px-2 py-2 border transition-colors ${
+                            isSelected
+                              ? 'bg-[#FFD700]/15 border-[#FFD700]/55 text-[#FFD700]'
+                              : 'bg-[#1E1E1E] border-white/10 text-white/70'
+                          } ${isBusy ? 'opacity-60 cursor-not-allowed' : ''}`}
+                          style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                        >
+                          <span className="text-[8px] font-black italic uppercase truncate">
+                            {String(offerPlayer?.name || 'ATLETA')}
+                          </span>
+                          <span className="text-[8px] font-black italic uppercase shrink-0">
+                            {String(offerPlayer?.pos || '--')} {Number(offerPlayer?.ovr ?? 0) || '--'}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {!!proposalError && (
+                <p className="text-[8px] font-black italic uppercase text-[#B22222] mt-3">
+                  {proposalError}
+                </p>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`text-[9px] font-black italic uppercase py-3 ${
+                    isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                  }`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && void submitProposal()}
+                  disabled={isBusy}
+                >
+                  {isBusy ? 'ENVIANDO...' : 'ENVIAR'}
+                </button>
+                <button
+                  type="button"
+                  className="text-[8px] font-black italic uppercase py-3 bg-white/10 text-white/50"
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && closeProposalModal()}
+                  disabled={isBusy}
+                >
+                  FECHAR
+                </button>
+              </div>
             </div>
           </div>
         );
@@ -5709,7 +6911,7 @@ const MarketView = ({
             {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
             <div className="mt-8 w-full">
               <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={() => setShowDetailed(!showDetailed)}>
-                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÃ‰CNICA COMPLETA"}
+                {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}
               </MCOButton>
             </div>
           </div>
@@ -5724,7 +6926,8 @@ const MarketView = ({
       isAuctionMode ? 'MODO LEILAO' : marketClosed ? 'JANELA FECHADA' : 'JANELA ABERTA',
     );
   }
-  if (subMode === 'watchlist') return renderPlayerList('OBSERVAÃ‡ÃƒO', 'LISTA DE SCOUTING');
+  if (subMode === 'watchlist') return renderPlayerList('OBSERVAÇÃO', 'LISTA DE SCOUTING');
+  if (subMode === 'proposals') return renderProposalsView();
 
   return (
     <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto">
@@ -5735,7 +6938,7 @@ const MarketView = ({
             <i className="fas fa-arrow-left mr-2"></i> VOLTAR
           </MCOButton>
           <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MERCADO</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÃŠNCIAS E NEGÃ“CIOS</p>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÊNCIAS E NEGÓCIOS</p>
         </header>
         <div className="grid grid-cols-1 gap-4">
           <MCOCard onClick={() => setSubMode('list')} className="p-8" active={true} accentColor="#FFD700">
@@ -5755,9 +6958,27 @@ const MarketView = ({
                 <i className="fas fa-binoculars text-2xl text-[#FFD700]"></i>
               </div>
               <div>
-                <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÃ‡ÃƒO</h4>
+                <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÇÃO</h4>
                 <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">ATLETAS MONITORADOS</p>
               </div>
+            </div>
+          </MCOCard>
+          <MCOCard onClick={() => setSubMode('proposals')} className="p-8" active={true} accentColor="#FFD700">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                  <i className="fas fa-envelope-open-text text-2xl text-[#FFD700]"></i>
+                </div>
+                <div>
+                  <h4 className="text-xl font-black italic uppercase font-heading text-white">PROPOSTAS</h4>
+                  <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">RECEBIDAS E ENVIADAS</p>
+                </div>
+              </div>
+              {proposalUnreadCount > 0 && (
+                <span className="text-[8px] font-black italic uppercase px-2 py-1 bg-[#B22222] text-white border border-[#FFB4B4]/45">
+                  {proposalUnreadCount}
+                </span>
+              )}
             </div>
           </MCOCard>
         </div>
@@ -5777,6 +6998,8 @@ const App = () => {
   const [clubProfileLoading, setClubProfileLoading] = useState(false);
   const [clubProfileError, setClubProfileError] = useState('');
   const [hasInboxNotifications, setHasInboxNotifications] = useState(false);
+  const [legacyToasts, setLegacyToasts] = useState<LegacyToastItem[]>([]);
+  const toastTimersRef = useRef<Map<number, number>>(new Map());
 
   const [careers] = useState(getLegacyConfederacoes);
   const [currentCareerId, setCurrentCareerId] = useState(careers[0]?.id ?? 'none');
@@ -5795,6 +7018,38 @@ const App = () => {
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  const dismissLegacyToast = (toastId: number) => {
+    const timerId = toastTimersRef.current.get(toastId);
+    if (timerId) {
+      window.clearTimeout(timerId);
+      toastTimersRef.current.delete(toastId);
+    }
+
+    setLegacyToasts((current) => current.filter((toast) => toast.id !== toastId));
+  };
+
+  const pushLegacyToast = (message: string, variant: LegacyToastVariant = 'info') => {
+    const normalized = String(message || '').trim();
+    if (normalized === '') return;
+
+    const toastId = Date.now() + Math.floor(Math.random() * 1000);
+    setLegacyToasts((current) => [...current.slice(-2), { id: toastId, message: normalized, variant }]);
+
+    const timerId = window.setTimeout(() => {
+      toastTimersRef.current.delete(toastId);
+      setLegacyToasts((current) => current.filter((toast) => toast.id !== toastId));
+    }, 5500);
+
+    toastTimersRef.current.set(toastId, timerId);
+  };
+
+  useEffect(() => {
+    return () => {
+      toastTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+      toastTimersRef.current.clear();
+    };
   }, []);
 
   const [userStats, setUserStats] = useState({ 
@@ -5966,7 +7221,7 @@ const App = () => {
 
       if (!clube) {
         setClubProfileToView(null);
-        setClubProfileError('Clube nÃ£o encontrado para esta confederaÃ§Ã£o.');
+        setClubProfileError('Clube não encontrado para esta confederação.');
         return;
       }
 
@@ -5986,7 +7241,7 @@ const App = () => {
       });
     } catch (currentError: any) {
       setClubProfileToView(null);
-      setClubProfileError(currentError?.message || 'NÃ£o foi possÃ­vel carregar os dados do clube.');
+      setClubProfileError(currentError?.message || 'Não foi possível carregar os dados do clube.');
     } finally {
       setClubProfileLoading(false);
     }
@@ -6008,6 +7263,9 @@ const App = () => {
         if (t === 'SCHEDULE') {
           setSelectedScheduleMatch(null);
           setView('schedule-matches');
+        } else if (t === 'MARKET_PROPOSALS') {
+          setMarketSubMode('proposals');
+          setView('market');
         } else if (t === 'TRANSFER') setView('market');
         else if (t === 'MATCH') setView('match-center');
         else if (t === 'FINANCE') setView('finance');
@@ -6017,10 +7275,10 @@ const App = () => {
       case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} match={selectedPendingMatch} />;
-      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} />;
+      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} />;
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} currentCareer={currentCareer} />;
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
-      case 'squad': return <SquadView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
+      case 'squad': return <SquadView onBack={() => setView('my-club')} currentCareer={currentCareer} onNotify={pushLegacyToast} />;
       case 'achievements': return <AchievementsView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'patrocinios': return <PatrociniosView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'finance': return <FinanceView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
@@ -6039,6 +7297,7 @@ const App = () => {
   return (
     <>
       {renderContent()}
+      <LegacyToastStack toasts={legacyToasts} hasBottomNav={!hideBottomNav} onClose={dismissLegacyToast} />
       {!hideBottomNav && (
         <MCOBottomNav
           activeView={view}
