@@ -1328,7 +1328,7 @@ class LegacyController extends Controller
 
         $latestOutbid = (clone $outbidBaseQuery)
             ->leftJoin('liga_clubes as lc', 'lc.id', '=', 'li.clube_lider_id')
-            ->leftJoin('elenco_padrao as ep', 'ep.id', '=', 'li.elencopadrao_id')
+            ->leftJoin('elencopadrao as ep', 'ep.id', '=', 'li.elencopadrao_id')
             ->selectRaw('li.id as item_id, li.expira_em, lc.nome as leader_name, ep.short_name, ep.long_name')
             ->groupBy('li.id', 'li.expira_em', 'lc.nome', 'ep.short_name', 'ep.long_name')
             ->orderBy('li.expira_em')
