@@ -5278,6 +5278,8 @@ const MarketView = ({
   initialSubMode = 'menu',
   onSubModeChange,
   onNotify,
+  quickAuctionStatusFilter = null,
+  onQuickAuctionStatusFilterHandled,
 }: any) => {
   const [subMode, setSubMode] = useState<LegacyMarketSubMode>(initialSubMode);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
@@ -5285,6 +5287,7 @@ const MarketView = ({
 
   const [marketPlayersRaw, setMarketPlayersRaw] = useState<any[]>([]);
   const [marketLoading, setMarketLoading] = useState(false);
+  const [marketRefreshing, setMarketRefreshing] = useState(false);
   const [marketError, setMarketError] = useState('');
   const [marketClosed, setMarketClosed] = useState(false);
   const [marketMode, setMarketMode] = useState<'open' | 'closed' | 'auction'>('open');
@@ -5313,10 +5316,13 @@ const MarketView = ({
   const [marketProposalsError, setMarketProposalsError] = useState('');
   const [marketProposalBusyIds, setMarketProposalBusyIds] = useState<number[]>([]);
   const [marketNowTs, setMarketNowTs] = useState(() => Date.now());
+  const [marketModeResolved, setMarketModeResolved] = useState(false);
 
   const [filterStatus, setFilterStatus] = useState('TODOS');
   const [filterPos, setFilterPos] = useState('TODAS');
   const [filterQuality, setFilterQuality] = useState('TODAS');
+  const [filterName, setFilterName] = useState('');
+  const [debouncedFilterName, setDebouncedFilterName] = useState('');
   const [filterValMin, setFilterValMin] = useState('');
   const [filterValMax, setFilterValMax] = useState('');
   const [sortBy, setSortBy] = useState('OVR_DESC');
@@ -5329,6 +5335,7 @@ const MarketView = ({
     to: 0,
     perPage: LEGACY_MARKET_PAGE_SIZE,
   });
+  const marketPlayersCountRef = useRef(0);
 
   const notifyMarket = (message: string, variant: LegacyToastVariant = 'info') => {
     const normalized = String(message || '').trim();
@@ -5338,6 +5345,10 @@ const MarketView = ({
       onNotify(normalized, variant);
     }
   };
+
+  useEffect(() => {
+    marketPlayersCountRef.current = marketPlayersRaw.length;
+  }, [marketPlayersRaw]);
 
   useEffect(() => {
     setSubMode(initialSubMode);
@@ -5352,6 +5363,16 @@ const MarketView = ({
   useEffect(() => {
     setIsFilterOpen(false);
   }, [subMode, currentCareer?.id]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDebouncedFilterName(filterName.trim());
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [filterName]);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -5392,6 +5413,27 @@ const MarketView = ({
   }, [marketMode]);
 
   useEffect(() => {
+    if (!quickAuctionStatusFilter || subMode !== 'list' || !marketModeResolved) {
+      return;
+    }
+
+    if (marketMode === 'auction' && filterStatus !== quickAuctionStatusFilter) {
+      setFilterStatus(quickAuctionStatusFilter);
+    }
+
+    if (typeof onQuickAuctionStatusFilterHandled === 'function') {
+      onQuickAuctionStatusFilterHandled();
+    }
+  }, [
+    quickAuctionStatusFilter,
+    subMode,
+    marketModeResolved,
+    marketMode,
+    filterStatus,
+    onQuickAuctionStatusFilterHandled,
+  ]);
+
+  useEffect(() => {
     if (subMode === 'list' || subMode === 'watchlist') {
       return;
     }
@@ -5428,6 +5470,9 @@ const MarketView = ({
       }
 
       if (!currentCareer?.id) {
+        setMarketModeResolved(true);
+        setMarketLoading(false);
+        setMarketRefreshing(false);
         setMarketPlayersRaw([]);
         setMarketClosed(false);
         setMarketMode('open');
@@ -5462,7 +5507,18 @@ const MarketView = ({
         return;
       }
 
-      setMarketLoading(true);
+      setMarketModeResolved(false);
+      const shouldSoftRefresh =
+        (subMode === 'list' || subMode === 'watchlist')
+        && marketPlayersCountRef.current > 0;
+
+      if (shouldSoftRefresh) {
+        setMarketRefreshing(true);
+        setMarketLoading(false);
+      } else {
+        setMarketLoading(true);
+        setMarketRefreshing(false);
+      }
       setMarketError('');
 
       try {
@@ -5476,6 +5532,7 @@ const MarketView = ({
         endpoint.searchParams.set('filter_pos', filterPos);
         endpoint.searchParams.set('filter_quality', filterQuality);
         endpoint.searchParams.set('sort_by', sortBy);
+        if (debouncedFilterName !== '') endpoint.searchParams.set('filter_name', debouncedFilterName);
         if (filterValMin !== '') endpoint.searchParams.set('filter_val_min', filterValMin);
         if (filterValMax !== '') endpoint.searchParams.set('filter_val_max', filterValMax);
 
@@ -5525,6 +5582,7 @@ const MarketView = ({
           to,
           perPage,
         });
+        setMarketModeResolved(true);
         if (currentPage !== marketPage) {
           setMarketPage(currentPage);
         }
@@ -5559,10 +5617,12 @@ const MarketView = ({
           to: 0,
           perPage: LEGACY_MARKET_PAGE_SIZE,
         });
+        setMarketModeResolved(true);
         setMarketError(error?.message || 'Não foi possível carregar os registros do mercado.');
       } finally {
         if (!cancelled) {
           setMarketLoading(false);
+          setMarketRefreshing(false);
         }
       }
     };
@@ -5580,6 +5640,7 @@ const MarketView = ({
     filterStatus,
     filterPos,
     filterQuality,
+    debouncedFilterName,
     filterValMin,
     filterValMax,
     sortBy,
@@ -6052,7 +6113,7 @@ const MarketView = ({
 
   useEffect(() => {
     setMarketPage(1);
-  }, [subMode, currentCareer?.id, filterStatus, filterPos, filterQuality, filterValMin, filterValMax, sortBy]);
+  }, [subMode, currentCareer?.id, filterStatus, filterPos, filterQuality, debouncedFilterName, filterValMin, filterValMax, sortBy]);
 
   const totalFilteredPlayers = Math.max(0, Number(marketPagination.total ?? filteredPlayers.length) || 0);
   const totalMarketPages = Math.max(1, Number(marketPagination.lastPage ?? 1) || 1);
@@ -6460,6 +6521,16 @@ const MarketView = ({
           </div>
           {isFilterOpen && (
             <div className="space-y-4 mt-4">
+              <div className="space-y-1">
+                <label className="text-[7px] font-black text-white/30 uppercase italic">NOME DO JOGADOR</label>
+                <input
+                  type="text"
+                  placeholder="EX: VINICIUS"
+                  value={filterName}
+                  onChange={(e) => setFilterName(e.target.value)}
+                  className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase"
+                />
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[7px] font-black text-white/30 uppercase italic">STATUS</label>
@@ -6530,7 +6601,14 @@ const MarketView = ({
             <span className="text-[8px] font-black italic uppercase text-right pr-2">VALOR</span>
             <span className="text-[8px] font-black italic uppercase text-center">AÇÕES</span>
           </div>
-          {!marketLoading && !marketError && totalFilteredPlayers > 0 && (
+          {isMarketDataMode && marketRefreshing && (
+            <div className="flex items-center justify-end px-2">
+              <p className="text-[7px] font-black italic uppercase text-[#FFD700]/80 tracking-[0.18em]">
+                ATUALIZANDO...
+              </p>
+            </div>
+          )}
+          {!marketError && totalFilteredPlayers > 0 && (!marketLoading || marketRefreshing) && (
             <div className="flex items-center justify-between gap-2 px-2 py-2 bg-[#1E1E1E]/50 border-l-[2px] border-[#FFD700]/40">
               <p className="text-[8px] font-black italic uppercase text-white/45">
                 EXIBINDO {currentPageStart}-{currentPageEnd} DE {totalFilteredPlayers}
@@ -6540,7 +6618,7 @@ const MarketView = ({
               </p>
             </div>
           )}
-          {isMarketDataMode && marketLoading ? (
+          {isMarketDataMode && marketLoading && !marketRefreshing ? (
             <div className="text-center py-16 bg-[#1E1E1E]/30" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[9px] font-black italic uppercase text-white/40">CARREGANDO REGISTROS DO MERCADO...</p>
             </div>
@@ -6990,6 +7068,7 @@ const MarketView = ({
 const App = () => {
   const [view, setView] = useState(() => getLegacyRouteStateFromUrl().view);
   const [marketSubMode, setMarketSubMode] = useState<LegacyMarketSubMode>(() => getLegacyRouteStateFromUrl().marketSubMode);
+  const [marketQuickAuctionStatusFilter, setMarketQuickAuctionStatusFilter] = useState<string | null>(null);
   const [selectedPendingMatch, setSelectedPendingMatch] = useState<any>(null);
   const [selectedScheduleMatch, setSelectedScheduleMatch] = useState<any>(null);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
@@ -7261,21 +7340,33 @@ const App = () => {
       case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} currentCareer={currentCareer} />;
       case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t) => {
         if (t === 'SCHEDULE') {
+          setMarketQuickAuctionStatusFilter(null);
           setSelectedScheduleMatch(null);
           setView('schedule-matches');
         } else if (t === 'MARKET_PROPOSALS') {
+          setMarketQuickAuctionStatusFilter(null);
           setMarketSubMode('proposals');
           setView('market');
-        } else if (t === 'TRANSFER') setView('market');
-        else if (t === 'MATCH') setView('match-center');
-        else if (t === 'FINANCE') setView('finance');
-        else setView('hub-global');
+        } else if (t === 'TRANSFER') {
+          setMarketSubMode('list');
+          setMarketQuickAuctionStatusFilter('MEUS_LANCES');
+          setView('market');
+        } else if (t === 'MATCH') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('match-center');
+        } else if (t === 'FINANCE') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('finance');
+        } else {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('hub-global');
+        }
       }} />;
       case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
       case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} match={selectedPendingMatch} />;
-      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} />;
+      case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} quickAuctionStatusFilter={marketQuickAuctionStatusFilter} onQuickAuctionStatusFilterHandled={() => setMarketQuickAuctionStatusFilter(null)} />;
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} currentCareer={currentCareer} />;
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;
       case 'squad': return <SquadView onBack={() => setView('my-club')} currentCareer={currentCareer} onNotify={pushLegacyToast} />;

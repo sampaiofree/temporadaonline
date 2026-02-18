@@ -73,7 +73,8 @@ class AuctionService
             $this->assertRosterLimit($lockedLiga, (int) $lockedClube->id, (int) $lockedClube->liga_id);
 
             $now = Carbon::now('UTC');
-            $baseValue = max(0, (int) ($player->value_eur ?? 0));
+            $marketValue = max(0, (int) ($player->value_eur ?? 0));
+            $baseValue = $this->resolveInitialBidValue($marketValue);
 
             $item = LigaLeilaoItem::query()
                 ->where('confederacao_id', $lockedLiga->confederacao_id)
@@ -272,6 +273,14 @@ class AuctionService
         }
 
         return $snapshot;
+    }
+
+    private function resolveInitialBidValue(int $marketValue): int
+    {
+        $normalizedValue = max(0, $marketValue);
+        $initialBid = (int) floor($normalizedValue * 0.8);
+
+        return max(1, $initialBid);
     }
 
     private function finalizeExpiredItemById(int $itemId, Carbon $now): bool

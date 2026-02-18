@@ -204,6 +204,8 @@ class LegacyController extends Controller
         $filterStatus = Str::upper(trim((string) $request->query('filter_status', 'TODOS')));
         $filterPos = Str::upper(trim((string) $request->query('filter_pos', 'TODAS')));
         $filterQuality = Str::upper(trim((string) $request->query('filter_quality', 'TODAS')));
+        $filterName = trim((string) $request->query('filter_name', ''));
+        $filterNameNormalized = $this->normalizeLegacySearchTerm($filterName);
         $sortBy = Str::upper(trim((string) $request->query('sort_by', 'OVR_DESC')));
         $filterValMinRaw = trim((string) $request->query('filter_val_min', ''));
         $filterValMaxRaw = trim((string) $request->query('filter_val_max', ''));
@@ -354,14 +356,26 @@ class LegacyController extends Controller
                 $playersQuery->whereIn('elencopadrao.id', $favoriteIds);
             }
 
+            if ($filterNameNormalized !== '') {
+                $shortNameExpr = $this->accentInsensitiveSqlExpression('elencopadrao.short_name');
+                $longNameExpr = $this->accentInsensitiveSqlExpression('elencopadrao.long_name');
+                $likeFilter = '%' . $filterNameNormalized . '%';
+
+                $playersQuery->where(function ($query) use ($shortNameExpr, $longNameExpr, $likeFilter) {
+                    $query->whereRaw("{$shortNameExpr} LIKE ?", [$likeFilter])
+                        ->orWhereRaw("{$longNameExpr} LIKE ?", [$likeFilter]);
+                });
+            }
+
             if ($mercadoLeilao) {
                 if ($filterStatus === 'MEUS_LANCES') {
                     $playersQuery->whereExists(function ($query) use ($scopeConfederacaoId, $userClub) {
                         $query->select(DB::raw(1))
-                            ->from('liga_leilao_items as li')
+                            ->from('liga_leilao_itens as li')
                             ->join('liga_leilao_lances as ll', 'll.liga_leilao_item_id', '=', 'li.id')
                             ->whereColumn('li.elencopadrao_id', 'elencopadrao.id')
                             ->where('li.confederacao_id', (int) $scopeConfederacaoId)
+                            ->where('li.status', 'aberto')
                             ->where('ll.clube_id', (int) $userClub->id);
                     });
                 } elseif (in_array($filterStatus, ['MEU', 'RIVAL', 'CONTRATADO'], true)) {
@@ -535,7 +549,7 @@ class LegacyController extends Controller
                 $players = $players
                     ->map(function (array $player) use ($auctionSnapshot) {
                         $playerId = (int) ($player['elencopadrao_id'] ?? 0);
-                        $baseValue = (int) ($player['value_eur'] ?? 0);
+                        $baseValue = $this->resolveLegacyAuctionInitialBidValue((int) ($player['value_eur'] ?? 0));
                         $auction = $auctionSnapshot[$playerId] ?? null;
 
                         $player['can_buy'] = false;
@@ -744,7 +758,7 @@ class LegacyController extends Controller
             $players = $players
                 ->map(function (array $player) use ($auctionSnapshot) {
                     $playerId = (int) ($player['elencopadrao_id'] ?? 0);
-                    $baseValue = (int) ($player['value_eur'] ?? 0);
+                    $baseValue = $this->resolveLegacyAuctionInitialBidValue((int) ($player['value_eur'] ?? 0));
                     $auction = $auctionSnapshot[$playerId] ?? null;
 
                     $player['can_buy'] = false;
@@ -787,6 +801,7 @@ class LegacyController extends Controller
         $filterStatus = Str::upper(trim((string) $request->query('filter_status', 'TODOS')));
         $filterPos = Str::upper(trim((string) $request->query('filter_pos', 'TODAS')));
         $filterQuality = Str::upper(trim((string) $request->query('filter_quality', 'TODAS')));
+        $filterName = trim((string) $request->query('filter_name', ''));
         $sortBy = Str::upper(trim((string) $request->query('sort_by', 'OVR_DESC')));
         $filterValMinRaw = trim((string) $request->query('filter_val_min', ''));
         $filterValMaxRaw = trim((string) $request->query('filter_val_max', ''));
@@ -808,6 +823,7 @@ class LegacyController extends Controller
             $filterQuality,
             $filterValMin,
             $filterValMax,
+            $filterName,
             $sortBy,
         );
 
@@ -862,10 +878,12 @@ class LegacyController extends Controller
         string $filterQuality,
         ?int $filterValMin,
         ?int $filterValMax,
+        string $filterName,
         string $sortBy,
     ): Collection {
         $favoriteLookup = array_flip(array_map('intval', $favoriteIds));
         $normalizedSubMode = Str::lower($subMode);
+        $normalizedFilterName = $this->normalizeLegacySearchTerm($filterName);
 
         return $players
             ->filter(function (array $player) use (
@@ -875,7 +893,8 @@ class LegacyController extends Controller
                 $filterPos,
                 $filterQuality,
                 $filterValMin,
-                $filterValMax
+                $filterValMax,
+                $normalizedFilterName
             ): bool {
                 $playerId = (int) ($player['elencopadrao_id'] ?? 0);
                 $clubStatus = (string) ($player['club_status'] ?? 'livre');
@@ -903,7 +922,7 @@ class LegacyController extends Controller
 
                     if ($filterStatus === 'MEUS_LANCES') {
                         $isAuctionItem = is_array($player['auction'] ?? null);
-                        if ($isAuctionItem && ! (bool) ($player['auction']['has_user_bid'] ?? false)) {
+                        if (! $isAuctionItem || ! (bool) ($player['auction']['has_user_bid'] ?? false)) {
                             return false;
                         }
                     }
@@ -928,6 +947,14 @@ class LegacyController extends Controller
 
                 if ($filterValMax !== null && $valueInMillions > $filterValMax) {
                     return false;
+                }
+
+                if ($normalizedFilterName !== '') {
+                    $shortName = $this->normalizeLegacySearchTerm((string) ($player['short_name'] ?? ''));
+                    $longName = $this->normalizeLegacySearchTerm((string) ($player['long_name'] ?? ''));
+                    if (! str_contains($shortName, $normalizedFilterName) && ! str_contains($longName, $normalizedFilterName)) {
+                        return false;
+                    }
                 }
 
                 return true;
@@ -1028,6 +1055,63 @@ class LegacyController extends Controller
             '72-' => $overall <= 72,
             default => true,
         };
+    }
+
+    private function normalizeLegacySearchTerm(string $value): string
+    {
+        $ascii = Str::ascii(trim($value));
+        return Str::lower($ascii);
+    }
+
+    private function accentInsensitiveSqlExpression(string $column): string
+    {
+        $expression = "LOWER(COALESCE({$column}, ''))";
+
+        $replacements = [
+            'á' => 'a',
+            'à' => 'a',
+            'â' => 'a',
+            'ã' => 'a',
+            'ä' => 'a',
+            'å' => 'a',
+            'é' => 'e',
+            'è' => 'e',
+            'ê' => 'e',
+            'ë' => 'e',
+            'í' => 'i',
+            'ì' => 'i',
+            'î' => 'i',
+            'ï' => 'i',
+            'ó' => 'o',
+            'ò' => 'o',
+            'ô' => 'o',
+            'õ' => 'o',
+            'ö' => 'o',
+            'ú' => 'u',
+            'ù' => 'u',
+            'û' => 'u',
+            'ü' => 'u',
+            'ý' => 'y',
+            'ÿ' => 'y',
+            'ç' => 'c',
+            'ñ' => 'n',
+            'æ' => 'ae',
+            'œ' => 'oe',
+        ];
+
+        foreach ($replacements as $from => $to) {
+            $expression = "REPLACE({$expression}, '{$from}', '{$to}')";
+        }
+
+        return $expression;
+    }
+
+    private function resolveLegacyAuctionInitialBidValue(int $marketValue): int
+    {
+        $normalizedValue = max(0, $marketValue);
+        $initialBid = (int) floor($normalizedValue * 0.8);
+
+        return max(1, $initialBid);
     }
 
     private function parseLegacyTraitTags(mixed $traits): Collection
@@ -1225,6 +1309,31 @@ class LegacyController extends Controller
             ->orderByDesc('created_at')
             ->first();
 
+        $outbidBaseQuery = DB::table('liga_leilao_itens as li')
+            ->join('liga_leilao_lances as ll', 'll.liga_leilao_item_id', '=', 'li.id')
+            ->where('ll.clube_id', (int) $clube->id)
+            ->where('li.status', 'aberto')
+            ->whereNotNull('li.clube_lider_id')
+            ->where('li.clube_lider_id', '<>', (int) $clube->id)
+            ->whereNotNull('li.expira_em')
+            ->where('li.expira_em', '>', now('UTC'));
+
+        if ($scopeConfederacaoId) {
+            $outbidBaseQuery->where('li.confederacao_id', (int) $scopeConfederacaoId);
+        }
+
+        $outbidCount = (int) (clone $outbidBaseQuery)
+            ->distinct()
+            ->count('li.id');
+
+        $latestOutbid = (clone $outbidBaseQuery)
+            ->leftJoin('liga_clubes as lc', 'lc.id', '=', 'li.clube_lider_id')
+            ->leftJoin('elenco_padrao as ep', 'ep.id', '=', 'li.elencopadrao_id')
+            ->selectRaw('li.id as item_id, li.expira_em, lc.nome as leader_name, ep.short_name, ep.long_name')
+            ->groupBy('li.id', 'li.expira_em', 'lc.nome', 'ep.short_name', 'ep.long_name')
+            ->orderBy('li.expira_em')
+            ->first();
+
         $messages = [];
 
         if ($proposalCount > 0) {
@@ -1249,6 +1358,31 @@ class LegacyController extends Controller
                 'urgent' => true,
                 'action' => 'MARKET_PROPOSALS',
                 'action_label' => 'ABRIR PROPOSTAS',
+            ];
+        }
+
+        if ($outbidCount > 0) {
+            $playerName = (string) (
+                $latestOutbid?->short_name
+                ?: $latestOutbid?->long_name
+                ?: 'ATLETA'
+            );
+            $leaderClubName = (string) ($latestOutbid?->leader_name ?: 'CLUBE RIVAL');
+
+            $messages[] = [
+                'id' => 'auction-outbid',
+                'type' => 'LEILAO',
+                'title' => $outbidCount === 1
+                    ? 'LANCE COBERTO'
+                    : 'LANCES COBERTOS',
+                'sender' => $leaderClubName,
+                'content' => $outbidCount === 1
+                    ? "{$leaderClubName} cobriu seu lance por {$playerName}. Abra o mercado para reagir."
+                    : "Voce tem {$outbidCount} lances cobertos em leiloes abertos. Abra o mercado para reagir.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'TRANSFER',
+                'action_label' => 'ABRIR MERCADO',
             ];
         }
 
@@ -1319,6 +1453,7 @@ class LegacyController extends Controller
             (int) $confirmationMatches->count(),
             (int) $evaluationMatches->count(),
             $proposalCount,
+            $outbidCount,
         );
 
         return response()->json([
@@ -1354,15 +1489,17 @@ class LegacyController extends Controller
         int $scheduleCount,
         int $confirmationCount,
         int $evaluationCount,
-        int $proposalCount = 0
+        int $proposalCount = 0,
+        int $auctionOutbidCount = 0
     ): array
     {
         $scheduleCount = max(0, $scheduleCount);
         $confirmationCount = max(0, $confirmationCount);
         $evaluationCount = max(0, $evaluationCount);
         $proposalCount = max(0, $proposalCount);
-        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount + $proposalCount;
-        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + ($proposalCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
+        $auctionOutbidCount = max(0, $auctionOutbidCount);
+        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount + $proposalCount + $auctionOutbidCount;
+        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + ($proposalCount > 0 ? 1 : 0) + ($auctionOutbidCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
 
         if ($totalActions === 0) {
             return [
@@ -1371,6 +1508,7 @@ class LegacyController extends Controller
                 'total_messages' => 0,
                 'schedule_count' => 0,
                 'proposal_count' => 0,
+                'auction_outbid_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -1391,6 +1529,12 @@ class LegacyController extends Controller
             $segments[] = $proposalCount === 1
                 ? '1 proposta de transferencia'
                 : "{$proposalCount} propostas de transferencia";
+        }
+
+        if ($auctionOutbidCount > 0) {
+            $segments[] = $auctionOutbidCount === 1
+                ? '1 lance coberto em leilao'
+                : "{$auctionOutbidCount} lances cobertos em leilao";
         }
 
         if ($confirmationCount > 0) {
@@ -1415,13 +1559,14 @@ class LegacyController extends Controller
             'total_messages' => $totalMessages,
             'schedule_count' => $scheduleCount,
             'proposal_count' => $proposalCount,
+            'auction_outbid_count' => $auctionOutbidCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
             'detail' => implode(' e ', $segments).'.',
             'primary_action' => $scheduleCount > 0
                 ? 'SCHEDULE'
-                : ($proposalCount > 0 ? 'MARKET_PROPOSALS' : 'MATCH'),
+                : ($proposalCount > 0 ? 'MARKET_PROPOSALS' : ($auctionOutbidCount > 0 ? 'TRANSFER' : 'MATCH')),
         ];
     }
 
