@@ -201,6 +201,408 @@ class LegacyController extends Controller
                 ->sum('wage_eur');
         }
 
+        $filterStatus = Str::upper(trim((string) $request->query('filter_status', 'TODOS')));
+        $filterPos = Str::upper(trim((string) $request->query('filter_pos', 'TODAS')));
+        $filterQuality = Str::upper(trim((string) $request->query('filter_quality', 'TODAS')));
+        $sortBy = Str::upper(trim((string) $request->query('sort_by', 'OVR_DESC')));
+        $filterValMinRaw = trim((string) $request->query('filter_val_min', ''));
+        $filterValMaxRaw = trim((string) $request->query('filter_val_max', ''));
+        $filterValMin = is_numeric($filterValMinRaw) ? (int) $filterValMinRaw : null;
+        $filterValMax = is_numeric($filterValMaxRaw) ? (int) $filterValMaxRaw : null;
+        $subMode = Str::lower(trim((string) $request->query('sub_mode', 'list')));
+        $page = max(1, (int) $request->query('page', 1));
+        $perPage = max(1, min(100, (int) $request->query('per_page', 20)));
+        $shouldPaginate = $request->boolean('paginate')
+            || $request->has('page')
+            || $request->has('per_page');
+
+        $favoriteQuery = PlayerFavorite::query()
+            ->where('user_id', $user->id);
+
+        if ($scopeConfederacaoId) {
+            $favoriteQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $favoriteQuery->where('liga_id', $liga->id);
+        }
+
+        $favoriteIds = $favoriteQuery
+            ->pluck('elencopadrao_id')
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+
+        if ($shouldPaginate) {
+            $marketJogoId = (int) ($liga->confederacao?->jogo_id ?? $liga->jogo_id);
+
+            $entryScopeQuery = LigaClubeElenco::query()
+                ->selectRaw('MAX(id) as id, elencopadrao_id')
+                ->where('ativo', true);
+
+            if ($scopeConfederacaoId) {
+                $entryScopeQuery->where('confederacao_id', $scopeConfederacaoId);
+            } else {
+                $entryScopeQuery->where('liga_id', $liga->id);
+            }
+
+            $entryScopeQuery->groupBy('elencopadrao_id');
+
+            $playersQuery = Elencopadrao::query()
+                ->leftJoinSub($entryScopeQuery, 'entry_ids', function ($join) {
+                    $join->on('entry_ids.elencopadrao_id', '=', 'elencopadrao.id');
+                })
+                ->leftJoin('liga_clube_elencos as le', 'le.id', '=', 'entry_ids.id')
+                ->leftJoin('liga_clubes as lc', 'lc.id', '=', 'le.liga_clube_id')
+                ->leftJoin('ligas as ll', 'll.id', '=', 'lc.liga_id')
+                ->select([
+                    'elencopadrao.id as elencopadrao_id',
+                    'elencopadrao.short_name',
+                    'elencopadrao.long_name',
+                    'elencopadrao.player_positions',
+                    'elencopadrao.overall',
+                    'elencopadrao.value_eur',
+                    'elencopadrao.wage_eur',
+                    'elencopadrao.age',
+                    'elencopadrao.weak_foot',
+                    'elencopadrao.skill_moves',
+                    'elencopadrao.player_traits',
+                    'elencopadrao.pace',
+                    'elencopadrao.shooting',
+                    'elencopadrao.passing',
+                    'elencopadrao.dribbling',
+                    'elencopadrao.defending',
+                    'elencopadrao.physic',
+                    'elencopadrao.movement_acceleration',
+                    'elencopadrao.movement_sprint_speed',
+                    'elencopadrao.attacking_finishing',
+                    'elencopadrao.power_shot_power',
+                    'elencopadrao.power_long_shots',
+                    'elencopadrao.attacking_short_passing',
+                    'elencopadrao.skill_long_passing',
+                    'elencopadrao.mentality_vision',
+                    'elencopadrao.skill_dribbling',
+                    'elencopadrao.skill_ball_control',
+                    'elencopadrao.movement_agility',
+                    'elencopadrao.movement_balance',
+                    'elencopadrao.movement_reactions',
+                    'elencopadrao.defending_marking_awareness',
+                    'elencopadrao.mentality_interceptions',
+                    'elencopadrao.defending_standing_tackle',
+                    'elencopadrao.defending_sliding_tackle',
+                    'elencopadrao.power_strength',
+                    'elencopadrao.power_stamina',
+                    'elencopadrao.power_jumping',
+                    'elencopadrao.mentality_aggression',
+                    'elencopadrao.player_face_url',
+                    'le.id as entry_id',
+                    'le.liga_clube_id as entry_liga_clube_id',
+                    'le.value_eur as entry_value_eur',
+                    'lc.nome as club_name',
+                    'll.nome as liga_nome',
+                    'll.multa_multiplicador as multa_multiplicador',
+                ])
+                ->where('elencopadrao.jogo_id', $marketJogoId);
+
+            if ($mercadoLeilao) {
+                $playersQuery->whereNull('le.id');
+            }
+
+            if ($subMode === 'watchlist') {
+                if ($favoriteIds === []) {
+                    $mercadoPayload = [
+                        'players' => [],
+                        'pagination' => [
+                            'current_page' => 1,
+                            'per_page' => $perPage,
+                            'last_page' => 1,
+                            'total' => 0,
+                            'from' => null,
+                            'to' => null,
+                        ],
+                        'closed' => $mercadoFechado,
+                        'period' => $periodoAtivo,
+                        'mode' => $marketMode,
+                        'auction_period' => $periodoLeilaoAtivo,
+                        'bid_increment_options' => $auctionService->getBidIncrementOptions(),
+                        'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
+                        'radar_ids' => $favoriteIds,
+                        'propostas_recebidas_count' => (int) LigaProposta::query()
+                            ->where('clube_origem_id', $userClub->id)
+                            ->where('status', 'aberta')
+                            ->count(),
+                    ];
+
+                    return response()->json([
+                        'liga' => [
+                            'id' => $liga->id,
+                            'nome' => $liga->nome,
+                            'saldo_inicial' => (int) ($liga->saldo_inicial ?? 0),
+                            'jogo' => $liga->jogo?->nome,
+                            'multa_multiplicador' => $liga->multa_multiplicador !== null ? (float) $liga->multa_multiplicador : null,
+                            'confederacao_id' => $liga->confederacao_id,
+                            'confederacao_nome' => $liga->confederacao?->nome,
+                        ],
+                        'clube' => [
+                            'id' => $userClub->id,
+                            'nome' => $userClub->nome,
+                            'saldo' => $walletSaldo,
+                            'salary_per_round' => $salaryPerRound,
+                        ],
+                        'mercado' => $mercadoPayload,
+                    ]);
+                }
+
+                $playersQuery->whereIn('elencopadrao.id', $favoriteIds);
+            }
+
+            if ($mercadoLeilao) {
+                if ($filterStatus === 'MEUS_LANCES') {
+                    $playersQuery->whereExists(function ($query) use ($scopeConfederacaoId, $userClub) {
+                        $query->select(DB::raw(1))
+                            ->from('liga_leilao_items as li')
+                            ->join('liga_leilao_lances as ll', 'll.liga_leilao_item_id', '=', 'li.id')
+                            ->whereColumn('li.elencopadrao_id', 'elencopadrao.id')
+                            ->where('li.confederacao_id', (int) $scopeConfederacaoId)
+                            ->where('ll.clube_id', (int) $userClub->id);
+                    });
+                } elseif (in_array($filterStatus, ['MEU', 'RIVAL', 'CONTRATADO'], true)) {
+                    $playersQuery->whereRaw('1 = 0');
+                }
+            } else {
+                if ($filterStatus === 'LIVRE') {
+                    $playersQuery->whereNull('le.id');
+                } elseif ($filterStatus === 'MEU') {
+                    $playersQuery->where('le.liga_clube_id', (int) $userClub->id);
+                } elseif ($filterStatus === 'RIVAL') {
+                    $playersQuery
+                        ->whereNotNull('le.id')
+                        ->where('le.liga_clube_id', '!=', (int) $userClub->id);
+                } elseif ($filterStatus === 'CONTRATADO') {
+                    $playersQuery->whereNotNull('le.id');
+                }
+            }
+
+            if ($filterPos !== 'TODAS') {
+                $positionAliases = match ($filterPos) {
+                    'ATACANTES' => ['ATA', 'PE', 'PD', 'SA'],
+                    'MEIO' => ['MC', 'MEI', 'VOL', 'ME', 'MD'],
+                    'DEFESA' => ['ZAG', 'LD', 'LE', 'LWB', 'RWB'],
+                    default => [$filterPos],
+                };
+
+                $playersQuery->where(function ($positionQuery) use ($positionAliases) {
+                    foreach ($positionAliases as $positionAlias) {
+                        $position = Str::upper(trim((string) $positionAlias));
+                        if ($position === '') {
+                            continue;
+                        }
+
+                        $positionQuery->orWhereRaw(
+                            "REPLACE(UPPER(COALESCE(elencopadrao.player_positions, '')), ' ', '') = ?",
+                            [$position]
+                        );
+                        $positionQuery->orWhereRaw(
+                            "REPLACE(UPPER(COALESCE(elencopadrao.player_positions, '')), ' ', '') LIKE ?",
+                            [$position . ',%']
+                        );
+                        $positionQuery->orWhereRaw(
+                            "REPLACE(UPPER(COALESCE(elencopadrao.player_positions, '')), ' ', '') LIKE ?",
+                            ['%,' . $position]
+                        );
+                        $positionQuery->orWhereRaw(
+                            "REPLACE(UPPER(COALESCE(elencopadrao.player_positions, '')), ' ', '') LIKE ?",
+                            ['%,' . $position . ',%']
+                        );
+                    }
+                });
+            }
+
+            if ($filterQuality !== 'TODAS') {
+                match ($filterQuality) {
+                    '90+' => $playersQuery->where('elencopadrao.overall', '>=', 90),
+                    '89-88' => $playersQuery->whereBetween('elencopadrao.overall', [88, 89]),
+                    '87-84' => $playersQuery->whereBetween('elencopadrao.overall', [84, 87]),
+                    '83-80' => $playersQuery->whereBetween('elencopadrao.overall', [80, 83]),
+                    '79-73' => $playersQuery->whereBetween('elencopadrao.overall', [73, 79]),
+                    '72-' => $playersQuery->where('elencopadrao.overall', '<=', 72),
+                    default => null,
+                };
+            }
+
+            if ($filterValMin !== null) {
+                $playersQuery->whereRaw('ROUND(COALESCE(elencopadrao.value_eur, 0) / 1000000.0) >= ?', [$filterValMin]);
+            }
+
+            if ($filterValMax !== null) {
+                $playersQuery->whereRaw('ROUND(COALESCE(elencopadrao.value_eur, 0) / 1000000.0) <= ?', [$filterValMax]);
+            }
+
+            match ($sortBy) {
+                'OVR_ASC' => $playersQuery->orderBy('elencopadrao.overall')->orderBy('elencopadrao.id'),
+                'VAL_DESC' => $playersQuery->orderByRaw('ROUND(COALESCE(elencopadrao.value_eur, 0) / 1000000.0) DESC')->orderByDesc('elencopadrao.overall'),
+                'VAL_ASC' => $playersQuery->orderByRaw('ROUND(COALESCE(elencopadrao.value_eur, 0) / 1000000.0) ASC')->orderByDesc('elencopadrao.overall'),
+                default => $playersQuery->orderByDesc('elencopadrao.overall')->orderByDesc('elencopadrao.value_eur'),
+            };
+
+            $total = (clone $playersQuery)->count(DB::raw('DISTINCT elencopadrao.id'));
+            $lastPage = max(1, (int) ceil($total / max($perPage, 1)));
+            $currentPage = min(max(1, $page), $lastPage);
+            $offset = ($currentPage - 1) * $perPage;
+            $rows = (clone $playersQuery)
+                ->forPage($currentPage, $perPage)
+                ->get();
+
+            $traitNames = $rows
+                ->flatMap(fn ($row) => $this->parseLegacyTraitTags($row->player_traits))
+                ->unique(fn (string $name) => Str::lower($name))
+                ->values();
+
+            $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
+
+            $players = $rows
+                ->map(function ($row) use ($userClub, $playstylesMap) {
+                    $entryClubId = $row->entry_liga_clube_id !== null ? (int) $row->entry_liga_clube_id : null;
+                    $clubStatus = 'livre';
+                    $canBuy = $entryClubId === null;
+                    $canMulta = false;
+
+                    if ($entryClubId !== null) {
+                        $clubStatus = $entryClubId === (int) $userClub->id ? 'meu' : 'outro';
+                        $canBuy = $clubStatus === 'outro';
+                        $canMulta = $clubStatus === 'outro';
+                    }
+
+                    return [
+                        'elencopadrao_id' => (int) $row->elencopadrao_id,
+                        'short_name' => $row->short_name,
+                        'long_name' => $row->long_name,
+                        'player_positions' => $row->player_positions,
+                        'overall' => (int) ($row->overall ?? 0),
+                        'value_eur' => (int) ($row->value_eur ?? 0),
+                        'wage_eur' => (int) ($row->wage_eur ?? 0),
+                        'age' => $row->age !== null ? (int) $row->age : null,
+                        'weak_foot' => $row->weak_foot !== null ? (int) $row->weak_foot : null,
+                        'skill_moves' => $row->skill_moves !== null ? (int) $row->skill_moves : null,
+                        'player_traits' => $row->player_traits,
+                        'playstyle_badges' => $this->mapLegacyPlaystyleBadges($row->player_traits, $playstylesMap),
+                        'pace' => $row->pace !== null ? (int) $row->pace : null,
+                        'shooting' => $row->shooting !== null ? (int) $row->shooting : null,
+                        'passing' => $row->passing !== null ? (int) $row->passing : null,
+                        'dribbling' => $row->dribbling !== null ? (int) $row->dribbling : null,
+                        'defending' => $row->defending !== null ? (int) $row->defending : null,
+                        'physic' => $row->physic !== null ? (int) $row->physic : null,
+                        'movement_acceleration' => $row->movement_acceleration !== null ? (int) $row->movement_acceleration : null,
+                        'movement_sprint_speed' => $row->movement_sprint_speed !== null ? (int) $row->movement_sprint_speed : null,
+                        'attacking_finishing' => $row->attacking_finishing !== null ? (int) $row->attacking_finishing : null,
+                        'power_shot_power' => $row->power_shot_power !== null ? (int) $row->power_shot_power : null,
+                        'power_long_shots' => $row->power_long_shots !== null ? (int) $row->power_long_shots : null,
+                        'attacking_short_passing' => $row->attacking_short_passing !== null ? (int) $row->attacking_short_passing : null,
+                        'skill_long_passing' => $row->skill_long_passing !== null ? (int) $row->skill_long_passing : null,
+                        'mentality_vision' => $row->mentality_vision !== null ? (int) $row->mentality_vision : null,
+                        'skill_dribbling' => $row->skill_dribbling !== null ? (int) $row->skill_dribbling : null,
+                        'skill_ball_control' => $row->skill_ball_control !== null ? (int) $row->skill_ball_control : null,
+                        'movement_agility' => $row->movement_agility !== null ? (int) $row->movement_agility : null,
+                        'movement_balance' => $row->movement_balance !== null ? (int) $row->movement_balance : null,
+                        'movement_reactions' => $row->movement_reactions !== null ? (int) $row->movement_reactions : null,
+                        'defending_marking_awareness' => $row->defending_marking_awareness !== null ? (int) $row->defending_marking_awareness : null,
+                        'mentality_interceptions' => $row->mentality_interceptions !== null ? (int) $row->mentality_interceptions : null,
+                        'defending_standing_tackle' => $row->defending_standing_tackle !== null ? (int) $row->defending_standing_tackle : null,
+                        'defending_sliding_tackle' => $row->defending_sliding_tackle !== null ? (int) $row->defending_sliding_tackle : null,
+                        'power_strength' => $row->power_strength !== null ? (int) $row->power_strength : null,
+                        'power_stamina' => $row->power_stamina !== null ? (int) $row->power_stamina : null,
+                        'power_jumping' => $row->power_jumping !== null ? (int) $row->power_jumping : null,
+                        'mentality_aggression' => $row->mentality_aggression !== null ? (int) $row->mentality_aggression : null,
+                        'club_status' => $clubStatus,
+                        'club_name' => $row->club_name,
+                        'liga_nome' => $row->liga_nome,
+                        'multa_multiplicador' => $row->multa_multiplicador !== null ? (float) $row->multa_multiplicador : null,
+                        'club_id' => $entryClubId,
+                        'is_free_agent' => $clubStatus === 'livre',
+                        'can_buy' => $canBuy,
+                        'can_multa' => $canMulta,
+                        'entry_value_eur' => $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null,
+                        'player_face_url' => $row->player_face_url,
+                    ];
+                })
+                ->values();
+
+            if ($mercadoLeilao) {
+                $auctionSnapshot = $auctionService->buildAuctionSnapshotForPlayers(
+                    $liga,
+                    $players->pluck('elencopadrao_id')->map(fn ($id) => (int) $id)->all(),
+                    (int) $userClub->id,
+                );
+
+                $players = $players
+                    ->map(function (array $player) use ($auctionSnapshot) {
+                        $playerId = (int) ($player['elencopadrao_id'] ?? 0);
+                        $baseValue = (int) ($player['value_eur'] ?? 0);
+                        $auction = $auctionSnapshot[$playerId] ?? null;
+
+                        $player['can_buy'] = false;
+                        $player['can_multa'] = false;
+                        $player['auction'] = [
+                            'enabled' => true,
+                            'status' => (string) ($auction['status'] ?? 'aberto'),
+                            'has_bid' => (bool) ($auction['has_bid'] ?? false),
+                            'has_user_bid' => (bool) ($auction['has_user_bid'] ?? false),
+                            'base_value_eur' => (int) ($auction['base_value_eur'] ?? $baseValue),
+                            'current_bid_eur' => (int) ($auction['current_bid_eur'] ?? $baseValue),
+                            'leader_club_id' => isset($auction['leader_club_id']) ? (int) $auction['leader_club_id'] : null,
+                            'leader_club_name' => $auction['leader_club_name'] ?? null,
+                            'expires_at' => $auction['expires_at'] ?? null,
+                            'seconds_remaining' => isset($auction['seconds_remaining']) ? (int) $auction['seconds_remaining'] : null,
+                            'is_leader' => (bool) ($auction['is_leader'] ?? false),
+                            'next_min_bid_eur' => (int) ($auction['next_min_bid_eur'] ?? $baseValue),
+                        ];
+
+                        return $player;
+                    })
+                    ->values();
+            }
+
+            $mercadoPayload = [
+                'players' => $players->all(),
+                'pagination' => [
+                    'current_page' => $currentPage,
+                    'per_page' => $perPage,
+                    'last_page' => $lastPage,
+                    'total' => $total,
+                    'from' => $total > 0 ? ($offset + 1) : null,
+                    'to' => $total > 0 ? ($offset + $rows->count()) : null,
+                ],
+                'closed' => $mercadoFechado,
+                'period' => $periodoAtivo,
+                'mode' => $marketMode,
+                'auction_period' => $periodoLeilaoAtivo,
+                'bid_increment_options' => $auctionService->getBidIncrementOptions(),
+                'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
+                'radar_ids' => $favoriteIds,
+                'propostas_recebidas_count' => (int) LigaProposta::query()
+                    ->where('clube_origem_id', $userClub->id)
+                    ->where('status', 'aberta')
+                    ->count(),
+            ];
+
+            return response()->json([
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'saldo_inicial' => (int) ($liga->saldo_inicial ?? 0),
+                    'jogo' => $liga->jogo?->nome,
+                    'multa_multiplicador' => $liga->multa_multiplicador !== null ? (float) $liga->multa_multiplicador : null,
+                    'confederacao_id' => $liga->confederacao_id,
+                    'confederacao_nome' => $liga->confederacao?->nome,
+                ],
+                'clube' => [
+                    'id' => $userClub->id,
+                    'nome' => $userClub->nome,
+                    'saldo' => $walletSaldo,
+                    'salary_per_round' => $salaryPerRound,
+                ],
+                'mercado' => $mercadoPayload,
+            ]);
+        }
+
         $marketJogoId = (int) ($liga->confederacao?->jogo_id ?? $liga->jogo_id);
 
         $playersCollection = Elencopadrao::query()
