@@ -7268,6 +7268,12 @@ const App = () => {
     setView('league-table');
   };
 
+  const openMarketFromHub = () => {
+    setMarketQuickAuctionStatusFilter(null);
+    setMarketSubMode('menu');
+    setView('market');
+  };
+
   const handleConfirmResult = (match: any) => {
     setSelectedPendingMatch(match);
     setView('confirm-match');
@@ -7334,7 +7340,7 @@ const App = () => {
 
   const renderContent = () => {
     switch(view) {
-      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
+      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
       case 'season-stats': return <SeasonStatsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
       case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} currentCareer={currentCareer} />;
@@ -7379,7 +7385,7 @@ const App = () => {
       case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'profile': return <ProfileView onBack={() => setView('hub-global')} />;
-      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={() => setView('market')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
+      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
     }
   };
 
