@@ -56,14 +56,15 @@
                         <x-sidebar-group
                             title="ADMINISTRAÇÃO"
                             icon="shield-check"
-                            :active="request()->routeIs(['admin.clubes.*', 'admin.ligas-usuarios.*', 'admin.users.*', 'admin.partidas-denuncias.*', 'admin.whatsapp.*'])"
+                            :active="request()->routeIs(['admin.clubes.*', 'admin.ligas-usuarios.*', 'admin.users.*', 'admin.partidas-denuncias.*', 'admin.whatsapp.*', 'admin.logs.*'])"
                         >
                             <div class="space-y-1 py-1">
-                                <x-nav-link href="{{ route('admin.clubes.index') }}" :active="request()->routeIs('admin.clubes.*')">Clubes por Liga</x-nav-link>
+                                <x-nav-link href="{{ route('admin.clubes.index') }}" :active="request()->routeIs('admin.clubes.*')">Clubes</x-nav-link>
                                 <x-nav-link href="{{ route('admin.ligas-usuarios.index') }}" :active="request()->routeIs('admin.ligas-usuarios.*')">Usuários por Liga</x-nav-link>
                                 <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')">Usuários</x-nav-link>
                                 <x-nav-link href="{{ route('admin.partidas-denuncias.index') }}" :active="request()->routeIs('admin.partidas-denuncias.*')">Denúncias de Partida</x-nav-link>
                                 <x-nav-link href="{{ route('admin.whatsapp.index') }}" :active="request()->routeIs('admin.whatsapp.*')">WhatsApp</x-nav-link>
+                                <x-nav-link href="{{ route('admin.logs.index') }}" :active="request()->routeIs('admin.logs.*')">Logs</x-nav-link>
                             </div>
                         </x-sidebar-group>
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Confederacao;
 use App\Models\Geracao;
 use App\Models\Jogo;
+use App\Models\LigaJogador;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,16 @@ class ConfederacaoController extends Controller
         $confederacoes = Confederacao::orderByDesc('created_at')
             ->withCount('ligas')
             ->get();
+
+        $usuariosPorConfederacao = LigaJogador::query()
+            ->join('ligas', 'liga_jogador.liga_id', '=', 'ligas.id')
+            ->selectRaw('ligas.confederacao_id, COUNT(DISTINCT liga_jogador.user_id) as usuarios_count')
+            ->groupBy('ligas.confederacao_id')
+            ->pluck('usuarios_count', 'ligas.confederacao_id');
+
+        $confederacoes->each(function (Confederacao $confederacao) use ($usuariosPorConfederacao): void {
+            $confederacao->usuarios_count = (int) ($usuariosPorConfederacao[$confederacao->id] ?? 0);
+        });
 
         return view('admin.confederacoes.index', [
             'confederacoes' => $confederacoes,

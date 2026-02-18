@@ -32,6 +32,7 @@
                         <tr>
                             <th class="px-4 py-3 font-semibold">Nome</th>
                             <th class="px-4 py-3 font-semibold">Ligas</th>
+                            <th class="px-4 py-3 font-semibold">Usuarios</th>
                             <th class="px-4 py-3 font-semibold">Criado em</th>
                             <th class="px-4 py-3 font-semibold">Acoes</th>
                         </tr>
@@ -61,6 +62,7 @@
                                     </div>
                                 </td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $confederacao->ligas_count }}</td>
+                                <td class="px-4 py-4 align-top text-slate-600">{{ $confederacao->usuarios_count }}</td>
                                 <td class="px-4 py-4 align-top text-slate-600">{{ $confederacao->created_at?->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 py-4 align-top">
                                     <div class="flex flex-wrap gap-2">
@@ -87,7 +89,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Ainda nao existem confederacoes cadastradas.
                                 </td>
                             </tr>
