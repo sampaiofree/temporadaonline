@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ElencoController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ElencoPadraoController as AdminElencoPadraoController;
@@ -142,7 +141,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 Route::middleware(['auth', 'verified', 'roster.limit', 'legacy.first_access'])->group(function () {
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard', function () {
+        return redirect()->route('legacy.index');
+    })->name('dashboard');
     Route::get('/ligas', [LigaController::class, 'index'])->name('ligas');
     Route::post('/ligas/{liga}/entrar', [LigaController::class, 'join'])->name('ligas.join');
     Route::get('/perfil', [ProfileController::class, 'show'])->name('perfil');

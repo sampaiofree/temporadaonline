@@ -65,9 +65,9 @@
                     <span class="text-[#ffd700]">{{ $email }}</span>
                 </div>
 
-                @if ($status === 'verification-link-sent')
+                @if ($status)
                     <div class="mb-5 bg-[#166534]/25 border border-[#22c55e] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
-                        Novo link enviado com sucesso.
+                        {{ $status }}
                     </div>
                 @endif
 

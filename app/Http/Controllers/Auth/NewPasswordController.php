@@ -37,11 +37,14 @@ class NewPasswordController extends Controller
             'token' => 'required',
             'email' => 'required|email',
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
+        ], [
+            'token.required' => 'Token de redefinicao ausente.',
+            'email.required' => 'Informe um email.',
+            'email.email' => 'Informe um email valido.',
+            'password.required' => 'Informe uma nova senha.',
+            'password.confirmed' => 'A confirmacao da senha nao confere.',
         ]);
 
-        // Here we will attempt to reset the user's password. If it is successful we
-        // will update the password on an actual user model and persist it to the
-        // database. Otherwise we will parse the error and return the response.
         $status = Password::reset(
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function ($user) use ($request) {
@@ -54,17 +57,20 @@ class NewPasswordController extends Controller
             }
         );
 
-        // If the password was successfully reset, we will redirect the user back to
-        // the application's home authenticated view. If there is an error we can
-        // redirect them back to where they came from with their error message.
         if ($status == Password::PASSWORD_RESET) {
             return redirect()
                 ->route('legacy.login')
                 ->with('status', 'Senha redefinida com sucesso. Faca login com a nova senha.');
         }
 
+        $message = match ($status) {
+            Password::INVALID_TOKEN => 'Link de redefinicao invalido ou expirado.',
+            Password::RESET_THROTTLED => 'Aguarde alguns minutos antes de tentar novamente.',
+            default => 'Nao foi possivel redefinir a senha. Confira os dados e tente novamente.',
+        };
+
         throw ValidationException::withMessages([
-            'email' => [trans($status)],
+            'email' => [$message],
         ]);
     }
 }

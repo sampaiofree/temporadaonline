@@ -257,7 +257,7 @@ export default function App() {
           LEGACY<span className="text-legacy-accent">XI</span>
         </div>
         <a 
-          href="https://temporadaonline.3f7.org/register" 
+          href="/register" 
           target="_blank" 
           rel="noopener noreferrer"
           className="bg-legacy-accent text-legacy-bg font-display font-black text-xs sm:text-sm px-4 sm:px-6 py-2 sm:py-3 uppercase italic tracking-tighter hover:scale-105 transition-transform active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
