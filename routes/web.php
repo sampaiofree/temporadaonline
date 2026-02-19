@@ -39,9 +39,16 @@ use App\Http\Controllers\LigaClubePerfilController;
 use App\Http\Controllers\MinhaLigaController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Api\UserDisponibilidadeController;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
-Route::redirect('/', '/legacy');
+Route::get('/', function () {
+    if (Auth::check()) {
+        return redirect()->route('legacy.index');
+    }
+
+    return view('home');
+})->name('home');
 
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
@@ -134,7 +141,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         ->name('elenco-padrao.jogadores.destroy');
 });
 
-Route::middleware(['auth', 'roster.limit', 'legacy.first_access'])->group(function () {
+Route::middleware(['auth', 'verified', 'roster.limit', 'legacy.first_access'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/ligas', [LigaController::class, 'index'])->name('ligas');
     Route::post('/ligas/{liga}/entrar', [LigaController::class, 'join'])->name('ligas.join');

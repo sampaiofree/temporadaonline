@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&family=Inter:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Montserrat", sans-serif;
+  --color-legacy-bg: #121212;
+  --color-legacy-accent: #F6CF01;
+  --color-legacy-card: #1E1E1E;
+}
+
+@layer base {
+  html, body {
+    @apply overflow-x-hidden;
+  }
+  body {
+    @apply bg-legacy-bg text-white font-sans antialiased;
+  }
+}

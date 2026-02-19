@@ -5,8 +5,6 @@ use App\Http\Controllers\Legacy\LegacyController;
 use App\Http\Controllers\Legacy\LegacyOnboardingClubeController;
 use App\Http\Controllers\Legacy\LegacyProfileController;
 use App\Http\Controllers\Legacy\PrimeiroAcessoController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('legacy')->name('legacy.')->group(function () {
@@ -16,15 +14,11 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
         ->middleware('auth')
         ->name('logout');
 
-    Route::get('/', function (Request $request, LegacyController $controller) {
-        if (! Auth::check()) {
-            return redirect()->guest(route('legacy.login'));
-        }
+    Route::get('/', [LegacyController::class, 'index'])
+        ->middleware(['auth', 'verified', 'legacy.first_access'])
+        ->name('index');
 
-        return $controller->index($request);
-    })->middleware('legacy.first_access')->name('index');
-
-    Route::middleware(['auth', 'legacy.first_access'])->group(function () {
+    Route::middleware(['auth', 'verified', 'legacy.first_access'])->group(function () {
         Route::get('/primeiro-acesso', [PrimeiroAcessoController::class, 'show'])->name('primeiro_acesso');
         Route::put('/primeiro-acesso/profile', [PrimeiroAcessoController::class, 'updateProfile'])
             ->name('primeiro_acesso.profile.update');

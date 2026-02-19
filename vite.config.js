@@ -27,6 +27,7 @@ export default defineConfig({
                 'resources/js/liga_clube_perfil.jsx',
                 'resources/js/register.jsx',
                 'resources/js/login.jsx',
+                'resources/js/home/main.tsx',
                 'resources/js/legacy/index.tsx',
                 'resources/js/legacy/primeiro_acesso.jsx',
                 'resources/js/legacy/onboarding_clube.jsx',

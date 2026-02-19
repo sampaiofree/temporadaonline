@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <title>Legacy XI | Login</title>
+        <title>Legacy XI | Recuperar Conta</title>
         <script src="https://cdn.tailwindcss.com"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,700;1,900&family=Russo+One&display=swap" rel="stylesheet">
@@ -56,8 +56,8 @@
             <section class="w-full max-w-md bg-[#1e1e1e] border-l-[6px] border-[#ffd700] p-8 legacy-clip shadow-[0_0_35px_rgba(0,0,0,0.55)]">
                 <header class="mb-8">
                     <p class="text-[10px] text-[#ffd700] font-black tracking-[0.35em] uppercase italic mb-2">Legacy XI</p>
-                    <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Login</h1>
-                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Acesse para entrar no hub legado</p>
+                    <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Recuperar Senha</h1>
+                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Enviaremos um link para redefinir sua conta</p>
                 </header>
 
                 @if (session('status'))
@@ -72,7 +72,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('legacy.login.store') }}" class="space-y-4">
+                <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
                     @csrf
 
                     <div>
@@ -89,31 +89,17 @@
                         >
                     </div>
 
-                    <div>
-                        <label for="password" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Senha</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            required
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="********"
-                        >
-                    </div>
-
-                    <div class="flex items-center justify-between gap-4 text-[10px] font-black uppercase italic tracking-[0.14em]">
-                        <a href="{{ route('register') }}" class="text-white/60 hover:text-white transition-colors">
-                            Criar cadastro
-                        </a>
-                        <a href="{{ route('password.request') }}" class="text-[#ffd700] hover:text-white transition-colors">
-                            Recuperacao de senha
-                        </a>
-                    </div>
-
                     <button type="submit" class="w-full mt-3 bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
-                        Entrar no Legacy
+                        Enviar Link de Recuperacao
                     </button>
                 </form>
+
+                <p class="mt-6 text-[10px] text-white/50 font-bold uppercase italic tracking-[0.12em]">
+                    Lembrou a senha?
+                    <a href="{{ route('legacy.login') }}" class="text-[#ffd700] hover:text-white transition-colors">
+                        Voltar ao login
+                    </a>
+                </p>
             </section>
         </main>
     </body>
