@@ -2518,22 +2518,21 @@ const LegacyMarketPlayerThumb = ({
             <img
               src={templateSrc}
               alt="Template do card reduzido"
-              className={`absolute inset-0 z-20 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 z-0 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setTemplateLoaded(true)}
               onError={() => {
                 setTemplateFailed(true);
                 setTemplateLoaded(false);
               }}
             />
-            <div className="absolute inset-0 z-10 bg-black/15 pointer-events-none"></div>
           </>
         ) : null}
 
         <LegacyPlayerImage
           src={player.photo}
           alt={player.name}
-          wrapperClassName="relative z-0 w-full h-full"
-          imgClassName="w-full h-full object-cover object-top"
+          wrapperClassName="relative z-10 w-full h-full"
+          imgClassName="w-full h-full object-contain object-center"
           fallback={
             <div className="w-full h-full flex items-center justify-center text-[#FFD700]/40">
               <i className="fas fa-user text-sm"></i>
@@ -7189,7 +7188,7 @@ const MarketView = ({
                 <div className="flex justify-center">
                   <LegacyMarketPlayerThumb
                     player={player}
-                    useReducedTemplate={subMode === 'list'}
+                    useReducedTemplate={subMode === 'list' || subMode === 'watchlist'}
                   />
                 </div>
                 <div className="overflow-hidden cursor-pointer active:opacity-50 px-1" onClick={() => setSelectedPlayer(player)}>
