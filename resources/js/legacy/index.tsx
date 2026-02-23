@@ -2573,31 +2573,39 @@ const LegacyUTCard = ({
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
       <div className="absolute inset-0 bg-[#FFD700] opacity-10 blur-3xl animate-pulse"></div>
-      <div className="relative w-full h-full bg-[#1E1E1E] border-[3px] border-[#FFD700] overflow-hidden shadow-2xl transition-transform duration-500" style={{ clipPath: SHIELD_CLIP }}>
+      <div
+        className={`relative w-full h-full overflow-hidden shadow-2xl transition-transform duration-500 ${
+          shouldUseTemplate ? 'bg-transparent border-0' : 'bg-[#1E1E1E] border-[3px] border-[#FFD700]'
+        }`}
+        style={shouldUseTemplate ? undefined : { clipPath: SHIELD_CLIP }}
+      >
         {shouldUseTemplate ? (
           <>
             {!templateLoaded ? <div className="absolute inset-0 animate-pulse bg-white/5"></div> : null}
             <img
               src={templateSrc}
               alt="Template do card completo"
-              className={`absolute inset-0 z-10 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className="absolute inset-0 z-0 w-full h-full object-contain object-center pointer-events-none"
               onLoad={() => setTemplateLoaded(true)}
               onError={() => {
                 setTemplateFailed(true);
                 setTemplateLoaded(false);
               }}
             />
-            <div className="absolute inset-0 z-[5] bg-black/10 pointer-events-none"></div>
           </>
         ) : null}
-        <div className="absolute inset-0 opacity-5 pointer-events-none"><div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_#FFD700_1px,_transparent_1px)] bg-[size:20px_20px]"></div></div>
-        <div className="relative h-1/2 flex pt-6 px-4">
+        {!shouldUseTemplate ? (
+          <div className="absolute inset-0 opacity-5 pointer-events-none">
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_#FFD700_1px,_transparent_1px)] bg-[size:20px_20px]"></div>
+          </div>
+        ) : null}
+        <div className="relative z-10 h-1/2 flex pt-6 px-4">
           <div className="z-20 shrink-0 flex flex-col items-center">
             <span className="text-5xl font-black italic font-heading leading-none text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">{player.ovr}</span>
             <span className="text-xl font-black italic font-heading uppercase tracking-tighter text-white opacity-80">{player.pos}</span>
             <i className="fa-brands fa-playstation mt-4 text-[#FFD700] text-xl opacity-40"></i>
           </div>
-          <div className="absolute right-0 top-0 bottom-0 w-3/4 overflow-hidden">
+          <div className="absolute right-0 top-0 bottom-0 z-10 w-3/4 overflow-hidden">
             <LegacyPlayerImage
               src={player.photo}
               alt={player.name}
@@ -2935,7 +2943,7 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
           <div className="absolute inset-0" onClick={closePlayer}></div>
           <div className="relative w-full max-w-sm flex flex-col items-center">
             <div className="w-full flex justify-end mb-4"><button onClick={closePlayer} className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}><i className="fas fa-times text-xl"></i></button></div>
-            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
+            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} preferAssetTemplate />}
             <div className="mt-8 w-full">
               <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5" onClick={() => setShowDetailed(!showDetailed)}>
                 {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}
@@ -7497,7 +7505,7 @@ const MarketView = ({
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
-            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
+            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} preferAssetTemplate />}
             <div className="mt-8 w-full">
               <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={() => setShowDetailed(!showDetailed)}>
                 {showDetailed ? "VER CARD ULTIMATE" : "FICHA TÉCNICA COMPLETA"}
