@@ -40,29 +40,29 @@
                         >
                             <div class="space-y-1 py-1">
                                 <x-nav-link href="{{ route('admin.jogos.index') }}" :active="request()->routeIs('admin.jogos.*')">Jogos</x-nav-link>
-                                <x-nav-link href="{{ route('admin.geracoes.index') }}" :active="request()->routeIs('admin.geracoes.*')">Gera??es</x-nav-link>
+                                <x-nav-link href="{{ route('admin.geracoes.index') }}" :active="request()->routeIs('admin.geracoes.*')">Gerações</x-nav-link>
                                 <x-nav-link href="{{ route('admin.plataformas.index') }}" :active="request()->routeIs('admin.plataformas.*')">Plataformas</x-nav-link>
-                                <x-nav-link href="{{ route('admin.elenco-padrao.index') }}" :active="request()->routeIs('admin.elenco-padrao.*')">Elenco Padr?o</x-nav-link>
-                                <x-nav-link href="{{ route('admin.confederacoes.index') }}" :active="request()->routeIs('admin.confederacoes.*')">Confedera??o</x-nav-link>
+                                <x-nav-link href="{{ route('admin.elenco-padrao.index') }}" :active="request()->routeIs('admin.elenco-padrao.*')">Elenco Padrão</x-nav-link>
+                                <x-nav-link href="{{ route('admin.confederacoes.index') }}" :active="request()->routeIs('admin.confederacoes.*')">Confederação</x-nav-link>
                                 <x-nav-link href="{{ route('admin.ligas.index') }}" :active="request()->routeIs('admin.ligas.*')">Liga</x-nav-link>
                                 <x-nav-link href="{{ route('admin.conquistas.index') }}" :active="request()->routeIs('admin.conquistas.*')">Conquistas</x-nav-link>
-                                <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patroc?nios</x-nav-link>
-                                <x-nav-link href="{{ route('admin.premiacoes.index') }}" :active="request()->routeIs('admin.premiacoes.*')">Premia??es</x-nav-link>
-                                <x-nav-link href="{{ route('admin.idioma-regiao.index') }}" :active="request()->routeIs('admin.idioma-regiao.*')">Idiomas e Regi?es</x-nav-link>
+                                <x-nav-link href="{{ route('admin.patrocinios.index') }}" :active="request()->routeIs('admin.patrocinios.*')">Patrocínios</x-nav-link>
+                                <x-nav-link href="{{ route('admin.premiacoes.index') }}" :active="request()->routeIs('admin.premiacoes.*')">Premiações</x-nav-link>
+                                <x-nav-link href="{{ route('admin.idioma-regiao.index') }}" :active="request()->routeIs('admin.idioma-regiao.*')">Idiomas e Regiões</x-nav-link>
                                 <x-nav-link href="{{ route('admin.clube-tamanho.index') }}" :active="request()->routeIs('admin.clube-tamanho.*')">Clube Tamanho</x-nav-link>
                             </div>
                         </x-sidebar-group>
 
                         <x-sidebar-group
-                            title="ADMINISTRA??O"
+                            title="ADMINISTRAÇÃO"
                             icon="shield-check"
                             :active="request()->routeIs(['admin.clubes.*', 'admin.ligas-usuarios.*', 'admin.users.*', 'admin.partidas-denuncias.*', 'admin.whatsapp.*', 'admin.logs.*'])"
                         >
                             <div class="space-y-1 py-1">
                                 <x-nav-link href="{{ route('admin.clubes.index') }}" :active="request()->routeIs('admin.clubes.*')">Clubes</x-nav-link>
-                                <x-nav-link href="{{ route('admin.ligas-usuarios.index') }}" :active="request()->routeIs('admin.ligas-usuarios.*')">Usu?rios por Liga</x-nav-link>
-                                <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')">Usu?rios</x-nav-link>
-                                <x-nav-link href="{{ route('admin.partidas-denuncias.index') }}" :active="request()->routeIs('admin.partidas-denuncias.*')">Den?ncias de Partida</x-nav-link>
+                                <x-nav-link href="{{ route('admin.ligas-usuarios.index') }}" :active="request()->routeIs('admin.ligas-usuarios.*')">Usuários por Liga</x-nav-link>
+                                <x-nav-link href="{{ route('admin.users.index') }}" :active="request()->routeIs('admin.users.*')">Usuários</x-nav-link>
+                                <x-nav-link href="{{ route('admin.partidas-denuncias.index') }}" :active="request()->routeIs('admin.partidas-denuncias.*')">Denúncias de Partida</x-nav-link>
                                 <x-nav-link href="{{ route('admin.whatsapp.index') }}" :active="request()->routeIs('admin.whatsapp.*')">WhatsApp</x-nav-link>
                                 <x-nav-link href="{{ route('admin.logs.index') }}" :active="request()->routeIs('admin.logs.*')">Logs</x-nav-link>
                             </div>
@@ -74,7 +74,7 @@
                             :active="request()->routeIs(['admin.paises.*', 'admin.ligas-escudos.*', 'admin.escudos-clubes.*', 'admin.playstyles.*', 'admin.app-assets.*'])"
                         >
                             <div class="space-y-1 py-1">
-                                <x-nav-link href="{{ route('admin.paises.index') }}" :active="request()->routeIs('admin.paises.*')">Pa?ses</x-nav-link>
+                                <x-nav-link href="{{ route('admin.paises.index') }}" :active="request()->routeIs('admin.paises.*')">Países</x-nav-link>
                                 <x-nav-link href="{{ route('admin.ligas-escudos.index') }}" :active="request()->routeIs('admin.ligas-escudos.*')">Escudos de Ligas</x-nav-link>
                                 <x-nav-link href="{{ route('admin.escudos-clubes.index') }}" :active="request()->routeIs('admin.escudos-clubes.*')">Escudos de Clubes</x-nav-link>
                                 <x-nav-link href="{{ route('admin.playstyles.index') }}" :active="request()->routeIs('admin.playstyles.*')">Playstyles</x-nav-link>

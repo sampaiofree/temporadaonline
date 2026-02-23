@@ -160,6 +160,9 @@ const syncLegacyRouteInUrl = (view: string, marketSubMode: LegacyMarketSubMode) 
   } else {
     params.delete('subMode');
     params.delete('submode');
+    params.delete('marketModal');
+    params.delete('marketPlayerId');
+    params.delete('marketPlayerView');
   }
 
   const query = params.toString();
@@ -2515,21 +2518,21 @@ const LegacyMarketPlayerThumb = ({
             <img
               src={templateSrc}
               alt="Template do card reduzido"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 z-20 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setTemplateLoaded(true)}
               onError={() => {
                 setTemplateFailed(true);
                 setTemplateLoaded(false);
               }}
             />
-            <div className="absolute inset-0 bg-black/25"></div>
+            <div className="absolute inset-0 z-10 bg-black/15 pointer-events-none"></div>
           </>
         ) : null}
 
         <LegacyPlayerImage
           src={player.photo}
           alt={player.name}
-          wrapperClassName="relative z-10 w-full h-full"
+          wrapperClassName="relative z-0 w-full h-full"
           imgClassName="w-full h-full object-cover object-top"
           fallback={
             <div className="w-full h-full flex items-center justify-center text-[#FFD700]/40">
@@ -2564,7 +2567,7 @@ const LegacyUTCard = ({
   useEffect(() => {
     setTemplateLoaded(false);
     setTemplateFailed(false);
-  }, [templateSrc, player?.id]);
+  }, [templateSrc]);
 
   const shouldUseTemplate = templateSrc !== '' && !templateFailed;
 
@@ -2578,14 +2581,14 @@ const LegacyUTCard = ({
             <img
               src={templateSrc}
               alt="Template do card completo"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`absolute inset-0 z-10 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
               onLoad={() => setTemplateLoaded(true)}
               onError={() => {
                 setTemplateFailed(true);
                 setTemplateLoaded(false);
               }}
             />
-            <div className="absolute inset-0 bg-black/20"></div>
+            <div className="absolute inset-0 z-[5] bg-black/10 pointer-events-none"></div>
           </>
         ) : null}
         <div className="absolute inset-0 opacity-5 pointer-events-none"><div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_#FFD700_1px,_transparent_1px)] bg-[size:20px_20px]"></div></div>
@@ -2609,10 +2612,10 @@ const LegacyUTCard = ({
             />
           </div>
         </div>
-        <div className="relative z-10 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1 my-2">
+        <div className="relative z-20 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1 my-2">
            <h3 className="text-xl font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter whitespace-nowrap overflow-hidden px-2">{player.name}</h3>
         </div>
-        <div className="grid grid-cols-2 gap-x-0 px-4 pt-4">
+        <div className="relative z-20 grid grid-cols-2 gap-x-0 px-4 pt-4">
           <div className="flex flex-col gap-2 border-r border-[#FFD700]/10 pr-2">
             {statsEntries.slice(0, 3).map(([stat, val]) => (
               <div key={stat} className="flex items-center gap-3"><span className="text-lg font-black italic font-heading text-white">{val as number}</span><span className="text-[10px] font-black italic uppercase text-white/30 tracking-widest">{stat}</span></div>
@@ -6187,6 +6190,34 @@ const MarketView = ({
     setMarketProposalsError('');
     setMarketProposalBusyIds([]);
   }, [subMode]);
+
+  useEffect(() => {
+    const canDescribePlayerModal =
+      selectedPlayer
+      && (subMode === 'list' || subMode === 'watchlist' || subMode === 'proposals');
+
+    const params = new URLSearchParams(window.location.search);
+
+    if (canDescribePlayerModal) {
+      const playerId = Number(selectedPlayer?.id ?? 0);
+      params.set('marketModal', 'player');
+      params.set('marketPlayerView', showDetailed ? 'details' : 'card');
+
+      if (playerId > 0) {
+        params.set('marketPlayerId', String(playerId));
+      } else {
+        params.delete('marketPlayerId');
+      }
+    } else {
+      params.delete('marketModal');
+      params.delete('marketPlayerId');
+      params.delete('marketPlayerView');
+    }
+
+    const query = params.toString();
+    const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
+    window.history.replaceState(null, '', nextUrl);
+  }, [selectedPlayer, showDetailed, subMode]);
 
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
   const marketPlayers = useMemo(() => marketPlayersRaw.map(mapLegacyMarketPlayer), [marketPlayersRaw]);
