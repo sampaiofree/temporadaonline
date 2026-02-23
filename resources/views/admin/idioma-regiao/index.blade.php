@@ -1,9 +1,9 @@
-<x-app-layout title="Idiomas e Regi?es">
+<x-app-layout title="Idiomas e Regiões">
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-slate-800">Idiomas e Regi?es</h2>
-                <p class="text-sm text-slate-500">Gerencie os registros de idioma e regi?o usados no perfil.</p>
+                <h2 class="text-2xl font-bold text-slate-800">Idiomas e Regiões</h2>
+                <p class="text-sm text-slate-500">Gerencie os registros de idioma e região usados no perfil.</p>
             </div>
         </div>
     </x-slot>
@@ -31,7 +31,7 @@
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Idiomas</h3>
-                        <p class="text-sm text-slate-500">Lista de idiomas dispon?veis.</p>
+                        <p class="text-sm text-slate-500">Lista de idiomas disponíveis.</p>
                     </div>
                     <button
                         type="button"
@@ -49,7 +49,7 @@
                                 <th class="px-4 py-3 font-semibold">Slug</th>
                                 <th class="px-4 py-3 font-semibold">Perfis</th>
                                 <th class="px-4 py-3 font-semibold">Criado em</th>
-                                <th class="px-4 py-3 font-semibold text-right">A??es</th>
+                                <th class="px-4 py-3 font-semibold text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -106,15 +106,15 @@
             <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                     <div>
-                        <h3 class="text-lg font-semibold text-slate-900">Regi?es</h3>
-                        <p class="text-sm text-slate-500">Lista de regi?es dispon?veis.</p>
+                        <h3 class="text-lg font-semibold text-slate-900">Regiões</h3>
+                        <p class="text-sm text-slate-500">Lista de regiões disponíveis.</p>
                     </div>
                     <button
                         type="button"
                         data-open-modal="regiao"
                         class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     >
-                        Criar regi?o
+                        Criar região
                     </button>
                 </div>
                 <div class="overflow-x-auto">
@@ -125,7 +125,7 @@
                                 <th class="px-4 py-3 font-semibold">Slug</th>
                                 <th class="px-4 py-3 font-semibold">Perfis</th>
                                 <th class="px-4 py-3 font-semibold">Criado em</th>
-                                <th class="px-4 py-3 font-semibold text-right">A??es</th>
+                                <th class="px-4 py-3 font-semibold text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -158,7 +158,7 @@
                                                 @method('DELETE')
                                                 <button
                                                     type="submit"
-                                                    onclick="return confirm('Deseja realmente excluir esta regi?o?')"
+                                                    onclick="return confirm('Deseja realmente excluir esta região?')"
                                                     class="inline-flex items-center rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
                                                 >
                                                     Excluir
@@ -170,7 +170,7 @@
                             @empty
                                 <tr>
                                     <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
-                                        Nenhuma regi?o cadastrada.
+                                        Nenhuma região cadastrada.
                                     </td>
                                 </tr>
                             @endforelse
@@ -254,7 +254,7 @@
     >
         <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
             <div class="flex items-center justify-between gap-4">
-                <h3 id="regiao-modal-title" class="text-lg font-semibold text-slate-900">Criar regi?o</h3>
+                <h3 id="regiao-modal-title" class="text-lg font-semibold text-slate-900">Criar região</h3>
                 <button
                     type="button"
                     data-close-modal="regiao"
@@ -270,7 +270,7 @@
                 <input type="hidden" name="form_context" value="regiao">
 
                 <div>
-                    <label for="regiao-nome" class="text-xs font-semibold text-slate-700">Nome da regi?o</label>
+                    <label for="regiao-nome" class="text-xs font-semibold text-slate-700">Nome da região</label>
                     <input
                         id="regiao-nome"
                         name="nome"
@@ -298,7 +298,7 @@
                         type="submit"
                         class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     >
-                        Salvar regi?o
+                        Salvar região
                     </button>
                 </div>
             </form>
@@ -444,7 +444,7 @@
             function init() {
                 var handlers = {
                     idioma: setupEntityModal('idioma', 'idioma'),
-                    regiao: setupEntityModal('regiao', 'regi?o'),
+                    regiao: setupEntityModal('regiao', 'região'),
                 };
 
                 var shouldReopen = {{ $errors->any() ? 'true' : 'false' }};

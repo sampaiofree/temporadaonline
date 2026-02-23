@@ -52,6 +52,7 @@
                 font-style: italic;
             }
         </style>
+        @include('components.app_assets')
         <script>
             window.__LEGACY_CONFIG__ = @json($legacyConfig ?? []);
         </script>
