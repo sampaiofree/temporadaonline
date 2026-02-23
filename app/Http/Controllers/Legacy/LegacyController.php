@@ -1218,7 +1218,7 @@ class LegacyController extends Controller
                 'liga' => [
                     'id' => $liga->id,
                     'nome' => $liga->nome,
-                    'timezone' => $liga->timezone ?? 'UTC',
+                    'timezone' => $liga->resolveTimezone(),
                     'confederacao_id' => $liga->confederacao_id,
                     'confederacao_nome' => $liga->confederacao?->nome,
                 ],
@@ -1297,6 +1297,47 @@ class LegacyController extends Controller
             })
             ->values();
 
+        $inboxTimezone = $liga->resolveTimezone();
+        $todayDateInLeague = now($inboxTimezone)->toDateString();
+
+        $todayScheduledOpenMatches = $partidas
+            ->filter(function (Partida $partida) use ($inboxTimezone, $todayDateInLeague): bool {
+                if (! $partida->scheduled_at) {
+                    return false;
+                }
+
+                if ((string) $partida->estado === 'finalizada') {
+                    return false;
+                }
+
+                $scheduledLocalDate = $partida->scheduled_at
+                    ->copy()
+                    ->timezone($inboxTimezone)
+                    ->toDateString();
+
+                return $scheduledLocalDate === $todayDateInLeague;
+            })
+            ->values();
+
+        $pastScheduledUnfinalizedMatches = $partidas
+            ->filter(function (Partida $partida) use ($inboxTimezone, $todayDateInLeague): bool {
+                if (! $partida->scheduled_at) {
+                    return false;
+                }
+
+                if ((string) $partida->estado === 'finalizada') {
+                    return false;
+                }
+
+                $scheduledLocalDate = $partida->scheduled_at
+                    ->copy()
+                    ->timezone($inboxTimezone)
+                    ->toDateString();
+
+                return $scheduledLocalDate < $todayDateInLeague;
+            })
+            ->values();
+
         $proposalBaseQuery = LigaProposta::query()
             ->with(['elencopadrao:id,short_name,long_name', 'clubeDestino:id,nome'])
             ->where('status', 'aberta')
@@ -1339,6 +1380,137 @@ class LegacyController extends Controller
             ->first();
 
         $messages = [];
+
+        $esquemaLayout = $clube->esquema_tatico_layout;
+        $esquemaPlayers = [];
+        if (is_array($esquemaLayout)) {
+            $rawPlayers = $esquemaLayout['players'] ?? [];
+            if (is_array($rawPlayers)) {
+                $esquemaPlayers = $rawPlayers;
+            }
+        }
+
+        if (count($esquemaPlayers) === 0) {
+            $messages[] = [
+                'id' => 'tactical-setup-missing',
+                'type' => 'CLUBE',
+                'title' => 'CONFIGURE SEU ESQUEMA TATICO',
+                'sender' => 'MCO SYSTEM',
+                'content' => 'Voce ainda nao configurou o esquema tatico do seu clube. Monte o posicionamento para agilizar a organizacao das partidas.',
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => false,
+                'action' => 'TACTICAL_SETUP',
+                'action_label' => 'ABRIR ESQUEMA TATICO',
+            ];
+        }
+
+        $availableAchievementCount = 0;
+        $latestAvailableAchievement = null;
+        $availablePatrocinioCount = 0;
+        $latestAvailablePatrocinio = null;
+
+        $conquistaProgress = $this->computeLegacyConquistaProgress($liga, $clube);
+        $claimedConquistaIds = LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->pluck('conquista_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $claimedConquistaMap = array_flip($claimedConquistaIds);
+
+        $availableConquistas = Conquista::query()
+            ->orderBy('tipo')
+            ->orderBy('quantidade')
+            ->orderBy('id')
+            ->get(['id', 'nome', 'tipo', 'quantidade'])
+            ->filter(function (Conquista $conquista) use ($conquistaProgress, $claimedConquistaMap): bool {
+                if (isset($claimedConquistaMap[(int) $conquista->id])) {
+                    return false;
+                }
+
+                $tipo = (string) $conquista->tipo;
+                $current = (int) ($conquistaProgress[$tipo] ?? 0);
+                $required = (int) ($conquista->quantidade ?? 0);
+
+                return $current >= $required;
+            })
+            ->values();
+
+        $availableAchievementCount = (int) $availableConquistas->count();
+        $latestAvailableAchievement = $availableConquistas->first();
+
+        if ($availableAchievementCount > 0) {
+            $achievementName = (string) ($latestAvailableAchievement?->nome ?: 'CONQUISTA');
+
+            $messages[] = [
+                'id' => 'achievement-claim-available',
+                'type' => 'CONQUISTA',
+                'title' => $availableAchievementCount === 1
+                    ? 'CONQUISTA DISPONIVEL PARA RESGATE'
+                    : 'CONQUISTAS DISPONIVEIS PARA RESGATE',
+                'sender' => 'MCO ACHIEVEMENTS',
+                'content' => $availableAchievementCount === 1
+                    ? "A conquista {$achievementName} ja pode ser resgatada."
+                    : "Voce possui {$availableAchievementCount} conquistas prontas para resgate.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => false,
+                'action' => 'ACHIEVEMENTS',
+                'action_label' => 'ABRIR CONQUISTAS',
+            ];
+        }
+
+        $fans = (int) LigaClubeConquista::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
+            ->sum('conquistas.fans');
+
+        $claimedPatrocinioIds = LigaClubePatrocinio::query()
+            ->where('liga_id', $liga->id)
+            ->where('liga_clube_id', $clube->id)
+            ->whereNotNull('claimed_at')
+            ->pluck('patrocinio_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $claimedPatrocinioMap = array_flip($claimedPatrocinioIds);
+
+        $availablePatrocinios = Patrocinio::query()
+            ->orderBy('fans')
+            ->orderBy('id')
+            ->get(['id', 'nome', 'fans'])
+            ->filter(function (Patrocinio $patrocinio) use ($fans, $claimedPatrocinioMap): bool {
+                if (isset($claimedPatrocinioMap[(int) $patrocinio->id])) {
+                    return false;
+                }
+
+                return $fans >= (int) ($patrocinio->fans ?? 0);
+            })
+            ->values();
+
+        $availablePatrocinioCount = (int) $availablePatrocinios->count();
+        $latestAvailablePatrocinio = $availablePatrocinios->first();
+
+        if ($availablePatrocinioCount > 0) {
+            $patrocinioName = (string) ($latestAvailablePatrocinio?->nome ?: 'PATROCINIO');
+
+            $messages[] = [
+                'id' => 'patrocinio-claim-available',
+                'type' => 'PATROCINIO',
+                'title' => $availablePatrocinioCount === 1
+                    ? 'PATROCINIO DISPONIVEL PARA RESGATE'
+                    : 'PATROCINIOS DISPONIVEIS PARA RESGATE',
+                'sender' => 'MCO FINANCE',
+                'content' => $availablePatrocinioCount === 1
+                    ? "O patrocinio {$patrocinioName} ja pode ser resgatado."
+                    : "Voce possui {$availablePatrocinioCount} patrocinios prontos para resgate.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => false,
+                'action' => 'PATROCINIOS',
+                'action_label' => 'ABRIR PATROCINIOS',
+            ];
+        }
 
         if ($proposalCount > 0) {
             $playerName = (string) (
@@ -1418,6 +1590,58 @@ class LegacyController extends Controller
             ];
         }
 
+        if ($todayScheduledOpenMatches->isNotEmpty()) {
+            $todayMatchCount = (int) $todayScheduledOpenMatches->count();
+            $opponents = $todayScheduledOpenMatches
+                ->take(2)
+                ->map(fn (Partida $partida) => $this->legacyOpponentName($partida, (int) $clube->id))
+                ->filter()
+                ->values();
+            $opponentsLabel = $opponents->isNotEmpty()
+                ? ' ('.$opponents->implode(', ').($todayMatchCount > 2 ? ', ...' : '').')'
+                : '';
+
+            $messages[] = [
+                'id' => 'today-match-pending',
+                'type' => 'PARTIDA',
+                'title' => $todayMatchCount === 1
+                    ? 'VOCE TEM PARTIDA HOJE'
+                    : 'VOCE TEM PARTIDAS HOJE',
+                'sender' => 'MATCH CENTER',
+                'content' => $todayMatchCount === 1
+                    ? "Existe 1 partida agendada para hoje que ainda nao foi finalizada{$opponentsLabel}."
+                    : "Existem {$todayMatchCount} partidas agendadas para hoje que ainda nao foram finalizadas{$opponentsLabel}.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'MATCH',
+                'action_label' => 'ABRIR MATCH CENTER',
+            ];
+        }
+
+        if ($pastScheduledUnfinalizedMatches->isNotEmpty()) {
+            $pastPendingCount = (int) $pastScheduledUnfinalizedMatches->count();
+            $oldestPending = $pastScheduledUnfinalizedMatches->first();
+            $oldestDate = $oldestPending?->scheduled_at
+                ? $oldestPending->scheduled_at->copy()->timezone($inboxTimezone)->format('d/m')
+                : null;
+
+            $messages[] = [
+                'id' => 'past-match-unfinalized',
+                'type' => 'SUMULA',
+                'title' => $pastPendingCount === 1
+                    ? 'SUMULA PENDENTE DE FINALIZACAO'
+                    : 'SUMULAS PENDENTES DE FINALIZACAO',
+                'sender' => 'MATCH CENTER',
+                'content' => $pastPendingCount === 1
+                    ? 'Existe 1 partida de data anterior que ainda nao foi finalizada.'
+                    : "Existem {$pastPendingCount} partidas de datas anteriores que ainda nao foram finalizadas.".($oldestDate ? " Mais antiga em {$oldestDate}." : ''),
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'MATCH',
+                'action_label' => 'REVISAR NO MATCH CENTER',
+            ];
+        }
+
         foreach ($confirmationMatches as $partida) {
             $opponent = $this->legacyOpponentName($partida, (int) $clube->id);
             $mandante = $partida->placar_mandante ?? '-';
@@ -1458,13 +1682,17 @@ class LegacyController extends Controller
             (int) $evaluationMatches->count(),
             $proposalCount,
             $outbidCount,
+            (int) $todayScheduledOpenMatches->count(),
+            (int) $pastScheduledUnfinalizedMatches->count(),
+            $availableAchievementCount,
+            $availablePatrocinioCount,
         );
 
         return response()->json([
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
-                'timezone' => $liga->timezone ?? 'UTC',
+                'timezone' => $liga->resolveTimezone(),
                 'confederacao_id' => $liga->confederacao_id,
                 'confederacao_nome' => $liga->confederacao?->nome,
             ],
@@ -1494,7 +1722,11 @@ class LegacyController extends Controller
         int $confirmationCount,
         int $evaluationCount,
         int $proposalCount = 0,
-        int $auctionOutbidCount = 0
+        int $auctionOutbidCount = 0,
+        int $todayOpenMatchCount = 0,
+        int $pastUnfinalizedMatchCount = 0,
+        int $achievementClaimCount = 0,
+        int $patrocinioClaimCount = 0
     ): array
     {
         $scheduleCount = max(0, $scheduleCount);
@@ -1502,8 +1734,28 @@ class LegacyController extends Controller
         $evaluationCount = max(0, $evaluationCount);
         $proposalCount = max(0, $proposalCount);
         $auctionOutbidCount = max(0, $auctionOutbidCount);
-        $totalActions = $scheduleCount + $confirmationCount + $evaluationCount + $proposalCount + $auctionOutbidCount;
-        $totalMessages = ($scheduleCount > 0 ? 1 : 0) + ($proposalCount > 0 ? 1 : 0) + ($auctionOutbidCount > 0 ? 1 : 0) + $confirmationCount + $evaluationCount;
+        $todayOpenMatchCount = max(0, $todayOpenMatchCount);
+        $pastUnfinalizedMatchCount = max(0, $pastUnfinalizedMatchCount);
+        $achievementClaimCount = max(0, $achievementClaimCount);
+        $patrocinioClaimCount = max(0, $patrocinioClaimCount);
+        $totalActions = $scheduleCount
+            + $confirmationCount
+            + $evaluationCount
+            + $proposalCount
+            + $auctionOutbidCount
+            + $todayOpenMatchCount
+            + $pastUnfinalizedMatchCount
+            + $achievementClaimCount
+            + $patrocinioClaimCount;
+        $totalMessages = ($scheduleCount > 0 ? 1 : 0)
+            + ($proposalCount > 0 ? 1 : 0)
+            + ($auctionOutbidCount > 0 ? 1 : 0)
+            + ($todayOpenMatchCount > 0 ? 1 : 0)
+            + ($pastUnfinalizedMatchCount > 0 ? 1 : 0)
+            + ($achievementClaimCount > 0 ? 1 : 0)
+            + ($patrocinioClaimCount > 0 ? 1 : 0)
+            + $confirmationCount
+            + $evaluationCount;
 
         if ($totalActions === 0) {
             return [
@@ -1513,6 +1765,10 @@ class LegacyController extends Controller
                 'schedule_count' => 0,
                 'proposal_count' => 0,
                 'auction_outbid_count' => 0,
+                'today_open_match_count' => 0,
+                'past_unfinalized_match_count' => 0,
+                'achievement_claim_count' => 0,
+                'patrocinio_claim_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -1541,6 +1797,30 @@ class LegacyController extends Controller
                 : "{$auctionOutbidCount} lances cobertos em leilao";
         }
 
+        if ($todayOpenMatchCount > 0) {
+            $segments[] = $todayOpenMatchCount === 1
+                ? '1 partida de hoje nao finalizada'
+                : "{$todayOpenMatchCount} partidas de hoje nao finalizadas";
+        }
+
+        if ($pastUnfinalizedMatchCount > 0) {
+            $segments[] = $pastUnfinalizedMatchCount === 1
+                ? '1 partida anterior sem finalizacao'
+                : "{$pastUnfinalizedMatchCount} partidas anteriores sem finalizacao";
+        }
+
+        if ($achievementClaimCount > 0) {
+            $segments[] = $achievementClaimCount === 1
+                ? '1 conquista para resgatar'
+                : "{$achievementClaimCount} conquistas para resgatar";
+        }
+
+        if ($patrocinioClaimCount > 0) {
+            $segments[] = $patrocinioClaimCount === 1
+                ? '1 patrocinio para resgatar'
+                : "{$patrocinioClaimCount} patrocinios para resgatar";
+        }
+
         if ($confirmationCount > 0) {
             $segments[] = $confirmationCount === 1
                 ? '1 confirmacao de placar'
@@ -1564,13 +1844,25 @@ class LegacyController extends Controller
             'schedule_count' => $scheduleCount,
             'proposal_count' => $proposalCount,
             'auction_outbid_count' => $auctionOutbidCount,
+            'today_open_match_count' => $todayOpenMatchCount,
+            'past_unfinalized_match_count' => $pastUnfinalizedMatchCount,
+            'achievement_claim_count' => $achievementClaimCount,
+            'patrocinio_claim_count' => $patrocinioClaimCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
             'detail' => implode(' e ', $segments).'.',
             'primary_action' => $scheduleCount > 0
                 ? 'SCHEDULE'
-                : ($proposalCount > 0 ? 'MARKET_PROPOSALS' : ($auctionOutbidCount > 0 ? 'TRANSFER' : 'MATCH')),
+                : ($proposalCount > 0
+                    ? 'MARKET_PROPOSALS'
+                    : ($auctionOutbidCount > 0
+                        ? 'TRANSFER'
+                        : (($todayOpenMatchCount > 0 || $pastUnfinalizedMatchCount > 0)
+                            ? 'MATCH'
+                            : ($achievementClaimCount > 0
+                                ? 'ACHIEVEMENTS'
+                                : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH'))))),
         ];
     }
 
@@ -3951,7 +4243,7 @@ class LegacyController extends Controller
     private function resolveMarketLiga(User $user, ?int $confederacaoId): ?Liga
     {
         $query = $user->ligas()
-            ->with(['jogo:id,nome', 'confederacao:id,nome'])
+            ->with(['jogo:id,nome', 'confederacao:id,nome,timezone'])
             ->orderByRaw("CASE WHEN ligas.status = 'ativa' THEN 0 ELSE 1 END")
             ->orderByDesc('ligas.id');
 
@@ -3973,7 +4265,7 @@ class LegacyController extends Controller
     private function resolveActiveMarketLiga(User $user, ?int $confederacaoId): ?Liga
     {
         $query = $user->ligas()
-            ->with(['jogo:id,nome', 'confederacao:id,nome,jogo_id'])
+            ->with(['jogo:id,nome', 'confederacao:id,nome,jogo_id,timezone'])
             ->where('ligas.status', 'ativa')
             ->orderByDesc('ligas.id');
 

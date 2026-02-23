@@ -14,5 +14,8 @@ class AppAsset extends Model
         'logo_dark',
         'imagem_campo',
         'background_app',
+        'card_completo',
+        'card_reduzido',
+        'img_jogador',
     ];
 }

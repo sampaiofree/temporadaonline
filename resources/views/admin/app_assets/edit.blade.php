@@ -138,6 +138,77 @@
                     @enderror
                 </div>
 
+                <div class="grid gap-6 lg:grid-cols-3">
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-slate-700">Card completo (playstyles)</label>
+                        @if($assets->card_completo)
+                            <div class="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                <img
+                                    src="{{ Storage::disk('public')->url($assets->card_completo) }}"
+                                    alt="Card completo"
+                                    class="h-32 w-full object-cover"
+                                >
+                            </div>
+                        @endif
+                        <input
+                            type="file"
+                            name="card_completo"
+                            accept="image/*"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-slate-400">Enviar um novo arquivo substitui o anterior.</p>
+                        @error('card_completo')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-slate-700">Card reduzido (playstyles)</label>
+                        @if($assets->card_reduzido)
+                            <div class="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                <img
+                                    src="{{ Storage::disk('public')->url($assets->card_reduzido) }}"
+                                    alt="Card reduzido"
+                                    class="h-32 w-full object-cover"
+                                >
+                            </div>
+                        @endif
+                        <input
+                            type="file"
+                            name="card_reduzido"
+                            accept="image/*"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-slate-400">Enviar um novo arquivo substitui o anterior.</p>
+                        @error('card_reduzido')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-slate-700">Imagem padrão do jogador</label>
+                        @if($assets->img_jogador)
+                            <div class="mb-2 overflow-hidden rounded-xl border border-slate-200 bg-slate-50">
+                                <img
+                                    src="{{ Storage::disk('public')->url($assets->img_jogador) }}"
+                                    alt="Imagem padrão do jogador"
+                                    class="h-32 w-full object-cover"
+                                >
+                            </div>
+                        @endif
+                        <input
+                            type="file"
+                            name="img_jogador"
+                            accept="image/*"
+                            class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                        >
+                        <p class="text-xs text-slate-400">Usada como fallback quando a foto do atleta falhar.</p>
+                        @error('img_jogador')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+                </div>
+
                 <div class="flex items-center justify-end gap-3 pt-6">
                     <button
                         type="submit"

@@ -1,9 +1,9 @@
-<x-app-layout title="Idiomas e Regiões">
+<x-app-layout title="Idiomas e Regi?es">
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <div>
-                <h2 class="text-2xl font-bold text-slate-800">Idiomas e Regiões</h2>
-                <p class="text-sm text-slate-500">Gerencie os registros de idioma e região usados no perfil.</p>
+                <h2 class="text-2xl font-bold text-slate-800">Idiomas e Regi?es</h2>
+                <p class="text-sm text-slate-500">Gerencie os registros de idioma e regi?o usados no perfil.</p>
             </div>
         </div>
     </x-slot>
@@ -31,7 +31,7 @@
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                     <div>
                         <h3 class="text-lg font-semibold text-slate-900">Idiomas</h3>
-                        <p class="text-sm text-slate-500">Lista de idiomas disponíveis.</p>
+                        <p class="text-sm text-slate-500">Lista de idiomas dispon?veis.</p>
                     </div>
                     <button
                         type="button"
@@ -49,7 +49,7 @@
                                 <th class="px-4 py-3 font-semibold">Slug</th>
                                 <th class="px-4 py-3 font-semibold">Perfis</th>
                                 <th class="px-4 py-3 font-semibold">Criado em</th>
-                                <th class="px-4 py-3 font-semibold text-right">Ações</th>
+                                <th class="px-4 py-3 font-semibold text-right">A??es</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -64,7 +64,7 @@
                                     <td class="px-4 py-4 font-semibold text-slate-900">{{ $idioma->nome }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $idioma->slug }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $idioma->profiles_count }}</td>
-                                    <td class="px-4 py-4 text-slate-600">{{ $idioma->created_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                                    <td class="px-4 py-4 text-slate-600">{{ $idioma->created_at?->format('d/m/Y H:i') ?? '?' }}</td>
                                     <td class="px-4 py-4 text-right">
                                         <div class="flex justify-end gap-2">
                                             <button
@@ -106,15 +106,15 @@
             <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
                 <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
                     <div>
-                        <h3 class="text-lg font-semibold text-slate-900">Regiões</h3>
-                        <p class="text-sm text-slate-500">Lista de regiões disponíveis.</p>
+                        <h3 class="text-lg font-semibold text-slate-900">Regi?es</h3>
+                        <p class="text-sm text-slate-500">Lista de regi?es dispon?veis.</p>
                     </div>
                     <button
                         type="button"
                         data-open-modal="regiao"
                         class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     >
-                        Criar região
+                        Criar regi?o
                     </button>
                 </div>
                 <div class="overflow-x-auto">
@@ -125,7 +125,7 @@
                                 <th class="px-4 py-3 font-semibold">Slug</th>
                                 <th class="px-4 py-3 font-semibold">Perfis</th>
                                 <th class="px-4 py-3 font-semibold">Criado em</th>
-                                <th class="px-4 py-3 font-semibold text-right">Ações</th>
+                                <th class="px-4 py-3 font-semibold text-right">A??es</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-slate-100">
@@ -140,7 +140,7 @@
                                     <td class="px-4 py-4 font-semibold text-slate-900">{{ $regiao->nome }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $regiao->slug }}</td>
                                     <td class="px-4 py-4 text-slate-600">{{ $regiao->profiles_count }}</td>
-                                    <td class="px-4 py-4 text-slate-600">{{ $regiao->created_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                                    <td class="px-4 py-4 text-slate-600">{{ $regiao->created_at?->format('d/m/Y H:i') ?? '?' }}</td>
                                     <td class="px-4 py-4 text-right">
                                         <div class="flex justify-end gap-2">
                                             <button
@@ -158,7 +158,7 @@
                                                 @method('DELETE')
                                                 <button
                                                     type="submit"
-                                                    onclick="return confirm('Deseja realmente excluir esta região?')"
+                                                    onclick="return confirm('Deseja realmente excluir esta regi?o?')"
                                                     class="inline-flex items-center rounded-xl border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-50"
                                                 >
                                                     Excluir
@@ -170,7 +170,7 @@
                             @empty
                                 <tr>
                                     <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
-                                        Nenhuma região cadastrada.
+                                        Nenhuma regi?o cadastrada.
                                     </td>
                                 </tr>
                             @endforelse
@@ -254,7 +254,7 @@
     >
         <div class="w-full max-w-xl rounded-2xl bg-white p-6 shadow-xl">
             <div class="flex items-center justify-between gap-4">
-                <h3 id="regiao-modal-title" class="text-lg font-semibold text-slate-900">Criar região</h3>
+                <h3 id="regiao-modal-title" class="text-lg font-semibold text-slate-900">Criar regi?o</h3>
                 <button
                     type="button"
                     data-close-modal="regiao"
@@ -270,7 +270,7 @@
                 <input type="hidden" name="form_context" value="regiao">
 
                 <div>
-                    <label for="regiao-nome" class="text-xs font-semibold text-slate-700">Nome da região</label>
+                    <label for="regiao-nome" class="text-xs font-semibold text-slate-700">Nome da regi?o</label>
                     <input
                         id="regiao-nome"
                         name="nome"
@@ -298,7 +298,7 @@
                         type="submit"
                         class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                     >
-                        Salvar região
+                        Salvar regi?o
                     </button>
                 </div>
             </form>
@@ -444,7 +444,7 @@
             function init() {
                 var handlers = {
                     idioma: setupEntityModal('idioma', 'idioma'),
-                    regiao: setupEntityModal('regiao', 'região'),
+                    regiao: setupEntityModal('regiao', 'regi?o'),
                 };
 
                 var shouldReopen = {{ $errors->any() ? 'true' : 'false' }};

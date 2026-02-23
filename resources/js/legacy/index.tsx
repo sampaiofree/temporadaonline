@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
 const LEGACY_CONFIG = (window as any).__LEGACY_CONFIG__ || {};
+const APP_ASSETS = (window as any).__APP_ASSETS__ || {};
 const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
 
 const getLegacyConfederacoes = () => {
@@ -1508,13 +1509,20 @@ const PublicClubProfileView = ({
              <div className="space-y-3">
                {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
                  <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    {(() => {
+                      const playerImageUrl = String(player?.foto || player?.player_face_url || '').trim();
+                      return (
                     <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700] overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
-                      {player?.foto ? (
-                        <img src={player.foto} className="w-full h-full object-cover grayscale opacity-70" />
-                      ) : (
-                        <i className="fas fa-user text-[#FFD700]/30"></i>
-                      )}
+                      <LegacyPlayerImage
+                        src={playerImageUrl}
+                        alt={String(player?.nome ?? 'ATLETA')}
+                        wrapperClassName="w-full h-full"
+                        imgClassName="w-full h-full object-cover"
+                        fallback={<i className="fas fa-user text-[#FFD700]/30"></i>}
+                      />
                     </div>
+                      );
+                    })()}
                     <div className="flex-grow">
                       <p className="text-[12px] font-black italic uppercase text-white leading-none">{String(player?.nome ?? 'ATLETA')}</p>
                       <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} • OVR {Number(player?.ovr ?? 0)}</p>
@@ -2477,12 +2485,109 @@ const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?
 
 // --- Player Detail Components ---
 
-const LegacyUTCard = ({ player }: { player: any }) => {
+const LegacyMarketPlayerThumb = ({
+  player,
+  useReducedTemplate = false,
+}: {
+  player: any,
+  useReducedTemplate?: boolean,
+}) => {
+  const templateSrc = useReducedTemplate ? LEGACY_MARKET_CARD_REDUZIDO_URL : '';
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [templateFailed, setTemplateFailed] = useState(false);
+
+  useEffect(() => {
+    setTemplateLoaded(false);
+    setTemplateFailed(false);
+  }, [templateSrc]);
+
+  const shouldUseTemplate = templateSrc !== '' && !templateFailed;
+
+  return (
+    <div className="relative w-14 h-14 overflow-visible">
+      <div
+        className={`relative z-10 w-14 h-14 ${shouldUseTemplate ? '' : 'bg-[#121212]'} border-b-2 border-[#FFD700]/30 overflow-hidden`}
+        style={{ clipPath: SHIELD_CLIP }}
+      >
+        {shouldUseTemplate ? (
+          <>
+            {!templateLoaded ? <div className="absolute inset-0 animate-pulse bg-white/5"></div> : null}
+            <img
+              src={templateSrc}
+              alt="Template do card reduzido"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setTemplateLoaded(true)}
+              onError={() => {
+                setTemplateFailed(true);
+                setTemplateLoaded(false);
+              }}
+            />
+            <div className="absolute inset-0 bg-black/25"></div>
+          </>
+        ) : null}
+
+        <LegacyPlayerImage
+          src={player.photo}
+          alt={player.name}
+          wrapperClassName="relative z-10 w-full h-full"
+          imgClassName="w-full h-full object-cover object-top"
+          fallback={
+            <div className="w-full h-full flex items-center justify-center text-[#FFD700]/40">
+              <i className="fas fa-user text-sm"></i>
+            </div>
+          }
+        />
+      </div>
+
+      <div className="absolute bottom-0 right-0 z-30 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+        {player.ovr}
+      </div>
+      <div className="absolute bottom-0 left-0 z-30 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+        {player.pos}
+      </div>
+    </div>
+  );
+};
+
+const LegacyUTCard = ({
+  player,
+  preferAssetTemplate = false,
+}: {
+  player: any,
+  preferAssetTemplate?: boolean,
+}) => {
   const statsEntries = Object.entries(player.stats || {});
+  const templateSrc = preferAssetTemplate ? LEGACY_MARKET_CARD_COMPLETO_URL : '';
+  const [templateLoaded, setTemplateLoaded] = useState(false);
+  const [templateFailed, setTemplateFailed] = useState(false);
+
+  useEffect(() => {
+    setTemplateLoaded(false);
+    setTemplateFailed(false);
+  }, [templateSrc, player?.id]);
+
+  const shouldUseTemplate = templateSrc !== '' && !templateFailed;
+
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
       <div className="absolute inset-0 bg-[#FFD700] opacity-10 blur-3xl animate-pulse"></div>
       <div className="relative w-full h-full bg-[#1E1E1E] border-[3px] border-[#FFD700] overflow-hidden shadow-2xl transition-transform duration-500" style={{ clipPath: SHIELD_CLIP }}>
+        {shouldUseTemplate ? (
+          <>
+            {!templateLoaded ? <div className="absolute inset-0 animate-pulse bg-white/5"></div> : null}
+            <img
+              src={templateSrc}
+              alt="Template do card completo"
+              className={`absolute inset-0 w-full h-full object-cover transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setTemplateLoaded(true)}
+              onError={() => {
+                setTemplateFailed(true);
+                setTemplateLoaded(false);
+              }}
+            />
+            <div className="absolute inset-0 bg-black/20"></div>
+          </>
+        ) : null}
         <div className="absolute inset-0 opacity-5 pointer-events-none"><div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,_#FFD700_1px,_transparent_1px)] bg-[size:20px_20px]"></div></div>
         <div className="relative h-1/2 flex pt-6 px-4">
           <div className="z-20 shrink-0 flex flex-col items-center">
@@ -2491,7 +2596,17 @@ const LegacyUTCard = ({ player }: { player: any }) => {
             <i className="fa-brands fa-playstation mt-4 text-[#FFD700] text-xl opacity-40"></i>
           </div>
           <div className="absolute right-0 top-0 bottom-0 w-3/4 overflow-hidden">
-            <img src={player.photo} className="w-full h-full object-cover object-top filter contrast-125 saturate-110 drop-shadow-[-10px_0_15px_rgba(0,0,0,0.8)]" alt={player.name} />
+            <LegacyPlayerImage
+              src={player.photo}
+              alt={player.name}
+              wrapperClassName="w-full h-full"
+              imgClassName="w-full h-full object-cover object-top filter contrast-125 saturate-110 drop-shadow-[-10px_0_15px_rgba(0,0,0,0.8)]"
+              fallback={
+                <div className="w-full h-full flex items-center justify-center text-[#FFD700]/30 bg-[#121212]">
+                  <i className="fas fa-user text-3xl"></i>
+                </div>
+              }
+            />
           </div>
         </div>
         <div className="relative z-10 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1 my-2">
@@ -2766,7 +2881,18 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
               onClick={() => setSelectedPlayer(player)}
               style={{ clipPath: AGGRESSIVE_CLIP }}
             >
-              <img src={player.photo} className="w-12 h-12 object-cover" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }} />
+              <LegacyPlayerImage
+                src={player.photo}
+                alt={player.name}
+                wrapperClassName="w-12 h-12"
+                wrapperStyle={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+                imgClassName="w-full h-full object-cover"
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center bg-[#121212] text-[#FFD700]/30">
+                    <i className="fas fa-user text-sm"></i>
+                  </div>
+                }
+              />
               <div className="flex-grow overflow-hidden">
                 <p className="text-lg font-black italic font-heading text-white uppercase truncate">{player.name}</p>
                 <p className="text-[10px] text-[#FFD700] font-bold uppercase italic">
@@ -2911,6 +3037,7 @@ const AchievementsView = ({
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
   const [claimingIds, setClaimingIds] = useState<number[]>([]);
   const [claimNotice, setClaimNotice] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -2919,6 +3046,7 @@ const AchievementsView = ({
       if (!currentCareer?.id) {
         setClubData(null);
         setGroups([]);
+        setExpandedGroups({});
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
         setError('Selecione uma confederacao para visualizar as conquistas.');
         return;
@@ -2927,6 +3055,7 @@ const AchievementsView = ({
       setLoading(true);
       setError('');
       setClaimNotice('');
+      setExpandedGroups({});
 
       try {
         const endpoint = getLegacyAchievementsDataEndpoint(currentCareer.id);
@@ -2970,6 +3099,21 @@ const AchievementsView = ({
     if (status === 'claimed') return 'RESGATADA';
     if (status === 'available') return 'DISPONIVEL';
     return 'BLOQUEADA';
+  };
+
+  const achievementUnitLabel = (groupType: string, value: number) => {
+    const amount = Math.max(0, Number(value ?? 0) || 0);
+
+    if (groupType === 'gols') return amount === 1 ? 'gol' : 'gols';
+    if (groupType === 'assistencias') return amount === 1 ? 'assistencia' : 'assistencias';
+    if (groupType === 'quantidade_jogos') return amount === 1 ? 'jogo' : 'jogos';
+
+    return amount === 1 ? 'registro' : 'registros';
+  };
+
+  const toggleGroupExpanded = (groupType: string) => {
+    const key = String(groupType || 'grupo');
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleClaim = async (item: any) => {
@@ -3060,58 +3204,165 @@ const AchievementsView = ({
             </div>
           )}
 
-          {groups.map((group) => (
-            <section key={group.tipo} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <div className="flex justify-between items-end mb-5">
-                <div>
-                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
-                  <p className="text-xl font-black italic uppercase font-heading text-white">{group.current} REGISTRADOS</p>
+          {groups.map((group) => {
+            const groupKey = String(group?.tipo || 'grupo');
+            const groupItems = Array.isArray(group?.items) ? group.items : [];
+            const isExpanded = Boolean(expandedGroups[groupKey]);
+            const nextItem = groupItems.find((item: any) => item?.status === 'available')
+              || groupItems.find((item: any) => item?.status === 'locked')
+              || null;
+            const nextItemIndex = nextItem ? groupItems.findIndex((item: any) => Number(item?.id ?? 0) === Number(nextItem?.id ?? 0)) : -1;
+            const nextItemLevel = nextItemIndex >= 0 ? nextItemIndex + 1 : null;
+            const groupMaxTarget = Math.max(
+              0,
+              ...groupItems.map((item: any) => Math.max(0, Number(item?.quantidade ?? 0) || 0)),
+            );
+
+            const renderAchievementRow = (item: any) => (
+              <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                  {item.imagemUrl ? (
+                    <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fas fa-award text-[#FFD700]/50"></i>
+                  )}
                 </div>
-                <p className="text-[9px] font-black italic uppercase text-white/40">
-                  {group.claimedCount}/{group.total} RESGATADAS
-                </p>
-              </div>
 
-              <div className="space-y-3">
-                {group.items.map((item: any) => (
-                  <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                    <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
-                      {item.imagemUrl ? (
-                        <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
-                      ) : (
-                        <i className="fas fa-award text-[#FFD700]/50"></i>
-                      )}
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
+                  <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
+                    QUANTIDADE: {item.current}/{item.quantidade}
+                  </p>
+                  <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
+                    <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
+                  </div>
+                </div>
+                {item.status === 'available' ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleClaim(item)}
+                    disabled={claimingIds.includes(Number(item.id))}
+                    className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                    style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                  >
+                    {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                  </button>
+                ) : (
+                  <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
+                    {statusBadgeLabel(item.status)}
+                  </span>
+                )}
+              </article>
+            );
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
-                      <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
-                        QUANTIDADE: {item.current}/{item.quantidade}
-                      </p>
-                      <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
-                        <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
-                      </div>
-                    </div>
-                    {item.status === 'available' ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleClaim(item)}
-                        disabled={claimingIds.includes(Number(item.id))}
-                        className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
-                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                      >
-                        {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
-                      </button>
+            return (
+              <section key={groupKey} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <div className="flex justify-between items-end mb-5 gap-3">
+                  <div className="min-w-0">
+                    <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
+                    <p className="text-xl font-black italic uppercase font-heading text-white">
+                      {isExpanded ? `${group.current} REGISTRADOS` : 'PROXIMO OBJETIVO'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[9px] font-black italic uppercase text-white/40">
+                      PROGRESSO: {group.current}/{groupMaxTarget}
+                    </p>
+                    <p className="text-[9px] font-black italic uppercase text-white/40 mt-1">
+                      {group.claimedCount}/{group.total} RESGATADAS
+                    </p>
+                  </div>
+                </div>
+
+                {!isExpanded ? (
+                  <div className="space-y-3">
+                    {nextItem ? (
+                      <article className="bg-[#121212] p-4 border border-white/10 flex items-center gap-4 relative overflow-hidden" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        {nextItemLevel ? (
+                          <div className="absolute top-0 right-0 bg-[#FFD700] text-[#121212] text-[7px] font-black px-2 py-0.5 italic">
+                            NIVEL {nextItemLevel}
+                          </div>
+                        ) : null}
+
+                        <div className="w-16 h-16 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                          {nextItem.imagemUrl ? (
+                            <img src={nextItem.imagemUrl} alt={nextItem.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-award text-[#FFD700]/50"></i>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-center mb-1 gap-2">
+                            <p className="text-xs font-black italic uppercase text-white truncate">{nextItem.nome}</p>
+                            <span className="text-[9px] font-black text-[#FFD700] shrink-0">
+                              {nextItem.current}/{nextItem.quantidade}
+                            </span>
+                          </div>
+
+                          <div className="w-full h-2 bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#FFD700] to-[#b89b00] transition-all duration-500"
+                              style={{ width: `${Math.max(0, Math.min(100, Number(nextItem.progressPercent ?? 0) || 0))}%` }}
+                            ></div>
+                          </div>
+
+                          <p className="text-[8px] font-bold uppercase italic text-white/30 mt-2 tracking-tighter">
+                            {nextItem.status === 'available'
+                              ? 'PRONTA PARA RESGATE'
+                              : `FALTAM ${Math.max(0, Number(nextItem.quantidade ?? 0) - Number(nextItem.current ?? 0))} ${achievementUnitLabel(groupKey, Math.max(0, Number(nextItem.quantidade ?? 0) - Number(nextItem.current ?? 0)))} PARA O PROXIMO NIVEL`}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0">
+                          {nextItem.status === 'available' ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleClaim(nextItem)}
+                              disabled={claimingIds.includes(Number(nextItem.id))}
+                              className="text-[8px] font-black italic px-3 py-2 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                              style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                            >
+                              {claimingIds.includes(Number(nextItem.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                            </button>
+                          ) : (
+                            <span className={`text-[8px] font-black italic px-2 py-1 ${statusBadgeClass(nextItem.status)}`}>
+                              {statusBadgeLabel(nextItem.status)}
+                            </span>
+                          )}
+                        </div>
+                      </article>
                     ) : (
-                      <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
-                        {statusBadgeLabel(item.status)}
-                      </span>
+                      <div className="bg-[#121212] p-4 border border-white/10" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        <p className="text-[10px] font-black italic uppercase text-white/70">TODAS AS CONQUISTAS DESTE GRUPO JA FORAM RESGATADAS.</p>
+                      </div>
                     )}
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
+
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupExpanded(groupKey)}
+                      className="w-full mt-1 py-2 border border-white/10 text-[9px] font-black italic uppercase text-white/50 hover:bg-white/5 transition-colors"
+                      style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                    >
+                      VISUALIZAR TODAS AS CONQUISTAS
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {groupItems.map((item: any) => renderAchievementRow(item))}
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupExpanded(groupKey)}
+                      className="w-full mt-1 py-2 border border-white/10 text-[9px] font-black italic uppercase text-white/50 hover:bg-white/5 transition-colors"
+                      style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                    >
+                      OCULTAR LISTA COMPLETA
+                    </button>
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
@@ -3132,6 +3383,7 @@ const PatrociniosView = ({
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
   const [claimingIds, setClaimingIds] = useState<number[]>([]);
   const [claimNotice, setClaimNotice] = useState('');
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -3140,6 +3392,7 @@ const PatrociniosView = ({
       if (!currentCareer?.id) {
         setClubData(null);
         setGroups([]);
+        setExpandedGroups({});
         setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
         setError('Selecione uma confederacao para visualizar os patrocinios.');
         return;
@@ -3148,6 +3401,7 @@ const PatrociniosView = ({
       setLoading(true);
       setError('');
       setClaimNotice('');
+      setExpandedGroups({});
 
       try {
         const endpoint = getLegacyPatrociniosDataEndpoint(currentCareer.id);
@@ -3192,6 +3446,16 @@ const PatrociniosView = ({
     if (status === 'claimed') return 'RESGATADO';
     if (status === 'available') return 'DISPONIVEL';
     return 'BLOQUEADO';
+  };
+
+  const patrocinioUnitLabel = (value: number) => {
+    const amount = Math.max(0, Number(value ?? 0) || 0);
+    return amount === 1 ? 'FA' : 'FAS';
+  };
+
+  const toggleGroupExpanded = (groupType: string) => {
+    const key = String(groupType || 'grupo');
+    setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleClaim = async (item: any) => {
@@ -3278,61 +3542,172 @@ const PatrociniosView = ({
             </div>
           )}
 
-          {groups.map((group) => (
-            <section key={group.tipo} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <div className="flex justify-between items-end mb-5">
-                <div>
-                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
-                  <p className="text-xl font-black italic uppercase font-heading text-white">{group.current} FAS</p>
+          {groups.map((group) => {
+            const groupKey = String(group?.tipo || 'grupo');
+            const groupItems = Array.isArray(group?.items) ? group.items : [];
+            const isExpanded = Boolean(expandedGroups[groupKey]);
+            const nextItem = groupItems.find((item: any) => item?.status === 'available')
+              || groupItems.find((item: any) => item?.status === 'locked')
+              || null;
+            const nextItemIndex = nextItem ? groupItems.findIndex((item: any) => Number(item?.id ?? 0) === Number(nextItem?.id ?? 0)) : -1;
+            const nextItemLevel = nextItemIndex >= 0 ? nextItemIndex + 1 : null;
+            const groupMaxTarget = Math.max(
+              0,
+              ...groupItems.map((item: any) => Math.max(0, Number(item?.fans ?? 0) || 0)),
+            );
+
+            const renderPatrocinioRow = (item: any) => (
+              <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                  {item.imagemUrl ? (
+                    <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
+                  ) : (
+                    <i className="fas fa-handshake text-[#FFD700]/50"></i>
+                  )}
                 </div>
-                <p className="text-[9px] font-black italic uppercase text-white/40">
-                  {group.claimedCount}/{group.total} RESGATADOS
-                </p>
-              </div>
 
-              <div className="space-y-3">
-                {group.items.map((item: any) => (
-                  <article key={item.id} className="bg-[#121212] p-3 border border-white/10 flex items-center gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                    <div className="w-14 h-14 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
-                      {item.imagemUrl ? (
-                        <img src={item.imagemUrl} alt={item.nome} className="w-full h-full object-cover" />
-                      ) : (
-                        <i className="fas fa-handshake text-[#FFD700]/50"></i>
-                      )}
-                    </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
+                  <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
+                    FAS: {item.currentFans}/{item.fans}
+                  </p>
+                  <p className="text-[8px] font-black uppercase italic text-[#FFD700]/70 tracking-[0.14em] mt-1">
+                    VALOR: M$ {toMValue(item.valor)}M
+                  </p>
+                  <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
+                    <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
+                  </div>
+                </div>
+                {item.status === 'available' ? (
+                  <button
+                    type="button"
+                    onClick={() => void handleClaim(item)}
+                    disabled={claimingIds.includes(Number(item.id))}
+                    className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                    style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                  >
+                    {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                  </button>
+                ) : (
+                  <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
+                    {statusBadgeLabel(item.status)}
+                  </span>
+                )}
+              </article>
+            );
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
-                      <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
-                        FAS: {item.currentFans}/{item.fans}
-                      </p>
-                      <p className="text-[8px] font-black uppercase italic text-[#FFD700]/70 tracking-[0.14em] mt-1">
-                        VALOR: M$ {toMValue(item.valor)}M
-                      </p>
-                      <div className="w-full h-1.5 bg-white/10 mt-2 overflow-hidden">
-                        <div className="h-full bg-[#FFD700]" style={{ width: `${item.progressPercent}%` }}></div>
-                      </div>
-                    </div>
-                    {item.status === 'available' ? (
-                      <button
-                        type="button"
-                        onClick={() => void handleClaim(item)}
-                        disabled={claimingIds.includes(Number(item.id))}
-                        className="text-[8px] font-black italic px-2 py-2 shrink-0 bg-[#FFD700] text-[#121212] disabled:opacity-50"
-                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                      >
-                        {claimingIds.includes(Number(item.id)) ? 'RESGATANDO...' : 'RESGATAR'}
-                      </button>
+            return (
+              <section key={groupKey} className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <div className="flex justify-between items-end mb-5 gap-3">
+                  <div className="min-w-0">
+                    <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">{group.tipoLabel}</h4>
+                    <p className="text-xl font-black italic uppercase font-heading text-white">
+                      {isExpanded ? `${group.current} FAS` : 'PROXIMO OBJETIVO'}
+                    </p>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <p className="text-[9px] font-black italic uppercase text-white/40">
+                      PROGRESSO: {group.current}/{groupMaxTarget}
+                    </p>
+                    <p className="text-[9px] font-black italic uppercase text-white/40 mt-1">
+                      {group.claimedCount}/{group.total} RESGATADOS
+                    </p>
+                  </div>
+                </div>
+
+                {!isExpanded ? (
+                  <div className="space-y-3">
+                    {nextItem ? (
+                      <article className="bg-[#121212] p-4 border border-white/10 flex items-center gap-4 relative overflow-hidden" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        {nextItemLevel ? (
+                          <div className="absolute top-0 right-0 bg-[#FFD700] text-[#121212] text-[7px] font-black px-2 py-0.5 italic">
+                            NIVEL {nextItemLevel}
+                          </div>
+                        ) : null}
+
+                        <div className="w-16 h-16 bg-[#1E1E1E] border border-white/10 shrink-0 overflow-hidden flex items-center justify-center">
+                          {nextItem.imagemUrl ? (
+                            <img src={nextItem.imagemUrl} alt={nextItem.nome} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-handshake text-[#FFD700]/50"></i>
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex justify-between items-center mb-1 gap-2">
+                            <p className="text-xs font-black italic uppercase text-white truncate">{nextItem.nome}</p>
+                            <span className="text-[9px] font-black text-[#FFD700] shrink-0">
+                              {nextItem.currentFans}/{nextItem.fans}
+                            </span>
+                          </div>
+
+                          <p className="text-[8px] font-black uppercase italic text-[#FFD700]/70 tracking-[0.14em] mb-2">
+                            VALOR: M$ {toMValue(nextItem.valor)}M
+                          </p>
+
+                          <div className="w-full h-2 bg-white/5 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-[#FFD700] to-[#b89b00] transition-all duration-500"
+                              style={{ width: `${Math.max(0, Math.min(100, Number(nextItem.progressPercent ?? 0) || 0))}%` }}
+                            ></div>
+                          </div>
+
+                          <p className="text-[8px] font-bold uppercase italic text-white/30 mt-2 tracking-tighter">
+                            {nextItem.status === 'available'
+                              ? 'PRONTO PARA RESGATE'
+                              : `FALTAM ${Math.max(0, Number(nextItem.fans ?? 0) - Number(nextItem.currentFans ?? 0))} ${patrocinioUnitLabel(Math.max(0, Number(nextItem.fans ?? 0) - Number(nextItem.currentFans ?? 0)))} PARA O PROXIMO NIVEL`}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0">
+                          {nextItem.status === 'available' ? (
+                            <button
+                              type="button"
+                              onClick={() => void handleClaim(nextItem)}
+                              disabled={claimingIds.includes(Number(nextItem.id))}
+                              className="text-[8px] font-black italic px-3 py-2 bg-[#FFD700] text-[#121212] disabled:opacity-50"
+                              style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                            >
+                              {claimingIds.includes(Number(nextItem.id)) ? 'RESGATANDO...' : 'RESGATAR'}
+                            </button>
+                          ) : (
+                            <span className={`text-[8px] font-black italic px-2 py-1 ${statusBadgeClass(nextItem.status)}`}>
+                              {statusBadgeLabel(nextItem.status)}
+                            </span>
+                          )}
+                        </div>
+                      </article>
                     ) : (
-                      <span className={`text-[8px] font-black italic px-2 py-1 shrink-0 ${statusBadgeClass(item.status)}`}>
-                        {statusBadgeLabel(item.status)}
-                      </span>
+                      <div className="bg-[#121212] p-4 border border-white/10" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                        <p className="text-[10px] font-black italic uppercase text-white/70">TODOS OS PATROCINIOS DESTE GRUPO JA FORAM RESGATADOS.</p>
+                      </div>
                     )}
-                  </article>
-                ))}
-              </div>
-            </section>
-          ))}
+
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupExpanded(groupKey)}
+                      className="w-full mt-1 py-2 border border-white/10 text-[9px] font-black italic uppercase text-white/50 hover:bg-white/5 transition-colors"
+                      style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                    >
+                      VISUALIZAR TODOS OS PATROCINIOS
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {groupItems.map((item: any) => renderPatrocinioRow(item))}
+                    <button
+                      type="button"
+                      onClick={() => toggleGroupExpanded(groupKey)}
+                      className="w-full mt-1 py-2 border border-white/10 text-[9px] font-black italic uppercase text-white/50 hover:bg-white/5 transition-colors"
+                      style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                    >
+                      OCULTAR LISTA COMPLETA
+                    </button>
+                  </div>
+                )}
+              </section>
+            );
+          })}
         </div>
       )}
     </div>
@@ -4134,7 +4509,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
   );
 };
 
-const ProfileView = ({ onBack }: any) => {
+const ProfileView = ({ onBack, onNotify }: any) => {
   const [activeWidget, setActiveWidget] = useState<'user' | 'game' | 'schedule'>('user');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -4142,6 +4517,14 @@ const ProfileView = ({ onBack }: any) => {
   const [userData, setUserData] = useState({ name: '', email: '', phone: '', gamertag: '' });
   const [gameData, setGameData] = useState<any>({ geracao_id: null, plataforma_id: null, jogo_id: null, options: { jogos: [], plataformas: [], geracoes: [] } });
   const [availability, setAvailability] = useState<any>(buildEmptyAvailability());
+  const notify = (message: string, variant: LegacyToastVariant = 'info') => {
+    if (typeof onNotify === 'function') {
+      onNotify(message, variant);
+      return;
+    }
+
+    window.alert(message);
+  };
 
   const widgets = [
     { id: 'user', icon: 'fa-user-gear', label: 'USUÁRIO' },
@@ -4187,7 +4570,7 @@ const ProfileView = ({ onBack }: any) => {
         });
         setAvailability(currentAvailability);
       } catch (error: any) {
-        alert(error?.message || 'Falha ao carregar configurações.');
+        notify(error?.message || 'Falha ao carregar configurações.', 'error');
       } finally {
         setLoading(false);
       }
@@ -4198,7 +4581,7 @@ const ProfileView = ({ onBack }: any) => {
 
   const handleSave = async () => {
     if (!LEGACY_CONFIG.profileUpdateUrl || !LEGACY_CONFIG.profileDisponibilidadesSyncUrl) {
-      alert('Configuração legacy ausente para salvar dados.');
+      notify('Configuração legacy ausente para salvar dados.', 'warning');
       return;
     }
 
@@ -4232,9 +4615,9 @@ const ProfileView = ({ onBack }: any) => {
         body: JSON.stringify({ entries }),
       });
 
-      alert('ALTERAÇÕES SALVAS!');
+      notify('ALTERAÇÕES SALVAS!', 'success');
     } catch (error: any) {
-      alert(error?.message || 'Falha ao salvar configurações.');
+      notify(error?.message || 'Falha ao salvar configurações.', 'error');
     } finally {
       setSaving(false);
     }
@@ -4341,11 +4724,13 @@ const LegacyTaticoPlayerChip = ({
       aria-label={`Mover ${playerName}`}
     >
       <span className="w-12 h-12 bg-[#121212] border-2 border-[#FFD700] flex items-center justify-center overflow-hidden shadow-[0_0_10px_rgba(255,215,0,0.2)]" style={{ clipPath: SHIELD_CLIP }}>
-        {imageUrl ? (
-          <img src={imageUrl} alt={playerName} className="w-full h-full object-cover" />
-        ) : (
-          <span className="text-[10px] font-black italic text-[#FFD700]">{initials}</span>
-        )}
+        <LegacyPlayerImage
+          src={imageUrl}
+          alt={playerName}
+          wrapperClassName="w-full h-full"
+          imgClassName="w-full h-full object-cover"
+          fallback={<span className="text-[10px] font-black italic text-[#FFD700]">{initials}</span>}
+        />
       </span>
       <span className="block mt-1 px-2 py-1 bg-[#1E1E1E]/90 border border-white/10 text-[8px] font-black italic uppercase text-white leading-none whitespace-nowrap" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
         {overall || '--'} • {positionLabel}
@@ -4953,6 +5338,101 @@ const proxyFaceUrl = (url: string | null | undefined) => {
   if (!url) return '';
   const trimmed = String(url).replace(/^https?:\/\//, '');
   return `https://images.weserv.nl/?url=${encodeURIComponent(trimmed)}&w=180&h=180`;
+};
+
+const normalizeLegacyPlayerImageUrl = (value: any) => {
+  const raw = String(value || '').trim();
+  if (raw === '') return '';
+
+  if (raw.startsWith('/')) {
+    return raw;
+  }
+
+  if (raw.startsWith('data:') || raw.startsWith('blob:')) {
+    return raw;
+  }
+
+  if (raw.includes('images.weserv.nl/?url=')) {
+    return raw;
+  }
+
+  return proxyFaceUrl(raw);
+};
+
+const LEGACY_DEFAULT_PLAYER_IMAGE_URL = normalizeLegacyPlayerImageUrl(APP_ASSETS?.img_jogador_url);
+const LEGACY_MARKET_CARD_REDUZIDO_URL = String(APP_ASSETS?.card_reduzido_url || '').trim();
+const LEGACY_MARKET_CARD_COMPLETO_URL = String(APP_ASSETS?.card_completo_url || '').trim();
+
+const LegacyPlayerImage = ({
+  src,
+  alt,
+  wrapperClassName = '',
+  imgClassName = '',
+  wrapperStyle,
+  fallback = null,
+}: {
+  src?: any,
+  alt?: string,
+  wrapperClassName?: string,
+  imgClassName?: string,
+  wrapperStyle?: React.CSSProperties,
+  fallback?: React.ReactNode,
+}) => {
+  const fallbackUrl = LEGACY_DEFAULT_PLAYER_IMAGE_URL;
+
+  const resolveInitialSrc = (input: any) => {
+    const primary = normalizeLegacyPlayerImageUrl(input);
+    return primary || fallbackUrl || '';
+  };
+
+  const [currentSrc, setCurrentSrc] = useState<string>(() => resolveInitialSrc(src));
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [hasFailed, setHasFailed] = useState<boolean>(false);
+
+  useEffect(() => {
+    setCurrentSrc(resolveInitialSrc(src));
+    setIsLoaded(false);
+    setHasFailed(false);
+  }, [src, fallbackUrl]);
+
+  const handleLoad = () => {
+    setIsLoaded(true);
+    setHasFailed(false);
+  };
+
+  const handleError = () => {
+    if (fallbackUrl && currentSrc !== fallbackUrl) {
+      setCurrentSrc(fallbackUrl);
+      setIsLoaded(false);
+      setHasFailed(false);
+      return;
+    }
+
+    setHasFailed(true);
+    setIsLoaded(false);
+  };
+
+  const shouldRenderImage = currentSrc !== '' && !hasFailed;
+
+  return (
+    <div className={`relative ${wrapperClassName}`.trim()} style={wrapperStyle}>
+      {shouldRenderImage && !isLoaded ? (
+        <div className="absolute inset-0 animate-pulse bg-white/5"></div>
+      ) : null}
+
+      {shouldRenderImage ? (
+        <img
+          src={currentSrc}
+          alt={String(alt || 'Jogador')}
+          className={`${imgClassName} ${isLoaded ? 'opacity-100' : 'opacity-0'}`.trim()}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      ) : (
+        fallback
+      )}
+    </div>
+  );
 };
 
 const getLegacyPrimaryPosition = (positions: string | null | undefined) => {
@@ -6283,13 +6763,17 @@ const MarketView = ({
                               className="w-11 h-11 shrink-0 bg-[#1E1E1E] border border-white/10 overflow-hidden"
                               style={{ clipPath: SHIELD_CLIP }}
                             >
-                              {targetPhoto ? (
-                                <img src={targetPhoto} alt={targetName} className="w-full h-full object-cover object-top" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
-                                  <i className="fas fa-user text-[10px]"></i>
-                                </div>
-                              )}
+                              <LegacyPlayerImage
+                                src={targetPhoto}
+                                alt={targetName}
+                                wrapperClassName="w-full h-full"
+                                imgClassName="w-full h-full object-cover object-top"
+                                fallback={
+                                  <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
+                                    <i className="fas fa-user text-[10px]"></i>
+                                  </div>
+                                }
+                              />
                             </button>
                             <div className="min-w-0">
                               <button
@@ -6392,13 +6876,17 @@ const MarketView = ({
                               className="w-11 h-11 shrink-0 bg-[#1E1E1E] border border-white/10 overflow-hidden"
                               style={{ clipPath: SHIELD_CLIP }}
                             >
-                              {targetPhoto ? (
-                                <img src={targetPhoto} alt={targetName} className="w-full h-full object-cover object-top" />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
-                                  <i className="fas fa-user text-[10px]"></i>
-                                </div>
-                              )}
+                              <LegacyPlayerImage
+                                src={targetPhoto}
+                                alt={targetName}
+                                wrapperClassName="w-full h-full"
+                                imgClassName="w-full h-full object-cover object-top"
+                                fallback={
+                                  <div className="w-full h-full flex items-center justify-center text-[#FFD700]/50">
+                                    <i className="fas fa-user text-[10px]"></i>
+                                  </div>
+                                }
+                              />
                             </button>
                             <div className="min-w-0">
                               <button
@@ -6467,7 +6955,7 @@ const MarketView = ({
                 <i className="fas fa-times text-xl"></i>
               </button>
             </div>
-            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} />}
+            {showDetailed ? <DetailedAttributes player={selectedPlayer} /> : <LegacyUTCard player={selectedPlayer} preferAssetTemplate />}
             <div className="mt-8 w-full">
               <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={() => setShowDetailed(!showDetailed)}>
                 {showDetailed ? "VER CARD ULTIMATE" : "FICHA TECNICA COMPLETA"}
@@ -6668,17 +7156,10 @@ const MarketView = ({
                 style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
               >
                 <div className="flex justify-center">
-                  <div className="relative w-14 h-14 overflow-visible">
-                    <div className="relative z-10 w-14 h-14 bg-[#121212] border-b-2 border-[#FFD700]/30" style={{ clipPath: SHIELD_CLIP }}>
-                      <img src={player.photo} className="w-full h-full object-cover object-top" />
-                    </div>
-                    <div className="absolute bottom-0 right-0 z-30 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
-                      {player.ovr}
-                    </div>
-                    <div className="absolute bottom-0 left-0 z-30 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
-                      {player.pos}
-                    </div>
-                  </div>
+                  <LegacyMarketPlayerThumb
+                    player={player}
+                    useReducedTemplate={subMode === 'list'}
+                  />
                 </div>
                 <div className="overflow-hidden cursor-pointer active:opacity-50 px-1" onClick={() => setSelectedPlayer(player)}>
                   <p className="text-[11px] font-black italic uppercase text-white truncate leading-tight">{player.name}</p>
@@ -7357,6 +7838,15 @@ const App = () => {
           setMarketSubMode('list');
           setMarketQuickAuctionStatusFilter('MEUS_LANCES');
           setView('market');
+        } else if (t === 'TACTICAL_SETUP') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('esquema-tatico');
+        } else if (t === 'ACHIEVEMENTS') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('achievements');
+        } else if (t === 'PATROCINIOS') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('patrocinios');
         } else if (t === 'MATCH') {
           setMarketQuickAuctionStatusFilter(null);
           setView('match-center');
@@ -7384,7 +7874,7 @@ const App = () => {
       case 'league-table': return <LeagueTableView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} currentCareer={currentCareer} />;
       case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
-      case 'profile': return <ProfileView onBack={() => setView('hub-global')} />;
+      case 'profile': return <ProfileView onBack={() => setView('hub-global')} onNotify={pushLegacyToast} />;
       default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
     }
   };

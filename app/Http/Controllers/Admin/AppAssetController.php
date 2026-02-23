@@ -38,11 +38,14 @@ class AppAssetController extends Controller
             'logo_dark' => 'nullable|image:allow_svg|max:4096',
             'imagem_campo' => 'nullable|image:allow_svg|max:4096',
             'background_app' => 'nullable|image:allow_svg|max:4096',
+            'card_completo' => 'nullable|image:allow_svg|max:4096',
+            'card_reduzido' => 'nullable|image:allow_svg|max:4096',
+            'img_jogador' => 'nullable|image:allow_svg|max:4096',
         ]);
 
         $data = [];
 
-        foreach (['favicon', 'logo_padrao', 'logo_dark', 'imagem_campo', 'background_app'] as $field) {
+        foreach (['favicon', 'logo_padrao', 'logo_dark', 'imagem_campo', 'background_app', 'card_completo', 'card_reduzido', 'img_jogador'] as $field) {
             if ($request->hasFile($field)) {
                 $file = $request->file($field);
                 $path = $file->store('app-assets', 'public');
@@ -57,6 +60,14 @@ class AppAssetController extends Controller
 
         if ($data) {
             $assets->update($data);
+        }
+
+        $redirectTo = (string) $request->input('redirect_to', '');
+
+        if ($redirectTo === 'playstyles') {
+            return redirect()
+                ->route('admin.playstyles.index')
+                ->with('success', 'Imagens de playstyle atualizadas com sucesso.');
         }
 
         return redirect()
