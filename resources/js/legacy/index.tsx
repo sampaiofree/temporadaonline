@@ -2600,7 +2600,7 @@ const LegacyUTCard = ({
           </div>
         ) : null}
         <div className="relative z-10 h-1/2 flex pt-6 px-4">
-          <div className="z-20 shrink-0 flex flex-col items-center">
+          <div className="z-20 shrink-0 flex flex-col items-center py-5 pl-3">
             <span className="text-5xl font-black italic font-heading leading-none text-[#FFD700] drop-shadow-[0_2px_4px_rgba(0,0,0,1)]">{player.ovr}</span>
             <span className="text-xl font-black italic font-heading uppercase tracking-tighter text-white opacity-80">{player.pos}</span>
             <i className="fa-brands fa-playstation mt-4 text-[#FFD700] text-xl opacity-40"></i>
@@ -2622,7 +2622,7 @@ const LegacyUTCard = ({
         <div className="relative z-20 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1 my-2">
            <h3 className="text-xl font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter whitespace-nowrap overflow-hidden px-2">{player.name}</h3>
         </div>
-        <div className="relative z-20 grid grid-cols-2 gap-x-0 px-4 pt-4">
+        <div className="relative z-20 grid grid-cols-2 gap-x-0 px-5 pt-1">
           <div className="flex flex-col gap-2 border-r border-[#FFD700]/10 pr-2">
             {statsEntries.slice(0, 3).map(([stat, val]) => (
               <div key={stat} className="flex items-center gap-3"><span className="text-lg font-black italic font-heading text-white">{val as number}</span><span className="text-[10px] font-black italic uppercase text-white/30 tracking-widest">{stat}</span></div>
