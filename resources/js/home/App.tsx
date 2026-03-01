@@ -816,7 +816,7 @@ export default function App() {
                 <h4 className="text-[10px] font-black text-white uppercase tracking-[0.2em] mb-6">Legal</h4>
                 <ul className="space-y-3 text-[11px] font-bold text-gray-500 uppercase tracking-widest">
                   <li><a href="#" className="hover:text-legacy-accent transition-colors">Regras de Conduta</a></li>
-                  <li><a href="#" className="hover:text-legacy-accent transition-colors">Privacidade</a></li>
+                  <li><a href="/politica-privacidade" className="hover:text-legacy-accent transition-colors">Privacidade</a></li>
                   <li><a href="#" className="hover:text-legacy-accent transition-colors">Termos</a></li>
                 </ul>
               </div>

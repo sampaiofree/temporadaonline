@@ -29,6 +29,7 @@ export default defineConfig({
                 'resources/js/login.jsx',
                 'resources/js/home/main.tsx',
                 'resources/js/support/main.tsx',
+                'resources/js/privacy/main.tsx',
                 'resources/js/legacy/index.tsx',
                 'resources/js/legacy/primeiro_acesso.jsx',
                 'resources/js/legacy/onboarding_clube.jsx',
