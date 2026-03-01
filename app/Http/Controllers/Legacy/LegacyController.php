@@ -67,6 +67,7 @@ class LegacyController extends Controller
                 'profileSettingsUrl' => route('legacy.profile.settings'),
                 'profileUpdateUrl' => route('legacy.profile.update'),
                 'profileDisponibilidadesSyncUrl' => route('legacy.profile.disponibilidades.sync'),
+                'profileAccountDeletionRequestUrl' => route('legacy.profile.account_deletion.request'),
                 'logoutUrl' => route('legacy.logout'),
                 'userId' => $request->user()?->id,
                 'confederacoes' => $confederacoes,
@@ -4335,6 +4336,5 @@ class LegacyController extends Controller
         return Storage::disk('public')->url($path);
     }
 }
-
 
 

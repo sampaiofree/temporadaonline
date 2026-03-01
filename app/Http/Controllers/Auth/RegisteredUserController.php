@@ -11,6 +11,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 
 class RegisteredUserController extends Controller
@@ -31,24 +32,26 @@ class RegisteredUserController extends Controller
     public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
-            'nome' => ['required_without:name', 'string', 'max:255'],
-            'name' => ['required_without:nome', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
-            'whatsapp' => ['nullable', 'digits_between:10,15'],
-            'password' => ['required', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', Rules\Password::defaults()],
         ]);
 
-        $name = $validated['nome'] ?? $validated['name'];
+        $email = (string) $validated['email'];
+        $name = Str::of(strstr($email, '@', true) ?: 'usuario')
+            ->replace(['.', '_', '-'], ' ')
+            ->title()
+            ->limit(255, '')
+            ->toString();
 
         $user = User::create([
             'name' => $name,
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'email' => $email,
+            'password' => Hash::make((string) $validated['password']),
         ]);
 
         Profile::create([
             'user_id' => $user->id,
-            'whatsapp' => $validated['whatsapp'] ?? null,
+            'whatsapp' => null,
             'regiao' => 'Brasil',
             'idioma' => 'Português do Brasil',
             'reputacao_score' => 99,
@@ -62,10 +65,10 @@ class RegisteredUserController extends Controller
         if ($request->expectsJson()) {
             return response()->json([
                 'message' => 'Cadastro realizado com sucesso.',
-                'redirect' => route('dashboard', absolute: false),
+                'redirect' => route('verification.notice', absolute: false),
             ], 201);
         }
 
-        return redirect(route('dashboard', absolute: false));
+        return redirect(route('verification.notice', absolute: false));
     }
 }

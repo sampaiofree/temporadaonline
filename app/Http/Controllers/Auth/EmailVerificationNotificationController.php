@@ -13,12 +13,21 @@ class EmailVerificationNotificationController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        if ($request->user()->hasVerifiedEmail()) {
+        $user = $request->user();
+
+        if ($user->hasVerifiedEmail()) {
             return redirect()->intended(route('legacy.index', absolute: false));
         }
 
-        $request->user()->sendEmailVerificationNotification();
+        $sentAt = $user->email_verification_code_sent_at;
+        if ($sentAt && $sentAt->diffInSeconds(now()) < 60) {
+            $secondsLeft = 60 - $sentAt->diffInSeconds(now());
 
-        return back()->with('status', 'Novo link de verificacao enviado com sucesso.');
+            return back()->with('status', "Aguarde {$secondsLeft}s para reenviar um novo codigo.");
+        }
+
+        $user->sendEmailVerificationNotification();
+
+        return back()->with('status', 'Novo codigo de verificacao enviado com sucesso.');
     }
 }

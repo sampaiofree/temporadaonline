@@ -31,6 +31,9 @@ const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inb
 const LEGACY_PUBLIC_CLUB_PROFILE_DATA_URL = String(LEGACY_CONFIG?.publicClubProfileDataUrl || '/legacy/public-club-profile-data');
 const LEGACY_ESQUEMA_TATICO_DATA_URL = String(LEGACY_CONFIG?.esquemaTaticoDataUrl || '/legacy/esquema-tatico-data');
 const LEGACY_ESQUEMA_TATICO_SAVE_URL = String(LEGACY_CONFIG?.esquemaTaticoSaveUrl || '/legacy/esquema-tatico');
+const LEGACY_PROFILE_ACCOUNT_DELETION_REQUEST_URL = String(
+  LEGACY_CONFIG?.profileAccountDeletionRequestUrl || '/legacy/profile/request-account-deletion',
+);
 
 const navigateTo = (url: string) => {
   const navigateWithLoader = (window as any).navigateWithLoader;
@@ -4523,10 +4526,15 @@ const ProfileView = ({ onBack, onNotify }: any) => {
   const [activeWidget, setActiveWidget] = useState<'user' | 'game' | 'schedule'>('user');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [requestingDeletion, setRequestingDeletion] = useState(false);
   const [options, setOptions] = useState<any>({ jogos: [], plataformas: [], geracoes: [] });
   const [userData, setUserData] = useState({ name: '', email: '', phone: '', gamertag: '' });
   const [gameData, setGameData] = useState<any>({ geracao_id: null, plataforma_id: null, jogo_id: null, options: { jogos: [], plataformas: [], geracoes: [] } });
   const [availability, setAvailability] = useState<any>(buildEmptyAvailability());
+  const [accountDeletion, setAccountDeletion] = useState<{ pending: boolean; requested_at: string | null }>({
+    pending: false,
+    requested_at: null,
+  });
   const notify = (message: string, variant: LegacyToastVariant = 'info') => {
     if (typeof onNotify === 'function') {
       onNotify(message, variant);
@@ -4579,6 +4587,10 @@ const ProfileView = ({ onBack, onNotify }: any) => {
           options: profileOptions,
         });
         setAvailability(currentAvailability);
+        setAccountDeletion({
+          pending: Boolean(payload?.account_deletion?.pending),
+          requested_at: payload?.account_deletion?.requested_at || null,
+        });
       } catch (error: any) {
         notify(error?.message || 'Falha ao carregar configurações.', 'error');
       } finally {
@@ -4633,6 +4645,45 @@ const ProfileView = ({ onBack, onNotify }: any) => {
     }
   };
 
+  const formatDeletionRequestedAt = (value: string | null) => {
+    if (!value) return null;
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleString('pt-BR');
+  };
+
+  const handleAccountDeletionRequest = async () => {
+    if (accountDeletion.pending) {
+      notify('Sua solicitacao ja esta pendente de analise.', 'info');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Esta acao solicita a exclusao permanente da conta. Deseja continuar?',
+    );
+
+    if (!confirmed) return;
+
+    setRequestingDeletion(true);
+    try {
+      const payload = await jsonRequest(LEGACY_PROFILE_ACCOUNT_DELETION_REQUEST_URL, {
+        method: 'POST',
+      });
+
+      setAccountDeletion({
+        pending: true,
+        requested_at: payload?.requested_at || new Date().toISOString(),
+      });
+      notify(payload?.message || 'Solicitacao de exclusao enviada com sucesso.', 'success');
+    } catch (error: any) {
+      notify(error?.message || 'Nao foi possivel enviar a solicitacao de exclusao.', 'error');
+    } finally {
+      setRequestingDeletion(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-40 overflow-y-auto">
       <header className="mb-8">
@@ -4658,6 +4709,38 @@ const ProfileView = ({ onBack, onNotify }: any) => {
         {activeWidget === 'game' && <ProfileGameWidget data={{ ...gameData, options }} onChange={(f: any, v: any) => setGameData({...gameData, [f]: v})} />}
         {activeWidget === 'schedule' && <ProfileScheduleWidget availability={availability} onAddSlot={(day: string) => setAvailability({...availability, [day]: [...availability[day], {from: '19:00', to: '22:00'}]})} onRemoveSlot={(day: string, idx: number) => setAvailability({...availability, [day]: availability[day].filter((_: any, i: number) => i !== idx)})} onTimeChange={(day: string, idx: number, f: string, v: string) => { const nd = [...availability[day]]; nd[idx] = {...nd[idx], [f]: v}; setAvailability({...availability, [day]: nd}); }} />}
       </div>
+      <section className="bg-[#1E1E1E] border-l-[6px] border-[#B22222] p-6 mb-28" style={{ clipPath: AGGRESSIVE_CLIP }}>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h3 className="text-xl font-black italic uppercase font-heading text-white tracking-tighter">EXCLUSAO DE CONTA</h3>
+            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.2em] uppercase italic mt-1">EXIGENCIA APPLE / PRIVACIDADE</p>
+          </div>
+          <div className="w-10 h-10 bg-[#B22222] text-white flex items-center justify-center" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+            <i className="fas fa-user-slash"></i>
+          </div>
+        </div>
+
+        <p className="text-xs text-white/70 leading-relaxed mb-5">
+          Voce pode solicitar a exclusao permanente da sua conta e dos dados associados.
+          A solicitacao sera analisada pela equipe e, apos processada, nao podera ser desfeita.
+        </p>
+
+        {accountDeletion.pending ? (
+          <div className="bg-[#121212] border border-[#B22222]/60 px-4 py-3 text-[11px] font-bold uppercase italic tracking-wide text-white/85" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+            SOLICITACAO JA ENVIADA
+            {formatDeletionRequestedAt(accountDeletion.requested_at) ? ` EM ${formatDeletionRequestedAt(accountDeletion.requested_at)}` : ''}.
+          </div>
+        ) : (
+          <MCOButton
+            variant="danger"
+            className="w-full py-4 text-sm"
+            onClick={handleAccountDeletionRequest}
+            disabled={requestingDeletion}
+          >
+            {requestingDeletion ? 'ENVIANDO SOLICITACAO...' : 'SOLICITAR EXCLUSAO DA CONTA'}
+          </MCOButton>
+        )}
+      </section>
       <div className="fixed bottom-24 left-6 right-6 z-40">
         <MCOButton variant="primary" className="w-full py-5 text-lg" onClick={handleSave} disabled={saving}>
           {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}

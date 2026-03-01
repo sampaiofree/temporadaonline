@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Legacy;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ProfileUpdateRequest;
+use App\Models\AccountDeletionRequest;
 use App\Models\Geracao;
 use App\Models\Idioma;
 use App\Models\Jogo;
@@ -22,6 +23,11 @@ class LegacyProfileController extends Controller
     {
         $user = $request->user();
         $profile = $user->profile;
+        $pendingDeletionRequest = AccountDeletionRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
 
         $disponibilidades = UserDisponibilidade::query()
             ->where('user_id', $user->id)
@@ -58,6 +64,10 @@ class LegacyProfileController extends Controller
                 'geracoes' => Geracao::query()->orderBy('nome')->get(['id', 'nome']),
             ],
             'disponibilidades' => $disponibilidades,
+            'account_deletion' => [
+                'pending' => (bool) $pendingDeletionRequest,
+                'requested_at' => $pendingDeletionRequest?->requested_at?->toIso8601String(),
+            ],
         ]);
     }
 
@@ -181,6 +191,38 @@ class LegacyProfileController extends Controller
             'message' => 'Disponibilidades atualizadas com sucesso.',
             'count' => $entries->count(),
         ]);
+    }
+
+    public function requestAccountDeletion(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $pendingRequest = AccountDeletionRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+
+        if ($pendingRequest) {
+            return response()->json([
+                'message' => 'Sua solicitacao de exclusao ja foi registrada e esta em analise.',
+                'pending' => true,
+                'requested_at' => $pendingRequest->requested_at?->toIso8601String(),
+            ]);
+        }
+
+        $created = AccountDeletionRequest::query()->create([
+            'user_id' => $user->id,
+            'email' => (string) $user->email,
+            'status' => 'pending',
+            'requested_at' => now(),
+        ]);
+
+        return response()->json([
+            'message' => 'Solicitacao de exclusao registrada com sucesso. Nossa equipe entrara em contato.',
+            'pending' => true,
+            'requested_at' => $created->requested_at?->toIso8601String(),
+        ], 201);
     }
 
     private function normalizeTimeToHi(string $value): string

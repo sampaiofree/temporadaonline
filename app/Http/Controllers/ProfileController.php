@@ -64,6 +64,10 @@ class ProfileController extends Controller
 
         if (isset($payload['email']) && $payload['email'] !== $originalEmail) {
             $user->email_verified_at = null;
+            $user->email_verification_code_hash = null;
+            $user->email_verification_code_expires_at = null;
+            $user->email_verification_code_sent_at = null;
+            $user->email_verification_code_attempts = 0;
         }
 
         $user->save();

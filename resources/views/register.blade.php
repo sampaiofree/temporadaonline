@@ -57,7 +57,7 @@
                 <header class="mb-8">
                     <p class="text-[10px] text-[#ffd700] font-black tracking-[0.35em] uppercase italic mb-2">Legacy XI</p>
                     <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Cadastro</h1>
-                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Crie sua conta para entrar no hub legado</p>
+                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Informe e-mail e senha para criar a conta</p>
                 </header>
 
                 @if ($errors->any())
@@ -70,20 +70,6 @@
                     @csrf
 
                     <div>
-                        <label for="nome" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Nome</label>
-                        <input
-                            id="nome"
-                            name="nome"
-                            type="text"
-                            value="{{ old('nome') }}"
-                            required
-                            autofocus
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="Seu nome completo"
-                        >
-                    </div>
-
-                    <div>
                         <label for="email" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Email</label>
                         <input
                             id="email"
@@ -91,21 +77,9 @@
                             type="email"
                             value="{{ old('email') }}"
                             required
+                            autofocus
                             class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
                             placeholder="voce@exemplo.com"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="whatsapp" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">WhatsApp</label>
-                        <input
-                            id="whatsapp"
-                            name="whatsapp"
-                            type="text"
-                            value="{{ old('whatsapp') }}"
-                            required
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="DDD + numero"
                         >
                     </div>
 
@@ -114,18 +88,6 @@
                         <input
                             id="password"
                             name="password"
-                            type="password"
-                            required
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="********"
-                        >
-                    </div>
-
-                    <div>
-                        <label for="password_confirmation" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Confirmar senha</label>
-                        <input
-                            id="password_confirmation"
-                            name="password_confirmation"
                             type="password"
                             required
                             class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"

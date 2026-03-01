@@ -20,6 +20,7 @@ class VerifyEmailController extends Controller
 
         if ($request->user()->markEmailAsVerified()) {
             event(new Verified($request->user()));
+            $request->user()->clearEmailVerificationCode();
         }
 
         return redirect()->intended(route('legacy.index', absolute: false).'?verified=1');

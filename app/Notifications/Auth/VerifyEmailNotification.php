@@ -2,23 +2,37 @@
 
 namespace App\Notifications\Auth;
 
-use Illuminate\Auth\Notifications\VerifyEmail;
+use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Notifications\Notification;
 
-class VerifyEmailNotification extends VerifyEmail
+class VerifyEmailNotification extends Notification
 {
+    use Queueable;
+
+    public function __construct(
+        private readonly string $code
+    ) {
+    }
+
     /**
-     * Build the verify email notification mail message for the given URL.
-     *
-     * @param  string  $url
+     * Get the notification's delivery channels.
      */
-    protected function buildMailMessage($url): MailMessage
+    public function via(object $notifiable): array
+    {
+        return ['mail'];
+    }
+
+    /**
+     * Build the verification code mail message.
+     */
+    public function toMail(object $notifiable): MailMessage
     {
         return (new MailMessage)
             ->subject('Confirme seu e-mail - Legacy XI')
             ->line('Voce recebeu este e-mail porque criou uma conta no Legacy XI.')
-            ->action('Confirmar e-mail', $url)
+            ->line('Seu codigo de verificacao e: '.$this->code)
+            ->line('O codigo expira em 15 minutos.')
             ->line('Se voce nao criou esta conta, ignore esta mensagem.');
     }
 }
-
