@@ -49,6 +49,10 @@ Route::get('/', function () {
     return view('home');
 })->name('home');
 
+Route::get('/suporte', function () {
+    return view('support');
+})->name('support');
+
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])->name('dashboard');
     Route::get('/logs', [AdminLogController::class, 'index'])->name('logs.index');
