@@ -4802,7 +4802,7 @@ const LegacyTaticoPlayerChip = ({
   const overall = Number(player?.overall ?? 0);
   const positionLabel = getLegacyPrimaryPosition(player?.player_positions);
   const initials = getLegacyInitials(playerName);
-  const imageUrl = proxyFaceUrl(player?.player_face_url);
+  const imageUrl = normalizeLegacyPlayerImageUrl(player?.player_face_url);
 
   return (
     <button
@@ -5452,6 +5452,23 @@ const normalizeLegacyPlayerImageUrl = (value: any) => {
   return proxyFaceUrl(raw);
 };
 
+const isLegacyExternalImageUrl = (value: string) => /^https?:\/\//i.test(String(value || '').trim());
+
+const appendLegacyImageRetryParam = (value: string) => {
+  const raw = String(value || '').trim();
+  if (raw === '') return raw;
+
+  const retryValue = Date.now().toString();
+
+  try {
+    const parsed = new URL(raw, window.location.origin);
+    parsed.searchParams.set('__legacy_img_retry', retryValue);
+    return parsed.toString();
+  } catch {
+    return `${raw}${raw.includes('?') ? '&' : '?'}__legacy_img_retry=${retryValue}`;
+  }
+};
+
 const LEGACY_DEFAULT_PLAYER_IMAGE_URL = normalizeLegacyPlayerImageUrl(APP_ASSETS?.img_jogador_url);
 const LEGACY_MARKET_CARD_REDUZIDO_URL = String(APP_ASSETS?.card_reduzido_url || '').trim();
 const LEGACY_MARKET_CARD_COMPLETO_URL = String(APP_ASSETS?.card_completo_url || '').trim();
@@ -5481,12 +5498,31 @@ const LegacyPlayerImage = ({
   const [currentSrc, setCurrentSrc] = useState<string>(() => resolveInitialSrc(src));
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
   const [hasFailed, setHasFailed] = useState<boolean>(false);
+  const imageRef = useRef<HTMLImageElement | null>(null);
+  const hasMountedRef = useRef(false);
+  const retryCountRef = useRef(0);
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    retryCountRef.current = 0;
     setCurrentSrc(resolveInitialSrc(src));
     setIsLoaded(false);
     setHasFailed(false);
   }, [src, fallbackUrl]);
+
+  useEffect(() => {
+    const imageElement = imageRef.current;
+    if (!imageElement) return;
+
+    if (imageElement.complete && imageElement.naturalWidth > 0) {
+      setIsLoaded(true);
+      setHasFailed(false);
+    }
+  }, [currentSrc]);
 
   const handleLoad = () => {
     setIsLoaded(true);
@@ -5494,6 +5530,14 @@ const LegacyPlayerImage = ({
   };
 
   const handleError = () => {
+    if (retryCountRef.current < 1 && isLegacyExternalImageUrl(currentSrc)) {
+      retryCountRef.current += 1;
+      setCurrentSrc(appendLegacyImageRetryParam(currentSrc));
+      setIsLoaded(false);
+      setHasFailed(false);
+      return;
+    }
+
     if (fallbackUrl && currentSrc !== fallbackUrl) {
       setCurrentSrc(fallbackUrl);
       setIsLoaded(false);
@@ -5515,6 +5559,7 @@ const LegacyPlayerImage = ({
 
       {shouldRenderImage ? (
         <img
+          ref={imageRef}
           src={currentSrc}
           alt={String(alt || 'Jogador')}
           className={`${imgClassName} ${isLoaded ? 'opacity-100' : 'opacity-0'}`.trim()}
