@@ -28,6 +28,7 @@
             content="Saiba como o Legacy XI trata seus dados pessoais em conformidade com a LGPD."
         />
 
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/js/privacy/main.tsx'])
     </head>

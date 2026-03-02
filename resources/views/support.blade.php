@@ -28,6 +28,7 @@
             content="Canal oficial de suporte do Legacy XI para duvidas de acesso, ligas e uso da plataforma."
         />
 
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/js/support/main.tsx'])
     </head>

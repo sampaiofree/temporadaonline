@@ -28,6 +28,7 @@
             content="Legacy XI: o Modo Carreira Online definitivo. Gestao nativa via app, mercado de transferencias e acesso alpha gratuito por tempo limitado."
         />
 
+        @include('components.app_assets')
         @viteReactRefresh
         @vite(['resources/js/home/main.tsx'])
     </head>
