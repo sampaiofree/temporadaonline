@@ -129,7 +129,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('escudos-clubes', AdminEscudoClubeController::class, [
         'parameters' => ['escudos-clubes' => 'escudo_clube'],
     ])->except(['show', 'create']);
-    Route::resource('users', AdminUserController::class)->except(['show', 'destroy']);
+    Route::resource('users', AdminUserController::class)->except(['show']);
     Route::resource('clube-tamanho', AdminClubeTamanhoController::class, [
         'parameters' => ['clube-tamanho' => 'clube_tamanho'],
     ])->only(['index', 'create', 'store', 'edit', 'update', 'destroy']);

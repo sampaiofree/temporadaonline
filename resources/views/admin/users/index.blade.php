@@ -1,3 +1,8 @@
+@php
+    $listingQuery = request()->getQueryString();
+    $listingSuffix = $listingQuery ? '?'.$listingQuery : '';
+@endphp
+
 <x-app-layout title="Usuários">
     <x-slot name="header">
         <div
@@ -131,10 +136,45 @@
         </div>
     </x-slot>
 
-    <div class="space-y-6">
+    <div
+        x-data="{
+            confirmDeleteOpen: false,
+            deleteAction: '',
+            deleteUserLabel: '',
+            deleteKeyword: '',
+            openDeleteModal(action, userLabel) {
+                this.deleteAction = String(action || '');
+                this.deleteUserLabel = String(userLabel || 'usuário');
+                this.deleteKeyword = '';
+                this.confirmDeleteOpen = true;
+            },
+            closeDeleteModal() {
+                this.confirmDeleteOpen = false;
+                this.deleteAction = '';
+                this.deleteUserLabel = '';
+                this.deleteKeyword = '';
+            },
+            canConfirmDelete() {
+                return this.deleteKeyword.trim().toUpperCase() === 'EXCLUIR';
+            },
+            submitDelete() {
+                if (!this.canConfirmDelete() || !this.deleteAction) {
+                    return;
+                }
+                this.$refs.deleteUserForm.submit();
+            },
+        }"
+        class="space-y-6"
+    >
         @if(session('success'))
             <div class="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
                 {{ session('success') }}
+            </div>
+        @endif
+
+        @if(session('error'))
+            <div class="rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+                {{ session('error') }}
             </div>
         @endif
 
@@ -186,12 +226,30 @@
                                 </td>
                                 <td class="px-4 py-4 text-slate-600">{{ $user->created_at?->format('d/m/Y H:i') }}</td>
                                 <td class="px-4 py-4 text-slate-600">
-                                    <a
-                                        href="{{ route('admin.users.edit', $user) }}"
-                                        class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
-                                    >
-                                        Editar
-                                    </a>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <a
+                                            href="{{ route('admin.users.edit', $user) }}"
+                                            class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                        >
+                                            Editar
+                                        </a>
+                                        @if ($user->is_admin)
+                                            <span
+                                                class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-400"
+                                                title="Administradores não podem ser excluídos."
+                                            >
+                                                Excluir
+                                            </span>
+                                        @else
+                                            <button
+                                                type="button"
+                                                class="inline-flex items-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100"
+                                                @click="openDeleteModal(@js(route('admin.users.destroy', $user).$listingSuffix), @js($user->name))"
+                                            >
+                                                Excluir
+                                            </button>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -208,6 +266,60 @@
 
         <div class="flex justify-end">
             {{ $users->links() }}
+        </div>
+
+        <div
+            x-cloak
+            x-show="confirmDeleteOpen"
+            x-transition.opacity
+            class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 p-4"
+            @keydown.escape.window="if (confirmDeleteOpen) closeDeleteModal()"
+            role="dialog"
+            aria-modal="true"
+        >
+            <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl" @click.outside="closeDeleteModal()">
+                <h3 class="text-lg font-semibold text-slate-900">Confirmação de exclusão</h3>
+                <p class="mt-2 text-sm text-slate-600">
+                    Você está prestes a excluir <strong x-text="deleteUserLabel"></strong>.
+                    Esta ação é irreversível.
+                </p>
+                <p class="mt-3 text-sm text-slate-700">
+                    Para confirmar, digite <span class="font-semibold text-rose-700">EXCLUIR</span> no campo abaixo.
+                </p>
+
+                <input
+                    type="text"
+                    x-model="deleteKeyword"
+                    class="mt-3 h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm uppercase tracking-wide focus:border-rose-500 focus:outline-none focus:ring-2 focus:ring-rose-100"
+                    placeholder="Digite EXCLUIR"
+                >
+
+                <form
+                    x-ref="deleteUserForm"
+                    method="POST"
+                    :action="deleteAction"
+                    @submit.prevent="submitDelete()"
+                    class="mt-5 flex justify-end gap-2"
+                >
+                    @csrf
+                    @method('DELETE')
+
+                    <button
+                        type="button"
+                        class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                        @click="closeDeleteModal()"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        type="submit"
+                        class="inline-flex items-center rounded-xl bg-rose-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500 disabled:cursor-not-allowed disabled:bg-rose-300"
+                        :disabled="!canConfirmDelete()"
+                    >
+                        Excluir usuário
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </x-app-layout>

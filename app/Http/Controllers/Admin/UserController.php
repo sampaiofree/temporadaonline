@@ -11,6 +11,7 @@ use App\Models\Regiao;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -135,6 +136,31 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Usuário salvo com sucesso');
     }
 
+    public function destroy(Request $request, User $user): RedirectResponse
+    {
+        $redirect = redirect()->route('admin.users.index', $request->query());
+        $authenticatedUser = $request->user();
+
+        if ((int) ($authenticatedUser?->id ?? 0) === (int) $user->id) {
+            return $redirect->with('error', 'Você não pode excluir o seu próprio usuário.');
+        }
+
+        if ($user->is_admin) {
+            return $redirect->with('error', 'Usuários administradores não podem ser excluídos.');
+        }
+
+        if ($this->hasUserHistory($user)) {
+            return $redirect->with(
+                'error',
+                'Usuário possui histórico relacionado. Remova os vínculos manualmente antes de excluir.'
+            );
+        }
+
+        $user->delete();
+
+        return $redirect->with('success', 'Usuário excluído com sucesso.');
+    }
+
     private function syncProfile(User $user, Request $request): void
     {
         $profile = $user->profile ?? new Profile(['user_id' => $user->id]);
@@ -163,5 +189,41 @@ class UserController extends Controller
         $value = trim((string) $request->input($field, ''));
 
         return $value === '' ? null : $value;
+    }
+
+    private function hasUserHistory(User $user): bool
+    {
+        $userId = (int) $user->id;
+
+        if ($user->ligas()->exists()) {
+            return true;
+        }
+
+        if ($user->clubesLiga()->exists()) {
+            return true;
+        }
+
+        if ($user->disponibilidades()->exists()) {
+            return true;
+        }
+
+        return DB::table('partida_denuncias')->where('user_id', $userId)->exists()
+            || DB::table('reclamacoes_partida')->where('user_id', $userId)->exists()
+            || DB::table('player_favorites')->where('user_id', $userId)->exists()
+            || DB::table('partida_alteracoes')->where('user_id', $userId)->exists()
+            || DB::table('partida_eventos')->where('user_id', $userId)->exists()
+            || DB::table('account_deletion_requests')->where('user_id', $userId)->exists()
+            || DB::table('partida_avaliacoes')
+                ->where(function ($query) use ($userId) {
+                    $query->where('avaliador_user_id', $userId)
+                        ->orWhere('avaliado_user_id', $userId);
+                })
+                ->exists()
+            || DB::table('partidas')
+                ->where(function ($query) use ($userId) {
+                    $query->where('wo_para_user_id', $userId)
+                        ->orWhere('placar_registrado_por', $userId);
+                })
+                ->exists();
     }
 }
