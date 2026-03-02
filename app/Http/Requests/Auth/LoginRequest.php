@@ -46,7 +46,9 @@ class LoginRequest extends FormRequest
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
-                'email' => trans('auth.failed'),
+                'email' => $this->isLegacyLoginRequest()
+                    ? 'Nao conseguimos entrar com estes dados. Confira e-mail e senha e tente novamente.'
+                    : trans('auth.failed'),
             ]);
         }
 
@@ -68,12 +70,36 @@ class LoginRequest extends FormRequest
 
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
+        $legacyThrottleMessage = $seconds >= 60
+            ? 'Muitas tentativas de login. Aguarde cerca de '.ceil($seconds / 60).' minuto(s) e tente novamente.'
+            : 'Muitas tentativas de login. Aguarde '.$seconds.' segundo(s) e tente novamente.';
+
         throw ValidationException::withMessages([
-            'email' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'email' => $this->isLegacyLoginRequest()
+                ? $legacyThrottleMessage
+                : trans('auth.throttle', [
+                    'seconds' => $seconds,
+                    'minutes' => ceil($seconds / 60),
+                ]),
         ]);
+    }
+
+    public function messages(): array
+    {
+        if (! $this->isLegacyLoginRequest()) {
+            return [];
+        }
+
+        return [
+            'email.required' => 'Informe seu e-mail para continuar.',
+            'email.email' => 'Digite um e-mail valido.',
+            'password.required' => 'Informe sua senha para continuar.',
+        ];
+    }
+
+    private function isLegacyLoginRequest(): bool
+    {
+        return $this->routeIs('legacy.*');
     }
 
     /**

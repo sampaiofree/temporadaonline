@@ -34,6 +34,19 @@ class RegisteredUserController extends Controller
         $validated = $request->validate([
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', Rules\Password::defaults()],
+        ], [
+            'email.required' => 'Informe seu e-mail para criar a conta.',
+            'email.email' => 'Digite um e-mail valido.',
+            'email.max' => 'Seu e-mail deve ter no maximo 255 caracteres.',
+            'email.lowercase' => 'Digite o e-mail apenas com letras minusculas.',
+            'email.unique' => 'Ja existe uma conta com este e-mail. Tente entrar ou recuperar a senha.',
+            'password.required' => 'Informe uma senha para continuar.',
+            'password.min' => 'Sua senha precisa ter pelo menos :min caracteres.',
+            'password.letters' => 'Sua senha precisa incluir pelo menos uma letra.',
+            'password.mixed' => 'Sua senha precisa incluir letra maiuscula e minuscula.',
+            'password.numbers' => 'Sua senha precisa incluir pelo menos um numero.',
+            'password.symbols' => 'Sua senha precisa incluir pelo menos um simbolo.',
+            'password.uncompromised' => 'Essa senha e muito comum. Escolha outra mais segura.',
         ]);
 
         $email = (string) $validated['email'];

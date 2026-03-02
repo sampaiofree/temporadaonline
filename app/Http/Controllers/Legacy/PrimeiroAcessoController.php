@@ -84,6 +84,12 @@ class PrimeiroAcessoController extends Controller
             abort(403);
         }
 
+        if ($request->has('name')) {
+            $request->merge([
+                'name' => trim((string) $request->input('name')),
+            ]);
+        }
+
         if ($request->has('whatsapp')) {
             $request->merge([
                 'whatsapp' => preg_replace('/\D+/', '', (string) $request->input('whatsapp')),
@@ -92,6 +98,7 @@ class PrimeiroAcessoController extends Controller
 
         $profileId = $user->profile?->id;
         $payload = $request->validate([
+            'name' => ['sometimes', 'required', 'string', 'max:255'],
             'regiao_id' => ['sometimes', 'required', 'integer', 'exists:regioes,id'],
             'idioma_id' => ['sometimes', 'required', 'integer', 'exists:idiomas,id'],
             'nickname' => [
@@ -105,6 +112,8 @@ class PrimeiroAcessoController extends Controller
             'plataforma_id' => ['sometimes', 'required', 'integer', 'exists:plataformas,id'],
             'geracao_id' => ['sometimes', 'required', 'integer', 'exists:geracoes,id'],
             'jogo_id' => ['sometimes', 'required', 'integer', 'exists:jogos,id'],
+        ], [
+            'nickname.unique' => 'Esse nickname já está em uso. Tente outro.',
         ]);
 
         if ($payload === []) {
@@ -113,12 +122,19 @@ class PrimeiroAcessoController extends Controller
             ]);
         }
 
-        $profile = $user->profile;
-        if (! $profile) {
-            $profile = new Profile(['user_id' => $user->id]);
+        if (array_key_exists('name', $payload)) {
+            $user->name = $payload['name'];
+            $user->save();
         }
 
-        $profile->fill(Arr::only($payload, [
+        $profile = $user->profile;
+
+        if (array_key_exists('name', $payload) && ! $profile) {
+            $profile = new Profile(['user_id' => $user->id]);
+            $profile->save();
+        }
+
+        $profilePayload = Arr::only($payload, [
             'regiao_id',
             'idioma_id',
             'nickname',
@@ -126,17 +142,26 @@ class PrimeiroAcessoController extends Controller
             'plataforma_id',
             'geracao_id',
             'jogo_id',
-        ]));
+        ]);
 
-        if (array_key_exists('regiao_id', $payload)) {
-            $profile->regiao = Regiao::query()->find($payload['regiao_id'])?->nome;
+        if ($profilePayload !== []) {
+            if (! $profile) {
+                $profile = new Profile(['user_id' => $user->id]);
+            }
+
+            $profile->fill($profilePayload);
+
+            if (array_key_exists('regiao_id', $payload)) {
+                $profile->regiao = Regiao::query()->find($payload['regiao_id'])?->nome;
+            }
+
+            if (array_key_exists('idioma_id', $payload)) {
+                $profile->idioma = Idioma::query()->find($payload['idioma_id'])?->nome;
+            }
+
+            $profile->save();
         }
 
-        if (array_key_exists('idioma_id', $payload)) {
-            $profile->idioma = Idioma::query()->find($payload['idioma_id'])?->nome;
-        }
-
-        $profile->save();
         $user->unsetRelation('profile');
         $user->load('profile');
 
@@ -253,6 +278,7 @@ class PrimeiroAcessoController extends Controller
             ->exists();
 
         $steps = [
+            'nome' => $profile !== null && filled($user->name),
             'regiao_idioma' => filled($profile?->regiao_id) && filled($profile?->idioma_id),
             'nickname' => filled($profile?->nickname),
             'whatsapp' => filled($profile?->whatsapp),

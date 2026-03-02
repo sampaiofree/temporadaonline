@@ -4791,6 +4791,8 @@ const buildLegacyTaticoInitialPlacements = (layout: any, availablePlayers: any[]
   return placements;
 };
 
+const LEGACY_ESQUEMA_MAX_PLAYERS = 11;
+
 const LegacyTaticoPlayerChip = ({
   player,
   position,
@@ -4921,12 +4923,26 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
   );
 
   const placedIds = useMemo(() => new Set(Object.keys(placements)), [placements]);
+  const playersInField = Object.keys(placements).length;
+  const isLineupFull = playersInField >= LEGACY_ESQUEMA_MAX_PLAYERS;
   const hasClub = Boolean(clubData?.id);
 
   const handleAddPlayer = (playerId: any) => {
     const id = String(playerId);
+
+    if (placedIds.has(id)) {
+      return;
+    }
+
+    if (isLineupFull) {
+      setSaveError(`O esquema permite no máximo ${LEGACY_ESQUEMA_MAX_PLAYERS} jogadores no campo.`);
+      setSaveSuccess('');
+      return;
+    }
+
     setPlacements((prev) => {
       if (prev[id]) return prev;
+      if (Object.keys(prev).length >= LEGACY_ESQUEMA_MAX_PLAYERS) return prev;
       const count = Object.keys(prev).length;
       const offsetX = ((count % 5) - 2) * 0.08;
       const offsetY = Math.floor(count / 5) * -0.06;
@@ -5021,6 +5037,11 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
       return;
     }
 
+    if (payloadPlayers.length > LEGACY_ESQUEMA_MAX_PLAYERS) {
+      setSaveError(`O esquema permite no máximo ${LEGACY_ESQUEMA_MAX_PLAYERS} jogadores no campo.`);
+      return;
+    }
+
     setSaving(true);
     setSaveError('');
     setSaveSuccess('');
@@ -5096,12 +5117,17 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
           <section className="bg-[#1E1E1E] p-5 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="flex items-center justify-between gap-3">
               <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-white/40">
-                {Object.keys(placements).length} JOGADORES NO CAMPO
+                {playersInField}/{LEGACY_ESQUEMA_MAX_PLAYERS} JOGADORES NO CAMPO
               </p>
               <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">
                 {sortedRoster.length} ATIVOS
               </p>
             </div>
+            {isLineupFull && (
+              <p className="mt-3 text-[9px] font-black uppercase italic text-[#FFD700]">
+                Limite de {LEGACY_ESQUEMA_MAX_PLAYERS} jogadores atingido.
+              </p>
+            )}
             <div className="mt-4 grid grid-cols-2 gap-2">
               <MCOButton onClick={handleSave} disabled={saving} className="w-full !py-4 !text-[10px]">
                 {saving ? 'SALVANDO...' : 'SALVAR ESQUEMA'}
@@ -5175,11 +5201,15 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                       <button
                         type="button"
                         className={`px-3 py-2 text-[8px] font-black uppercase italic transition-colors ${
-                          isPlaced ? 'bg-white/10 text-white/60 border border-white/20' : 'bg-[#FFD700] text-[#121212]'
+                          isPlaced
+                            ? 'bg-white/10 text-white/60 border border-white/20'
+                            : isLineupFull
+                            ? 'bg-white/10 text-white/30 border border-white/20'
+                            : 'bg-[#FFD700] text-[#121212]'
                         }`}
                         style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                         onClick={() => (isPlaced ? handleRemovePlayer(id) : handleAddPlayer(id))}
-                        disabled={saving}
+                        disabled={saving || (!isPlaced && isLineupFull)}
                       >
                         {isPlaced ? 'REMOVER' : 'ADICIONAR'}
                       </button>

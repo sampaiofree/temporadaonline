@@ -1391,7 +1391,9 @@ class LegacyController extends Controller
             }
         }
 
-        if (count($esquemaPlayers) === 0) {
+        $tacticalSetupCount = count($esquemaPlayers) === 0 ? 1 : 0;
+
+        if ($tacticalSetupCount > 0) {
             $messages[] = [
                 'id' => 'tactical-setup-missing',
                 'type' => 'CLUBE',
@@ -1687,6 +1689,7 @@ class LegacyController extends Controller
             (int) $pastScheduledUnfinalizedMatches->count(),
             $availableAchievementCount,
             $availablePatrocinioCount,
+            $tacticalSetupCount,
         );
 
         return response()->json([
@@ -1727,7 +1730,8 @@ class LegacyController extends Controller
         int $todayOpenMatchCount = 0,
         int $pastUnfinalizedMatchCount = 0,
         int $achievementClaimCount = 0,
-        int $patrocinioClaimCount = 0
+        int $patrocinioClaimCount = 0,
+        int $tacticalSetupCount = 0
     ): array
     {
         $scheduleCount = max(0, $scheduleCount);
@@ -1739,6 +1743,7 @@ class LegacyController extends Controller
         $pastUnfinalizedMatchCount = max(0, $pastUnfinalizedMatchCount);
         $achievementClaimCount = max(0, $achievementClaimCount);
         $patrocinioClaimCount = max(0, $patrocinioClaimCount);
+        $tacticalSetupCount = max(0, $tacticalSetupCount);
         $totalActions = $scheduleCount
             + $confirmationCount
             + $evaluationCount
@@ -1747,7 +1752,8 @@ class LegacyController extends Controller
             + $todayOpenMatchCount
             + $pastUnfinalizedMatchCount
             + $achievementClaimCount
-            + $patrocinioClaimCount;
+            + $patrocinioClaimCount
+            + $tacticalSetupCount;
         $totalMessages = ($scheduleCount > 0 ? 1 : 0)
             + ($proposalCount > 0 ? 1 : 0)
             + ($auctionOutbidCount > 0 ? 1 : 0)
@@ -1755,6 +1761,7 @@ class LegacyController extends Controller
             + ($pastUnfinalizedMatchCount > 0 ? 1 : 0)
             + ($achievementClaimCount > 0 ? 1 : 0)
             + ($patrocinioClaimCount > 0 ? 1 : 0)
+            + ($tacticalSetupCount > 0 ? 1 : 0)
             + $confirmationCount
             + $evaluationCount;
 
@@ -1770,6 +1777,7 @@ class LegacyController extends Controller
                 'past_unfinalized_match_count' => 0,
                 'achievement_claim_count' => 0,
                 'patrocinio_claim_count' => 0,
+                'tactical_setup_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -1822,6 +1830,10 @@ class LegacyController extends Controller
                 : "{$patrocinioClaimCount} patrocinios para resgatar";
         }
 
+        if ($tacticalSetupCount > 0) {
+            $segments[] = 'esquema tatico do clube pendente';
+        }
+
         if ($confirmationCount > 0) {
             $segments[] = $confirmationCount === 1
                 ? '1 confirmacao de placar'
@@ -1849,21 +1861,24 @@ class LegacyController extends Controller
             'past_unfinalized_match_count' => $pastUnfinalizedMatchCount,
             'achievement_claim_count' => $achievementClaimCount,
             'patrocinio_claim_count' => $patrocinioClaimCount,
+            'tactical_setup_count' => $tacticalSetupCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
             'detail' => implode(' e ', $segments).'.',
             'primary_action' => $scheduleCount > 0
                 ? 'SCHEDULE'
-                : ($proposalCount > 0
-                    ? 'MARKET_PROPOSALS'
-                    : ($auctionOutbidCount > 0
-                        ? 'TRANSFER'
-                        : (($todayOpenMatchCount > 0 || $pastUnfinalizedMatchCount > 0)
-                            ? 'MATCH'
-                            : ($achievementClaimCount > 0
-                                ? 'ACHIEVEMENTS'
-                                : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH'))))),
+                : ($tacticalSetupCount > 0
+                    ? 'TACTICAL_SETUP'
+                    : ($proposalCount > 0
+                        ? 'MARKET_PROPOSALS'
+                        : ($auctionOutbidCount > 0
+                            ? 'TRANSFER'
+                            : (($todayOpenMatchCount > 0 || $pastUnfinalizedMatchCount > 0)
+                                ? 'MATCH'
+                                : ($achievementClaimCount > 0
+                                    ? 'ACHIEVEMENTS'
+                                    : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH')))))),
         ];
     }
 
@@ -3919,6 +3934,12 @@ class LegacyController extends Controller
             ], 422);
         }
 
+        if (count($normalizedPlayers) > 11) {
+            return response()->json([
+                'message' => 'O esquema permite no máximo 11 jogadores no campo.',
+            ], 422);
+        }
+
 
         $userClub->update([
             'esquema_tatico_layout' => [
@@ -4336,5 +4357,3 @@ class LegacyController extends Controller
         return Storage::disk('public')->url($path);
     }
 }
-
-

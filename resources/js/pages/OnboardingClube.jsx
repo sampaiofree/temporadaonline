@@ -9,17 +9,29 @@ const getOnboardingData = () => window.__CLUBE_ONBOARDING__ ?? {};
 const getStepFromUrl = (totalSteps, options = {}) => {
     const params = new URLSearchParams(window.location.search);
     const value = Number(params.get('step'));
-    if (Number.isInteger(value) && value >= 1 && value <= totalSteps) {
-        return value;
-    }
 
     if (options.isClubOnlyMode) {
-        const clubStep = params.get('club_step');
-        if (clubStep === 'escudo' || clubStep === 'revisao') {
-            return options.escudoStep;
+        const nomeStep = Number(options.nomeStep ?? 1);
+        const escudoStep = Number(options.escudoStep ?? nomeStep);
+        const reviewStep = Number(options.reviewStep ?? escudoStep);
+
+        if (Number.isInteger(value) && value >= nomeStep && value <= totalSteps) {
+            return value;
         }
 
-        return options.nameStep;
+        const clubStep = params.get('club_step');
+        if (clubStep === 'escudo') {
+            return escudoStep;
+        }
+        if (clubStep === 'concluido' || clubStep === 'revisao') {
+            return reviewStep;
+        }
+
+        return nomeStep;
+    }
+
+    if (Number.isInteger(value) && value >= 1 && value <= totalSteps) {
+        return value;
     }
 
     return 1;
@@ -28,6 +40,10 @@ const getStepFromUrl = (totalSteps, options = {}) => {
 const getClubStepSlug = (step, options = {}) => {
     if (!options.isClubOnlyMode) {
         return null;
+    }
+
+    if (step === options.reviewStep) {
+        return 'concluido';
     }
 
     return step === options.escudoStep ? 'escudo' : 'nome';
@@ -114,16 +130,16 @@ export default function OnboardingClube() {
     const storeClubeUrl = routes.store_clube_url || '/minha_liga/clubes';
     const stepMode = routes.step_mode === 'club_only' ? 'club_only' : 'full';
     const isClubOnlyMode = stepMode === 'club_only';
-    const totalSteps = isClubOnlyMode ? 2 : 4;
-    const nomeStep = 1;
+    const totalSteps = 4;
+    const nomeStep = isClubOnlyMode ? 2 : 1;
     const confederacaoStep = 2;
-    const escudoStep = isClubOnlyMode ? 2 : 3;
-    const reviewStep = isClubOnlyMode ? escudoStep : 4;
+    const escudoStep = 3;
+    const reviewStep = 4;
     const selectUniverseUrl = routes.select_universe_url || onboardingBasePath;
     const showNavbar = routes.show_navbar !== false;
 
     const [step, setStep] = useState(
-        getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep }),
+        getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep, reviewStep }),
     );
     const [clubSnapshot, setClubSnapshot] = useState(clube);
     const [clubName, setClubName] = useState(clube?.nome ?? '');
@@ -172,7 +188,7 @@ export default function OnboardingClube() {
 
     useEffect(() => {
         const onPopState = () => {
-            setStep(getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep }));
+            setStep(getStepFromUrl(totalSteps, { isClubOnlyMode, nomeStep, escudoStep, reviewStep }));
             const nextEscudoId = getPickedEscudoFromUrl();
             if (nextEscudoId !== null) {
                 setSelectedEscudoId(nextEscudoId);
@@ -181,7 +197,7 @@ export default function OnboardingClube() {
 
         window.addEventListener('popstate', onPopState);
         return () => window.removeEventListener('popstate', onPopState);
-    }, [totalSteps, isClubOnlyMode, nomeStep, escudoStep]);
+    }, [totalSteps, isClubOnlyMode, nomeStep, escudoStep, reviewStep]);
 
     useEffect(() => {
         if (!isClubOnlyMode || !liga) {
@@ -190,10 +206,10 @@ export default function OnboardingClube() {
 
         updateUrlState({
             stage: 'clube',
-            club_step: getClubStepSlug(step, { isClubOnlyMode, escudoStep }),
+            club_step: getClubStepSlug(step, { isClubOnlyMode, escudoStep, reviewStep }),
             step,
         });
-    }, [isClubOnlyMode, liga, escudoStep, step]);
+    }, [isClubOnlyMode, liga, escudoStep, reviewStep, step]);
 
     if (!liga) {
         return (
@@ -231,16 +247,17 @@ export default function OnboardingClube() {
         updateUrlState({
             step: normalized,
             stage: isClubOnlyMode ? 'clube' : null,
-            club_step: getClubStepSlug(normalized, { isClubOnlyMode, escudoStep }),
+            club_step: getClubStepSlug(normalized, { isClubOnlyMode, escudoStep, reviewStep }),
         }, false);
     };
 
     const handleEscudoSelection = (value) => {
         setSelectedEscudoId(value);
+        setCompleted(false);
         updateUrlState({
             pick_escudo_id: value || null,
             stage: isClubOnlyMode ? 'clube' : null,
-            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : null,
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep, reviewStep }) : null,
         });
     };
 
@@ -270,7 +287,7 @@ export default function OnboardingClube() {
             step: escudoStep,
             pick_escudo_id: selectedEscudoId || '',
             stage: isClubOnlyMode ? 'clube' : '',
-            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : '',
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep, reviewStep }) : '',
         }, onboardingBasePath);
 
         window.navigateWithLoader(url);
@@ -282,7 +299,7 @@ export default function OnboardingClube() {
             step: escudoStep,
             pick_escudo_id: selectedEscudoId || '',
             stage: isClubOnlyMode ? 'clube' : '',
-            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }) : '',
+            club_step: isClubOnlyMode ? getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep, reviewStep }) : '',
         }, onboardingBasePath);
         window.navigateWithLoader(url);
     };
@@ -293,7 +310,7 @@ export default function OnboardingClube() {
         target.searchParams.set('step', String(escudoStep));
         if (isClubOnlyMode) {
             target.searchParams.set('stage', 'clube');
-            target.searchParams.set('club_step', getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep }));
+            target.searchParams.set('club_step', getClubStepSlug(escudoStep, { isClubOnlyMode, escudoStep, reviewStep }));
         }
         if (selectedEscudoId) {
             target.searchParams.set('pick_escudo_id', selectedEscudoId);
@@ -357,7 +374,7 @@ export default function OnboardingClube() {
             setFeedback([baseMessage, rosterMessage].filter(Boolean).join(' '));
             setFeedbackCta(response?.initial_roster_cta ?? '');
             setCompleted(true);
-            goToStep(isClubOnlyMode ? escudoStep : reviewStep);
+            goToStep(reviewStep);
         } catch (error) {
             const message =
                 error.response?.data?.message ??
@@ -390,8 +407,11 @@ export default function OnboardingClube() {
     const minhaLigaHref = buildLigaUrlFromTemplate(routes.home_url, `/minha_liga?liga_id=${liga.id}`);
     const progress = (step / totalSteps) * 100;
     const introSubtitle = isClubOnlyMode
-        ? 'Universo definido. Primeiro informe o nome do clube, depois escolha o escudo.'
+        ? 'Fluxo em quatro etapas: selecao da liga, nome do clube, escudo e conclusao.'
         : 'Fluxo guiado com dados reais. Liga e confederação são informativas para este contexto.';
+    const clubOnlyStepLabel = step === nomeStep
+        ? 'nome do clube'
+        : (step === escudoStep ? 'escudo do clube' : 'concluido');
 
     if (isClubOnlyMode) {
         return (
@@ -409,24 +429,9 @@ export default function OnboardingClube() {
                             Configure seu clube
                         </h1>
                         <p className="text-[10px] text-white/40 font-bold uppercase italic tracking-[0.14em]">
-                            Etapa {step} de {totalSteps}: {step === nomeStep ? 'nome do clube' : 'escudo do clube'}
+                            Etapa {step} de {totalSteps}: {clubOnlyStepLabel}
                         </p>
                     </header>
-
-                    {feedback ? (
-                        <div className="bg-[#1E1E1E] border-l-[6px] border-[#008000] p-5 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                            <p className="text-[10px] text-[#FFD700] font-black uppercase italic tracking-[0.18em]">Concluído</p>
-                            <p className="text-[12px] font-bold text-white/90">{feedback}</p>
-                            <div className="flex flex-col sm:flex-row gap-3">
-                                <a className="block w-full" href={meuClubeHref}>
-                                    <LegacyButton variant="outline" className="w-full">Meu clube</LegacyButton>
-                                </a>
-                                <a className="block w-full" href={meuElencoHref}>
-                                    <LegacyButton className="w-full">Meu elenco</LegacyButton>
-                                </a>
-                            </div>
-                        </div>
-                    ) : null}
 
                     {errors.length > 0 ? (
                         <div className="bg-[#B22222]/25 border border-[#B22222] p-3 text-[10px] font-black uppercase italic tracking-[0.13em]" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -437,7 +442,7 @@ export default function OnboardingClube() {
                     {step === nomeStep && (
                         <section className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
                             <div className="space-y-2">
-                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">1. Nome do clube</h2>
+                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">2. Nome do clube</h2>
                                 <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
                                     Liga: {liga.nome} • Confederação: {confederacaoNome || 'Não definida'}
                                 </p>
@@ -453,6 +458,7 @@ export default function OnboardingClube() {
                                     value={clubName}
                                     onChange={(event) => {
                                         setClubName(event.target.value);
+                                        setCompleted(false);
                                         if (errors.length > 0) {
                                             setErrors([]);
                                         }
@@ -490,7 +496,7 @@ export default function OnboardingClube() {
                     {step === escudoStep && (
                         <section className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
                             <div className="space-y-2">
-                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">2. Escudo do clube</h2>
+                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">3. Escudo do clube</h2>
                                 <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
                                     Nome: {clubeNomeAtual}
                                 </p>
@@ -629,10 +635,92 @@ export default function OnboardingClube() {
                                 <LegacyButton type="button" variant="outline" className="w-full" onClick={() => goToStep(nomeStep)}>
                                     Voltar para nome
                                 </LegacyButton>
-                                <LegacyButton type="button" className="w-full" onClick={handleSubmit} disabled={saving || completed}>
-                                    {saving ? 'Salvando...' : 'Salvar clube'}
+                                <LegacyButton type="button" className="w-full" onClick={handleSubmit} disabled={saving}>
+                                    {saving ? 'Salvando...' : 'Salvar e concluir'}
                                 </LegacyButton>
                             </div>
+                        </section>
+                    )}
+
+                    {step === reviewStep && (
+                        <section className="bg-[#1E1E1E] border-l-[6px] border-[#008000] p-6 md:p-8 space-y-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-black italic uppercase font-heading text-white">4. Concluído</h2>
+                                <p className="text-[10px] text-white/45 font-bold uppercase italic tracking-[0.12em]">
+                                    Resumo final da configuração do seu clube.
+                                </p>
+                            </div>
+
+                            {completed ? (
+                                <>
+                                    <article className="bg-[#121212] border border-[#008000] p-4 space-y-2" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                        <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Status</p>
+                                        <strong className="block text-[14px] text-white font-black uppercase italic">
+                                            Clube salvo com sucesso
+                                        </strong>
+                                        {feedback ? (
+                                            <p className="text-[11px] text-white/80 font-bold">{feedback}</p>
+                                        ) : null}
+                                    </article>
+
+                                    <article className="bg-[#121212] border border-[#FFD700]/25 p-4 flex items-center gap-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                        <div className="w-14 h-14 bg-[#1E1E1E] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden">
+                                            {selectedEscudoImage ? (
+                                                <img src={selectedEscudoImage} alt={selectedEscudoPreview?.clube_nome || 'Escudo selecionado'} className="w-full h-full object-contain p-1" />
+                                            ) : clubEscudoImage ? (
+                                                <img src={clubEscudoImage} alt={savedEscudoPreview?.clube_nome || 'Escudo atual'} className="w-full h-full object-contain p-1" />
+                                            ) : (
+                                                <span className="text-[#FFD700] font-black italic">{getLeagueInitials(clubeNomeAtual)}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em]">Clube</p>
+                                            <strong className="block text-[13px] text-white font-black uppercase italic mt-1">
+                                                {clubeNomeAtual}
+                                            </strong>
+                                        </div>
+                                    </article>
+
+                                    <div className="bg-[#121212] border border-[#FFD700]/25 p-4 grid grid-cols-1 sm:grid-cols-2 gap-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                        <div>
+                                            <p className="text-[8px] text-white/50 font-black uppercase italic tracking-[0.16em]">Nome</p>
+                                            <strong className="text-[12px] text-white font-black uppercase italic">{clubeNomeAtual}</strong>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-white/50 font-black uppercase italic tracking-[0.16em]">Escudo</p>
+                                            <strong className="text-[12px] text-white font-black uppercase italic">
+                                                {selectedEscudoPreview?.clube_nome || savedEscudoPreview?.clube_nome || 'Nenhum'}
+                                            </strong>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-white/50 font-black uppercase italic tracking-[0.16em]">Liga</p>
+                                            <strong className="text-[12px] text-white font-black uppercase italic">{liga.nome}</strong>
+                                        </div>
+                                        <div>
+                                            <p className="text-[8px] text-white/50 font-black uppercase italic tracking-[0.16em]">Confederação</p>
+                                            <strong className="text-[12px] text-white font-black uppercase italic">{confederacaoNome || 'Não definida'}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-3">
+                                        <LegacyButton type="button" variant="outline" className="w-full" onClick={() => goToStep(escudoStep)}>
+                                            Voltar
+                                        </LegacyButton>
+                                        <LegacyButton type="button" className="w-full" onClick={() => window.navigateWithLoader(minhaLigaHref)}>
+                                            Continuar
+                                        </LegacyButton>
+                                    </div>
+                                </>
+                            ) : (
+                                <article className="bg-[#121212] border border-[#B22222]/70 p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                                    <p className="text-[10px] text-white/85 font-black uppercase italic">
+                                        Para concluir, salve o clube no passo anterior.
+                                    </p>
+                                    <LegacyButton type="button" variant="outline" className="w-full" onClick={() => goToStep(escudoStep)}>
+                                        Voltar para escudo
+                                    </LegacyButton>
+                                </article>
+                            )}
                         </section>
                     )}
                 </div>

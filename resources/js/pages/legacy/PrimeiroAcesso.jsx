@@ -3,9 +3,9 @@ import { useMemo, useState } from 'react';
 const FIRST_ACCESS_DATA = window.__LEGACY_FIRST_ACCESS__ ?? {};
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
 
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;
 const AGGRESSIVE_CLIP = 'polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)';
-const STEP_KEYS = ['regiao_idioma', 'nickname', 'whatsapp', 'plataforma_geracao', 'jogo', 'disponibilidade'];
+const STEP_KEYS = ['nome', 'regiao_idioma', 'nickname', 'whatsapp', 'plataforma_geracao', 'jogo', 'disponibilidade'];
 
 const DAY_OPTIONS = [
     { value: 0, label: 'Domingo' },
@@ -19,31 +19,36 @@ const DAY_OPTIONS = [
 
 const STEPS_META = {
     1: {
+        title: 'Nome',
+        subtitle: 'Defina como seu nome será exibido na plataforma.',
+        key: 'nome',
+    },
+    2: {
         title: 'Região e idioma',
         subtitle: 'Selecione sua região e idioma principal.',
         key: 'regiao_idioma',
     },
-    2: {
+    3: {
         title: 'Nickname',
         subtitle: 'Defina seu nome de exibição nos rankings.',
         key: 'nickname',
     },
-    3: {
+    4: {
         title: 'WhatsApp',
         subtitle: 'Contato para organização de partidas e convites.',
         key: 'whatsapp',
     },
-    4: {
+    5: {
         title: 'Plataforma e geração',
         subtitle: 'Selecione onde você joga atualmente.',
         key: 'plataforma_geracao',
     },
-    5: {
+    6: {
         title: 'Jogo',
         subtitle: 'Escolha o jogo principal da sua conta.',
         key: 'jogo',
     },
-    6: {
+    7: {
         title: 'Horários disponíveis',
         subtitle: 'Cadastre pelo menos um horário válido.',
         key: 'disponibilidade',
@@ -136,6 +141,7 @@ export default function PrimeiroAcesso() {
         : [];
 
     const [profile, setProfile] = useState({
+        name: profileInitial.name ?? '',
         regiao_id: profileInitial.regiao_id ?? '',
         idioma_id: profileInitial.idioma_id ?? '',
         nickname: profileInitial.nickname ?? '',
@@ -184,6 +190,7 @@ export default function PrimeiroAcesso() {
         if (response?.profile) {
             setProfile((previous) => ({
                 ...previous,
+                name: response.profile.name ?? previous.name,
                 regiao_id: response.profile.regiao_id ?? previous.regiao_id,
                 idioma_id: response.profile.idioma_id ?? previous.idioma_id,
                 nickname: response.profile.nickname ?? previous.nickname,
@@ -255,6 +262,16 @@ export default function PrimeiroAcesso() {
 
         try {
             if (step === 1) {
+                const name = String(profile.name).trim();
+                if (!name) {
+                    throw new Error('Informe seu nome para continuar.');
+                }
+
+                await saveProfileStep({ name });
+                return;
+            }
+
+            if (step === 2) {
                 if (!profile.regiao_id || !profile.idioma_id) {
                     throw new Error('Selecione região e idioma para continuar.');
                 }
@@ -266,7 +283,7 @@ export default function PrimeiroAcesso() {
                 return;
             }
 
-            if (step === 2) {
+            if (step === 3) {
                 if (!String(profile.nickname).trim()) {
                     throw new Error('Informe um nickname válido.');
                 }
@@ -275,7 +292,7 @@ export default function PrimeiroAcesso() {
                 return;
             }
 
-            if (step === 3) {
+            if (step === 4) {
                 const whatsapp = normalizeWhatsApp(profile.whatsapp);
                 if (!whatsapp) {
                     throw new Error('Informe um WhatsApp válido.');
@@ -285,7 +302,7 @@ export default function PrimeiroAcesso() {
                 return;
             }
 
-            if (step === 4) {
+            if (step === 5) {
                 if (!profile.plataforma_id || !profile.geracao_id) {
                     throw new Error('Selecione plataforma e geração para continuar.');
                 }
@@ -297,7 +314,7 @@ export default function PrimeiroAcesso() {
                 return;
             }
 
-            if (step === 5) {
+            if (step === 6) {
                 if (!profile.jogo_id) {
                     throw new Error('Selecione um jogo para continuar.');
                 }
@@ -320,6 +337,23 @@ export default function PrimeiroAcesso() {
         const labelBase = 'block text-[9px] font-black text-[#FFD700] uppercase italic tracking-[0.2em]';
 
         if (step === 1) {
+            return (
+                <div className={fieldBox}>
+                    <label htmlFor="primeiro-acesso-nome" className={labelBase}>Nome</label>
+                    <input
+                        id="primeiro-acesso-nome"
+                        type="text"
+                        className={inputBase}
+                        style={{ clipPath: AGGRESSIVE_CLIP }}
+                        value={profile.name}
+                        onChange={(event) => updateProfileField('name', event.target.value)}
+                        placeholder="EX.: BRUNO SAMPAIO"
+                    />
+                </div>
+            );
+        }
+
+        if (step === 2) {
             return (
                 <div className="space-y-4">
                     <div className={fieldBox}>
@@ -357,7 +391,7 @@ export default function PrimeiroAcesso() {
             );
         }
 
-        if (step === 2) {
+        if (step === 3) {
             return (
                 <div className={fieldBox}>
                     <label htmlFor="primeiro-acesso-nickname" className={labelBase}>Nickname</label>
@@ -374,7 +408,7 @@ export default function PrimeiroAcesso() {
             );
         }
 
-        if (step === 3) {
+        if (step === 4) {
             return (
                 <div className={fieldBox}>
                     <label htmlFor="primeiro-acesso-whatsapp" className={labelBase}>WhatsApp</label>
@@ -391,7 +425,7 @@ export default function PrimeiroAcesso() {
             );
         }
 
-        if (step === 4) {
+        if (step === 5) {
             return (
                 <div className="space-y-4">
                     <div className={fieldBox}>
@@ -429,7 +463,7 @@ export default function PrimeiroAcesso() {
             );
         }
 
-        if (step === 5) {
+        if (step === 6) {
             return (
                 <div className={fieldBox}>
                     <label htmlFor="primeiro-acesso-jogo" className={labelBase}>Jogo</label>
