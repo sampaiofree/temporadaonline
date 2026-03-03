@@ -529,13 +529,19 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b border-slate-100 bg-white';
                 row.setAttribute(config.rowAttribute, '');
+                const renderInicio = config.fieldName === 'periodos'
+                    ? formatDateTimeLabel(inicio)
+                    : (inicio || '—');
+                const renderFim = config.fieldName === 'periodos'
+                    ? formatDateTimeLabel(fim)
+                    : (fim || '—');
                 row.innerHTML = `
                     <td class="px-4 py-3 text-sm text-slate-900">
-                        <div class="font-semibold">${typeof config.formatValue === 'function' ? config.formatValue(inicio) : (inicio || '—')}</div>
+                        <div class="font-semibold">${renderInicio}</div>
                         <input type="hidden" name="${config.fieldName}[${nextIndex}][inicio]" value="${inicio}">
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-900">
-                        <div class="font-semibold">${typeof config.formatValue === 'function' ? config.formatValue(fim) : (fim || '—')}</div>
+                        <div class="font-semibold">${renderFim}</div>
                         <input type="hidden" name="${config.fieldName}[${nextIndex}][fim]" value="${fim}">
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -655,7 +661,6 @@
             fieldName: 'periodos',
             rowAttribute: 'data-periodo-row',
             removeAttribute: 'data-remove-periodo',
-            formatValue: formatDateTimeLabel,
         });
 
         initRangeManager({
