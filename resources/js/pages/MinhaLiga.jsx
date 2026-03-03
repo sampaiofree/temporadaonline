@@ -106,7 +106,10 @@ export default function MinhaLiga() {
 
     const parsePeriodDate = (value) => {
         if (!value) return null;
-        return new Date(`${value}T00:00:00`);
+        const raw = String(value);
+        const normalized = raw.includes('T') ? raw : `${raw}T00:00:00`;
+        const parsed = new Date(normalized);
+        return Number.isNaN(parsed.getTime()) ? null : parsed;
     };
 
     const calculatePeriodProgress = (period) => {
@@ -125,7 +128,7 @@ export default function MinhaLiga() {
         return Math.round((elapsed / duration) * 100);
     };
 
-    const sectionStatusLabel = activePeriod ? 'Período atual' : 'Aguardando Início';
+    const sectionStatusLabel = activePeriod ? 'Mercado aberto agora' : 'Mercado fechado agora';
 
     return (
         <main className="mco-screen minha-liga-screen" aria-label="Minha liga">
@@ -317,7 +320,7 @@ export default function MinhaLiga() {
             </section>
             <section className="league-periods">
                 <div className="league-periods-header">
-                    <h3 className="league-periods-title">🕒 Cronograma de rodadas</h3>
+                    <h3 className="league-periods-title">Janelas de mercado</h3>
                     <span className="league-periods-status">{sectionStatusLabel}</span>
                 </div>
 
@@ -332,21 +335,21 @@ export default function MinhaLiga() {
                                 >
                                     <div className="league-period-card-side">
                                         <span className="league-period-card-rodada">
-                                            Rodada {index + 1}
+                                            Janela {index + 1}
                                         </span>
                                         <span className="league-period-card-status">
-                                            {isActivePeriod(periodo) ? 'Em andamento' : 'Planejada'}
+                                            {isActivePeriod(periodo) ? 'Aberta agora' : 'Programada'}
                                         </span>
                                     </div>
                                     <div className="league-period-card-body">
                                         <div className="league-period-card-row">
                                             <div>
-                                                <span>Início</span>
+                                                <span>Abre</span>
                                                 <strong>{periodo.inicio_label ?? periodo.inicio ?? '—'}</strong>
                                             </div>
                                             <div className="league-period-card-arrow">➔</div>
                                             <div>
-                                                <span>Término</span>
+                                                <span>Fecha</span>
                                                 <strong>{periodo.fim_label ?? periodo.fim ?? '—'}</strong>
                                             </div>
                                         </div>
@@ -359,15 +362,14 @@ export default function MinhaLiga() {
                         })
                     ) : (
                         <p className="league-period-empty">
-                            Ainda não existem períodos cadastrados para esta liga.
+                            Ainda não existem janelas de mercado cadastradas para esta liga.
                         </p>
                     )}
                 </div>
 
                 <div className="league-periods-note">
                     <p>
-                        As partidas realizadas fora deste intervalo <strong>não serão
-                        contabilizadas</strong> no sistema da liga.
+                        O mercado de transferências só fica disponível dentro dessas janelas.
                     </p>
                 </div>
             </section>

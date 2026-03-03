@@ -7,6 +7,7 @@ use App\Models\Liga;
 use App\Models\LigaPeriodo;
 use App\Models\Profile;
 use App\Models\UserDisponibilidade;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,11 +41,19 @@ class LigaController extends Controller
                 'periodo' => LigaPeriodo::activeRangeForLiga($liga),
                 'periodos' => $liga->periodos
                     ->sortBy('inicio')
-                    ->map(fn (LigaPeriodo $periodo) => [
-                        'codigo' => $periodo->id,
-                        'inicio_label' => $periodo->inicio?->format('d/m/Y'),
-                        'fim_label' => $periodo->fim?->format('d/m/Y'),
-                    ])
+                    ->map(function (LigaPeriodo $periodo) use ($liga) {
+                        $tz = $liga->resolveTimezone();
+                        $inicioRaw = (string) $periodo->getRawOriginal('inicio');
+                        $fimRaw = (string) $periodo->getRawOriginal('fim');
+                        $inicio = $inicioRaw !== '' ? Carbon::parse($inicioRaw, $tz) : null;
+                        $fim = $fimRaw !== '' ? Carbon::parse($fimRaw, $tz) : null;
+
+                        return [
+                            'codigo' => $periodo->id,
+                            'inicio_label' => $inicio?->format('d/m/Y H:i'),
+                            'fim_label' => $fim?->format('d/m/Y H:i'),
+                        ];
+                    })
                     ->values()
                     ->all(),
             ])

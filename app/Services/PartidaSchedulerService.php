@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\DB;
 class PartidaSchedulerService
 {
     private const BLOCK_MINUTES = 30;
+    private const SCHEDULING_HORIZON_DAYS = 30;
 
     /**
      * Gera turno e returno para um clube recém-criado.
@@ -70,7 +71,7 @@ class PartidaSchedulerService
     }
 
     /**
-     * Calcula slots para o visitante (UTC) usando periodos da liga e disponibilidade do mandante.
+     * Calcula slots para o visitante (UTC) usando a disponibilidade do mandante.
      */
     public function availableVisitorSlots(Partida $partida): Collection
     {
@@ -93,15 +94,12 @@ class PartidaSchedulerService
 
     private function availableSlotsForRole(Partida $partida, string $availabilityRole): Collection
     {
-        $partida->loadMissing(['liga.periodos', 'mandante.user', 'visitante.user']);
+        $partida->loadMissing(['liga', 'mandante.user', 'visitante.user']);
         $liga = $partida->liga;
         $tz = $liga->resolveTimezone();
         $nowLocal = Carbon::now($tz);
-        $periodos = ($liga->periodos ?? collect())->sortBy('inicio')->values();
-
-        if ($periodos->isEmpty()) {
-            return collect();
-        }
+        $windowStart = $nowLocal->copy()->startOfDay();
+        $windowEnd = $windowStart->copy()->addDays(self::SCHEDULING_HORIZON_DAYS);
 
         $availabilityUser = $availabilityRole === 'visitante'
             ? $partida->visitante?->user
@@ -114,41 +112,32 @@ class PartidaSchedulerService
 
         $slots = collect();
 
-        foreach ($periodos as $periodo) {
-            $startDate = Carbon::parse($periodo->inicio, $tz)->startOfDay();
-            $endDate = Carbon::parse($periodo->fim, $tz)->startOfDay();
+        for ($date = $windowStart->copy(); $date->lte($windowEnd); $date->addDay()) {
+            $dayOfWeek = $date->dayOfWeek;
+            $dayRanges = $availabilityRanges[$dayOfWeek] ?? [];
 
-            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
-                if ($date->lt($nowLocal->copy()->startOfDay())) {
-                    continue;
-                }
+            if (empty($dayRanges)) {
+                continue;
+            }
 
-                $dayOfWeek = $date->dayOfWeek;
-                $dayRanges = $availabilityRanges[$dayOfWeek] ?? [];
+            foreach ($dayRanges as $range) {
+                $rangeSlots = $this->buildSlotsForRange($date, $range, $tz);
 
-                if (empty($dayRanges)) {
-                    continue;
-                }
-
-                foreach ($dayRanges as $range) {
-                    $rangeSlots = $this->buildSlotsForRange($date, $range, $tz);
-
-                    foreach ($rangeSlots as $slotLocal) {
-                        if ($slotLocal->lessThanOrEqualTo($nowLocal)) {
-                            continue;
-                        }
-
-                        $slotUtc = $slotLocal->copy()->setTimezone('UTC');
-
-                        if (
-                            $this->hasScheduleConflict($partida->mandante_id, $slotUtc) ||
-                            $this->hasScheduleConflict($partida->visitante_id, $slotUtc)
-                        ) {
-                            continue;
-                        }
-
-                        $slots->push($slotUtc);
+                foreach ($rangeSlots as $slotLocal) {
+                    if ($slotLocal->lessThanOrEqualTo($nowLocal)) {
+                        continue;
                     }
+
+                    $slotUtc = $slotLocal->copy()->setTimezone('UTC');
+
+                    if (
+                        $this->hasScheduleConflict($partida->mandante_id, $slotUtc) ||
+                        $this->hasScheduleConflict($partida->visitante_id, $slotUtc)
+                    ) {
+                        continue;
+                    }
+
+                    $slots->push($slotUtc);
                 }
             }
         }
@@ -212,20 +201,11 @@ class PartidaSchedulerService
     }
 
     /**
-     * Verifica se a data local esta dentro de algum periodo cadastrado da liga.
+     * Mantido por compatibilidade: o agendamento nao depende mais de periodo de liga.
      */
     public function isWithinLigaPeriod(Liga $liga, Carbon $dateLocal): bool
     {
-        $liga->loadMissing('periodos');
-        $periodos = $liga->periodos ?? collect();
-        if ($periodos->isEmpty()) {
-            return true;
-        }
-
-        $date = $dateLocal->toDateString();
-
-        return $periodos->contains(fn ($periodo) => $date >= $periodo->inicio->toDateString()
-            && $date <= $periodo->fim->toDateString());
+        return true;
     }
 
     /**

@@ -23,7 +23,7 @@ class EnsureRosterLimitDuringMarketClosed
 
         [$liga, $clubeId] = $context;
 
-        if (! LigaPeriodo::activeRangeForLiga($liga)) {
+        if (LigaPeriodo::activeRangeForLiga($liga)) {
             return $next($request);
         }
 
@@ -131,7 +131,7 @@ class EnsureRosterLimitDuringMarketClosed
                 continue;
             }
 
-            if (! LigaPeriodo::activeRangeForLiga($liga)) {
+            if (LigaPeriodo::activeRangeForLiga($liga)) {
                 continue;
             }
 

@@ -1,4 +1,5 @@
 @php
+    use Carbon\Carbon;
     use Illuminate\Support\Facades\Storage;
 @endphp
 
@@ -25,8 +26,12 @@
             ? $confederacao->periodos
                 ->sortBy('inicio')
                 ->map(fn ($periodo) => [
-                    'inicio' => $periodo->inicio?->toDateString(),
-                    'fim' => $periodo->fim?->toDateString(),
+                    'inicio' => $periodo->inicio
+                        ? Carbon::parse((string) $periodo->getRawOriginal('inicio'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
+                    'fim' => $periodo->fim
+                        ? Carbon::parse((string) $periodo->getRawOriginal('fim'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
                 ])
                 ->values()
                 ->toArray()
@@ -177,15 +182,15 @@
     <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <p class="text-sm font-semibold text-slate-700">Períodos de partidas</p>
-                <p class="text-xs text-slate-500">Todas as ligas desta confederação usarão os mesmos períodos.</p>
+                <p class="text-sm font-semibold text-slate-700">Janelas de mercado aberto</p>
+                <p class="text-xs text-slate-500">Todas as ligas desta confederacao usarao as mesmas janelas.</p>
             </div>
             <button
                 type="button"
                 id="confederacao-periodos-add"
                 class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
             >
-                Adicionar período
+                Adicionar janela
             </button>
         </div>
 
@@ -208,14 +213,16 @@
                             @php
                                 $inicio = $periodo['inicio'] ?? '';
                                 $fim = $periodo['fim'] ?? '';
+                                $inicioLabel = $inicio ? Carbon::parse($inicio, $timezoneAtual)->format('d/m/Y H:i') : '—';
+                                $fimLabel = $fim ? Carbon::parse($fim, $timezoneAtual)->format('d/m/Y H:i') : '—';
                             @endphp
                             <tr class="border-b border-slate-100 bg-white" data-periodo-row>
                                 <td class="px-4 py-3 text-sm text-slate-900">
-                                    <div class="font-semibold">{{ $inicio ?: '—' }}</div>
+                                    <div class="font-semibold">{{ $inicioLabel }}</div>
                                     <input type="hidden" name="periodos[{{ $index }}][inicio]" value="{{ $inicio }}">
                                 </td>
                                 <td class="px-4 py-3 text-sm text-slate-900">
-                                    <div class="font-semibold">{{ $fim ?: '—' }}</div>
+                                    <div class="font-semibold">{{ $fimLabel }}</div>
                                     <input type="hidden" name="periodos[{{ $index }}][fim]" value="{{ $fim }}">
                                 </td>
                                 <td class="px-4 py-3 text-right">
@@ -234,7 +241,7 @@
                             class="border-b border-slate-100 bg-white {{ count($periodos) ? 'hidden' : '' }}"
                         >
                             <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-500">
-                                Ainda não há períodos cadastrados.
+                                Ainda não há janelas cadastradas.
                             </td>
                         </tr>
                     </tbody>
@@ -247,14 +254,14 @@
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
                 <p class="text-sm font-semibold text-slate-700">Períodos de leilão</p>
-                <p class="text-xs text-slate-500">Todas as ligas desta confederação usarão os mesmos períodos.</p>
+                <p class="text-xs text-slate-500">Todas as ligas desta confederacao usarao as mesmas janelas.</p>
             </div>
             <button
                 type="button"
                 id="confederacao-leiloes-add"
                 class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
             >
-                Adicionar período de leilão
+                Adicionar janela de leilão
             </button>
         </div>
 
@@ -332,7 +339,7 @@
     <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-semibold text-slate-900">Adicionar período</h3>
+                <h3 class="text-lg font-semibold text-slate-900">Adicionar janela</h3>
                 <p class="text-sm text-slate-500">Configure as datas de início e término.</p>
             </div>
             <button
@@ -346,19 +353,19 @@
 
         <form id="confederacao-periodos-modal-form" class="mt-6 space-y-4">
             <div>
-                <label for="confederacao-periodo-modal-inicio" class="text-sm font-semibold text-slate-700">Data de início</label>
+                <label for="confederacao-periodo-modal-inicio" class="text-sm font-semibold text-slate-700">Data e hora de inicio</label>
                 <input
                     id="confederacao-periodo-modal-inicio"
-                    type="date"
+                    type="datetime-local"
                     class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     required
                 >
             </div>
             <div>
-                <label for="confederacao-periodo-modal-fim" class="text-sm font-semibold text-slate-700">Data de término</label>
+                <label for="confederacao-periodo-modal-fim" class="text-sm font-semibold text-slate-700">Data e hora de fim</label>
                 <input
                     id="confederacao-periodo-modal-fim"
-                    type="date"
+                    type="datetime-local"
                     class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     required
                 >
@@ -376,7 +383,7 @@
                     type="submit"
                     class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 >
-                    Salvar período
+                    Salvar janela
                 </button>
             </div>
         </form>
@@ -392,7 +399,7 @@
     <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div class="flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-semibold text-slate-900">Adicionar período de leilão</h3>
+                <h3 class="text-lg font-semibold text-slate-900">Adicionar janela de leilão</h3>
                 <p class="text-sm text-slate-500">Configure as datas de início e término.</p>
             </div>
             <button
@@ -406,7 +413,7 @@
 
         <form id="confederacao-leiloes-modal-form" class="mt-6 space-y-4">
             <div>
-                <label for="confederacao-leilao-modal-inicio" class="text-sm font-semibold text-slate-700">Data de início</label>
+                <label for="confederacao-leilao-modal-inicio" class="text-sm font-semibold text-slate-700">Data de inicio</label>
                 <input
                     id="confederacao-leilao-modal-inicio"
                     type="date"
@@ -415,7 +422,7 @@
                 >
             </div>
             <div>
-                <label for="confederacao-leilao-modal-fim" class="text-sm font-semibold text-slate-700">Data de término</label>
+                <label for="confederacao-leilao-modal-fim" class="text-sm font-semibold text-slate-700">Data de fim</label>
                 <input
                     id="confederacao-leilao-modal-fim"
                     type="date"
@@ -436,7 +443,7 @@
                     type="submit"
                     class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 >
-                    Salvar período
+                    Salvar janela de leilão
                 </button>
             </div>
         </form>
@@ -497,6 +504,26 @@
                 errorMessage.textContent = message;
                 errorMessage.classList.remove('hidden');
             };
+            const formatDateTimeLabel = (value) => {
+                if (! value) {
+                    return '—';
+                }
+
+                const normalized = value.includes('T') ? value : value.replace(' ', 'T');
+                const date = new Date(normalized);
+
+                if (Number.isNaN(date.getTime())) {
+                    return value.replace('T', ' ');
+                }
+
+                return date.toLocaleString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                });
+            };
 
             const createRow = (inicio, fim) => {
                 const row = document.createElement('tr');
@@ -504,11 +531,11 @@
                 row.setAttribute(config.rowAttribute, '');
                 row.innerHTML = `
                     <td class="px-4 py-3 text-sm text-slate-900">
-                        <div class="font-semibold">${inicio || '—'}</div>
+                        <div class="font-semibold">${typeof config.formatValue === 'function' ? config.formatValue(inicio) : (inicio || '—')}</div>
                         <input type="hidden" name="${config.fieldName}[${nextIndex}][inicio]" value="${inicio}">
                     </td>
                     <td class="px-4 py-3 text-sm text-slate-900">
-                        <div class="font-semibold">${fim || '—'}</div>
+                        <div class="font-semibold">${typeof config.formatValue === 'function' ? config.formatValue(fim) : (fim || '—')}</div>
                         <input type="hidden" name="${config.fieldName}[${nextIndex}][fim]" value="${fim}">
                     </td>
                     <td class="px-4 py-3 text-right">
@@ -571,13 +598,13 @@
                 }
 
                 if (inicio > fim) {
-                    showError('A data de início precisa ser anterior ou igual à data de término.');
+                    showError('A data/hora de inicio precisa ser anterior ou igual a data/hora de fim.');
                     return;
                 }
 
                 const overlap = findOverlap(inicio, fim);
                 if (overlap) {
-                    showError(`Conflito com período ${overlap.inicio} - ${overlap.fim}.`);
+                    showError(`Conflito com janela ${overlap.inicio} - ${overlap.fim}.`);
                     return;
                 }
 
@@ -628,6 +655,7 @@
             fieldName: 'periodos',
             rowAttribute: 'data-periodo-row',
             removeAttribute: 'data-remove-periodo',
+            formatValue: formatDateTimeLabel,
         });
 
         initRangeManager({
@@ -643,20 +671,6 @@
             fieldName: 'leiloes',
             rowAttribute: 'data-leilao-row',
             removeAttribute: 'data-remove-leilao',
-            validateExtra: (inicio, fim) => {
-                for (const row of periodosManager.rows()) {
-                    const pInicio = row.querySelector('input[name$="[inicio]"]')?.value;
-                    const pFim = row.querySelector('input[name$="[fim]"]')?.value;
-                    if (! pInicio || ! pFim) {
-                        continue;
-                    }
-                    if (inicio <= pFim && fim >= pInicio) {
-                        return `Conflito com período de partidas ${pInicio} - ${pFim}.`;
-                    }
-                }
-
-                return null;
-            },
         });
     });
 </script>

@@ -15,6 +15,9 @@ use Illuminate\View\View;
 
 class ElencoPadraoController extends Controller
 {
+    private const MATCH_STRATEGY_JOGO_LONG_NAME = 'jogo_long_name';
+    private const MATCH_STRATEGY_PLAYER_ID = 'player_id';
+
     public function index(): View
     {
         $import = session('elenco_import');
@@ -46,6 +49,7 @@ class ElencoPadraoController extends Controller
         $previewFields = [];
         $previewRows = [];
         $jogoSelecionado = null;
+        $matchStrategy = self::MATCH_STRATEGY_JOGO_LONG_NAME;
 
         if ($import) {
             $path = $import['path'] ?? null;
@@ -59,6 +63,7 @@ class ElencoPadraoController extends Controller
                 $previewFields = array_keys(array_filter($mapping));
                 $previewRows = $this->buildPreview($path, $columns, $mapping, 5);
                 $jogoSelecionado = $jogos->firstWhere('id', $import['jogo_id'] ?? null);
+                $matchStrategy = $this->sanitizeMatchStrategy($import['match_strategy'] ?? null);
             }
         }
 
@@ -75,6 +80,9 @@ class ElencoPadraoController extends Controller
             'previewFields' => $previewFields,
             'previewRows' => $previewRows,
             'jogoSelecionado' => $jogoSelecionado,
+            'matchStrategy' => $matchStrategy,
+            'matchStrategies' => $this->matchStrategies(),
+            'requiredMappingFields' => $this->requiredMappingFields($matchStrategy),
         ]);
     }
 
@@ -192,6 +200,7 @@ class ElencoPadraoController extends Controller
             $data = $request->validate([
                 'jogo_id' => 'required|exists:jogos,id',
                 'csv' => 'required|file|mimes:csv,txt|max:20480',
+                'match_strategy' => 'required|in:'.implode(',', array_keys($this->matchStrategies())),
             ]);
 
             $path = $request->file('csv')->store('tmp');
@@ -211,6 +220,7 @@ class ElencoPadraoController extends Controller
                     'jogo_id' => (int) $data['jogo_id'],
                     'columns' => $columns,
                     'mapping' => $mapping,
+                    'match_strategy' => $this->sanitizeMatchStrategy($data['match_strategy']),
                 ],
             ]);
 
@@ -237,8 +247,11 @@ class ElencoPadraoController extends Controller
         $columns = $import['columns'] ?? [];
         $mappingInput = $request->input('mapping', []);
         $mapping = $this->sanitizeMapping($mappingInput, $fields, $columns);
+        $matchStrategy = $this->sanitizeMatchStrategy(
+            $request->input('match_strategy', $import['match_strategy'] ?? null)
+        );
 
-        $errors = $this->validateMapping($mapping);
+        $errors = $this->validateMapping($mapping, $matchStrategy);
         if (isset($errors['duplicate'])) {
             return redirect()->route('admin.elenco-padrao.index')
                 ->withErrors(['mapping' => $errors['duplicate']]);
@@ -246,23 +259,38 @@ class ElencoPadraoController extends Controller
 
         if (isset($errors['required'])) {
             session()->put('elenco_import.mapping', $mapping);
+            session()->put('elenco_import.match_strategy', $matchStrategy);
             return redirect()->route('admin.elenco-padrao.index')
                 ->withErrors(['mapping' => $errors['required']]);
         }
 
         session()->put('elenco_import.mapping', $mapping);
+        session()->put('elenco_import.match_strategy', $matchStrategy);
 
         if ($step === 'preview') {
             return redirect()->route('admin.elenco-padrao.index');
         }
 
         if ($step === 'confirm') {
-            $this->runImport($import['path'], (int) $import['jogo_id'], $columns, $mapping);
+            $summary = $this->runImport(
+                $import['path'],
+                (int) $import['jogo_id'],
+                $columns,
+                $mapping,
+                $matchStrategy,
+            );
             Storage::delete($import['path']);
             session()->forget('elenco_import');
 
+            $successMessage = sprintf(
+                'Importacao concluida. Criados: %d | Atualizados: %d | Ignorados: %d.',
+                (int) ($summary['created'] ?? 0),
+                (int) ($summary['updated'] ?? 0),
+                (int) ($summary['ignored'] ?? 0),
+            );
+
             return redirect()->route('admin.elenco-padrao.index')
-                ->with('success', 'Elenco importado com sucesso');
+                ->with('success', $successMessage);
         }
 
         return redirect()->route('admin.elenco-padrao.index');
@@ -371,6 +399,7 @@ class ElencoPadraoController extends Controller
         }
 
         $this->applyAutoMap($map, $normalized, $used, 'long_name', ['long_name', 'nome', 'player_name']);
+        $this->applyAutoMap($map, $normalized, $used, 'player_id', ['player_id', 'id_player', 'sofifa_id']);
         $this->applyAutoMap($map, $normalized, $used, 'short_name', ['short_name', 'apelido', 'nickname']);
         $this->applyAutoMap($map, $normalized, $used, 'overall', ['overall', 'ovr', 'rating']);
         $this->applyAutoMap($map, $normalized, $used, 'potential', ['potential', 'overall_potencial', 'potencial']);
@@ -484,14 +513,18 @@ class ElencoPadraoController extends Controller
         return $sanitized;
     }
 
-    private function validateMapping(array $mapping): array
+    private function validateMapping(array $mapping, string $matchStrategy): array
     {
         $errors = [];
-        $required = ['long_name', 'player_positions', 'overall'];
+        $required = $this->requiredMappingFields($matchStrategy);
         $missing = array_filter($required, fn ($field) => ($mapping[$field] ?? '') === '');
 
         if (! empty($missing)) {
-            $errors['required'] = 'Mapeie os campos obrigatórios: nome, posição e overall.';
+            $fieldNames = collect($missing)
+                ->map(fn (string $field) => $this->fieldLabels([$field])[$field] ?? $field)
+                ->implode(', ');
+
+            $errors['required'] = 'Mapeie os campos obrigatorios: '.$fieldNames.'.';
         }
 
         $selected = array_values(array_filter($mapping));
@@ -566,20 +599,28 @@ class ElencoPadraoController extends Controller
         return $rows;
     }
 
-    private function runImport(string $path, int $jogoId, array $columns, array $mapping): void
+    private function runImport(
+        string $path,
+        int $jogoId,
+        array $columns,
+        array $mapping,
+        string $matchStrategy,
+    ): array
     {
         if (! Storage::exists($path)) {
-            return;
+            return ['created' => 0, 'updated' => 0, 'ignored' => 0];
         }
 
         $handle = fopen(Storage::path($path), 'r');
         if ($handle === false) {
-            return;
+            return ['created' => 0, 'updated' => 0, 'ignored' => 0];
         }
 
         fgetcsv($handle, 0, ';');
         $indexes = array_flip($columns);
         $mappedFields = array_keys(array_filter($mapping));
+        $updated = 0;
+        $ignored = 0;
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
             $payload = [];
@@ -596,17 +637,23 @@ class ElencoPadraoController extends Controller
             $nome = $payload['long_name'] ?? null;
             $posicao = $payload['player_positions'] ?? null;
             $overall = $payload['overall'] ?? null;
+            $matchValue = $matchStrategy === self::MATCH_STRATEGY_PLAYER_ID
+                ? ($payload['player_id'] ?? null)
+                : $nome;
 
-            if ($nome === null || $nome === '' || $posicao === null || $posicao === '' || $overall === null || $overall === '') {
+            if ($matchValue === null || $matchValue === '' || $posicao === null || $posicao === '' || $overall === null || $overall === '') {
+                $ignored++;
                 continue;
             }
 
             if (! is_numeric($overall)) {
+                $ignored++;
                 continue;
             }
 
             $overallValue = (int) $overall;
             if ($overallValue < 1 || $overallValue > 99) {
+                $ignored++;
                 continue;
             }
 
@@ -620,15 +667,75 @@ class ElencoPadraoController extends Controller
 
             $this->normalizePayloadDates($payload);
 
-            Elencopadrao::updateOrCreate(
-                [
-                    'jogo_id' => $jogoId,
-                    'long_name' => $nome,
-                ],
-                $payload
-            );
+            $target = null;
+
+            if ($matchStrategy === self::MATCH_STRATEGY_PLAYER_ID) {
+                $targets = Elencopadrao::query()
+                    ->where('player_id', $matchValue)
+                    ->limit(2)
+                    ->get();
+
+                if ($targets->count() !== 1) {
+                    $ignored++;
+                    continue;
+                }
+
+                $target = $targets->first();
+            } else {
+                $targets = Elencopadrao::query()
+                    ->where('jogo_id', $jogoId)
+                    ->where('long_name', $matchValue)
+                    ->limit(2)
+                    ->get();
+
+                if ($targets->count() !== 1) {
+                    $ignored++;
+                    continue;
+                }
+
+                $target = $targets->first();
+            }
+
+            $target->update($payload);
+            $updated++;
         }
 
         fclose($handle);
+
+        return [
+            'created' => 0,
+            'updated' => $updated,
+            'ignored' => $ignored,
+        ];
+    }
+
+    private function matchStrategies(): array
+    {
+        return [
+            self::MATCH_STRATEGY_JOGO_LONG_NAME => 'jogo_id + long_name',
+            self::MATCH_STRATEGY_PLAYER_ID => 'player_id',
+        ];
+    }
+
+    private function sanitizeMatchStrategy(?string $matchStrategy): string
+    {
+        $value = is_string($matchStrategy) ? trim($matchStrategy) : '';
+
+        return array_key_exists($value, $this->matchStrategies())
+            ? $value
+            : self::MATCH_STRATEGY_JOGO_LONG_NAME;
+    }
+
+    private function requiredMappingFields(string $matchStrategy): array
+    {
+        $required = ['player_positions', 'overall'];
+
+        if ($matchStrategy === self::MATCH_STRATEGY_PLAYER_ID) {
+            $required[] = 'player_id';
+        } else {
+            $required[] = 'long_name';
+        }
+
+        return $required;
     }
 }

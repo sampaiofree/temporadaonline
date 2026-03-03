@@ -303,9 +303,17 @@ class LigaPropostaController extends Controller
 
     private function ensureProposalAllowed(Liga $liga): ?JsonResponse
     {
-        if ($this->marketWindowService->isAuctionActive($liga)) {
+        $window = $this->marketWindowService->resolveForLiga($liga);
+
+        if ($window['is_auction'] ?? false) {
             return response()->json([
                 'message' => 'Mercado em modo leilao. Propostas entre clubes estao bloqueadas.',
+            ], 423);
+        }
+
+        if ($window['is_closed'] ?? false) {
+            return response()->json([
+                'message' => 'Mercado fechado. Fora da janela de mercado aberto.',
             ], 423);
         }
 

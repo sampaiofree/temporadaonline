@@ -42,8 +42,8 @@ class LigaPartidasDemoSeeder extends Seeder
 
             LigaPeriodo::create([
                 'confederacao_id' => $liga->confederacao_id,
-                'inicio' => $start->toDateString(),
-                'fim' => $end->toDateString(),
+                'inicio' => $start->format('Y-m-d H:i:s'),
+                'fim' => $end->format('Y-m-d H:i:s'),
             ]);
         }
 

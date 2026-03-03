@@ -5,7 +5,7 @@
                 <h2 class="text-2xl font-bold text-slate-800">Importar Elenco Padrão</h2>
                 <p class="text-sm text-slate-500">Faça o upload, mapeie as colunas e confirme a importação.</p>
             </div>
-            <div class="text-right text-xs uppercase tracking-wide text-slate-400">CSV → UpdateOrCreate</div>
+            <div class="text-right text-xs uppercase tracking-wide text-slate-400">CSV → Atualizacao por chave</div>
         </div>
     </x-slot>
 
@@ -96,6 +96,25 @@
                         @enderror
                     </div>
 
+                    <div>
+                        <label for="match_strategy" class="block text-sm font-semibold text-slate-700">Base de atualizacao</label>
+                        <select
+                            id="match_strategy"
+                            name="match_strategy"
+                            class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                            {{ $jogos->isEmpty() ? 'disabled' : '' }}
+                        >
+                            @foreach($matchStrategies as $strategyKey => $strategyLabel)
+                                <option value="{{ $strategyKey }}" @selected(old('match_strategy', $matchStrategy) === $strategyKey)>
+                                    {{ $strategyLabel }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('match_strategy')
+                            <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                        @enderror
+                    </div>
+
                     <div class="flex items-center justify-end gap-3">
                         <button
                             type="submit"
@@ -111,15 +130,18 @@
             @if($step === 2)
                 <div class="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                     Jogo selecionado: <strong>{{ $jogoSelecionado?->nome ?? 'Não definido' }}</strong>
+                    <span class="mx-2 text-slate-300">|</span>
+                    Base de atualizacao: <strong>{{ $matchStrategies[$matchStrategy] ?? $matchStrategy }}</strong>
                 </div>
 
                 <form action="{{ route('admin.elenco-padrao.importar') }}" method="POST" class="space-y-6">
                     @csrf
+                    <input type="hidden" name="match_strategy" value="{{ $matchStrategy }}">
                     <div class="grid gap-4 md:grid-cols-2">
                         @foreach($fields as $field)
                             @php
                                 $label = $labels[$field] ?? $field;
-                                $required = in_array($field, ['long_name', 'player_positions', 'overall'], true);
+                                $required = in_array($field, $requiredMappingFields, true);
                             @endphp
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700">

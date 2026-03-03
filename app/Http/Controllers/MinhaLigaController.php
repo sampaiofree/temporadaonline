@@ -21,6 +21,7 @@ use App\Models\EscudoClube;
 use App\Models\Pais;
 use App\Services\LeagueFinanceService;
 use App\Services\TransferService;
+use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -69,14 +70,20 @@ class MinhaLigaController extends Controller
             $saldo = $walletSaldo !== null ? (int) $walletSaldo : (int) ($liga->saldo_inicial ?? 0);
         }
 
+        $tz = $liga->resolveTimezone();
         $periodos = $liga->periodos
-            ->map(function (LigaPeriodo $periodo) {
+            ->map(function (LigaPeriodo $periodo) use ($tz) {
+                $inicioRaw = (string) $periodo->getRawOriginal('inicio');
+                $fimRaw = (string) $periodo->getRawOriginal('fim');
+                $inicio = $inicioRaw !== '' ? Carbon::parse($inicioRaw, $tz) : null;
+                $fim = $fimRaw !== '' ? Carbon::parse($fimRaw, $tz) : null;
+
                 return [
                     'codigo' => $periodo->id,
-                    'inicio' => $periodo->inicio?->toDateString(),
-                    'fim' => $periodo->fim?->toDateString(),
-                    'inicio_label' => $periodo->inicio?->format('d/m/Y'),
-                    'fim_label' => $periodo->fim?->format('d/m/Y'),
+                    'inicio' => $inicio?->format('Y-m-d\TH:i:s'),
+                    'fim' => $fim?->format('Y-m-d\TH:i:s'),
+                    'inicio_label' => $inicio?->format('d/m/Y H:i'),
+                    'fim_label' => $fim?->format('d/m/Y H:i'),
                 ];
             })
             ->values()
@@ -743,7 +750,7 @@ class MinhaLigaController extends Controller
         $entries = [];
         $salaryPerRound = 0;
         $activeCount = 0;
-        $marketClosed = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $marketClosed = LigaPeriodo::activeRangeForLiga($liga) === null;
         $closedLimit = 18;
 
         if ($userClub) {

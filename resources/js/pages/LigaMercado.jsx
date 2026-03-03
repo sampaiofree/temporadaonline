@@ -212,8 +212,8 @@ export default function LigaMercado() {
     const auctionPeriod = mercado?.auction_period ?? null;
     const closedPeriodLabel =
         closedPeriod?.inicio_label && closedPeriod?.fim_label
-            ? `O mercado esta fechado durante o periodo de partidas (${closedPeriod.inicio_label} ate ${closedPeriod.fim_label}).`
-            : 'O mercado esta fechado durante o periodo de partidas.';
+            ? `Mercado fechado fora da janela de mercado aberto (${closedPeriod.inicio_label} ate ${closedPeriod.fim_label}).`
+            : 'Mercado fechado fora da janela de mercado aberto.';
     const auctionPeriodLabel =
         auctionPeriod?.inicio_label && auctionPeriod?.fim_label
             ? `Leilao ativo: ${auctionPeriod.inicio_label} ate ${auctionPeriod.fim_label}.`

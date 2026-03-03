@@ -76,7 +76,7 @@ class AuthenticatedSessionController extends Controller
                 continue;
             }
 
-            if (! LigaPeriodo::activeRangeForLiga($liga)) {
+            if (LigaPeriodo::activeRangeForLiga($liga)) {
                 continue;
             }
 

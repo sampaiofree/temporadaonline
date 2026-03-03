@@ -90,7 +90,7 @@ class LigaMercadoController extends Controller
 
         $marketWindow = $marketWindowService->resolveForLiga($liga);
         $marketMode = (string) ($marketWindow['mode'] ?? MarketWindowService::MODE_OPEN);
-        $periodoAtivo = $marketWindow['match_period'] ?? null;
+        $periodoAtivo = $marketWindow['market_period'] ?? null;
         $periodoLeilaoAtivo = $marketWindow['auction_period'] ?? null;
         $mercadoFechado = $marketMode === MarketWindowService::MODE_CLOSED;
         $mercadoLeilao = $marketMode === MarketWindowService::MODE_AUCTION;

@@ -10,10 +10,10 @@ use App\Http\Requests\Api\SwapPlayersRequest;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
-use App\Models\LigaPeriodo;
 use App\Services\MarketWindowService;
 use App\Services\TransferService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Str;
 
 class LeagueTransferController extends Controller
 {
@@ -42,7 +42,8 @@ class LeagueTransferController extends Controller
             ], 201);
         } catch (\DomainException $exception) {
             $message = $exception->getMessage();
-            $status = str_contains($message, 'já faz parte') ? 409 : 422;
+            $normalizedMessage = Str::ascii(Str::lower($message));
+            $status = str_contains($normalizedMessage, 'ja faz parte') ? 409 : 422;
 
             return response()->json(['message' => $message], $status);
         }
@@ -69,7 +70,7 @@ class LeagueTransferController extends Controller
 
             if (! $entry) {
                 return response()->json([
-                    'message' => 'Este jogador está livre. Use a rota de compra de jogador livre.',
+                    'message' => 'Este jogador esta livre. Use a rota de compra de jogador livre.',
                 ], 422);
             }
 
@@ -82,7 +83,7 @@ class LeagueTransferController extends Controller
             );
 
             return response()->json([
-                'message' => 'Transferência concluída com sucesso.',
+                'message' => 'Transferencia concluida com sucesso.',
                 'entry' => $entry,
             ]);
         } catch (\DomainException $exception) {
@@ -146,17 +147,13 @@ class LeagueTransferController extends Controller
             ], 423);
         }
 
-        $periodo = LigaPeriodo::activeRangeForLiga($liga);
-        if (! $periodo) {
+        $periodo = $window['market_period'] ?? null;
+        if ($periodo) {
             return null;
         }
 
-        $inicioLabel = $periodo['inicio_label'] ?? null;
-        $fimLabel = $periodo['fim_label'] ?? null;
-        $range = $inicioLabel && $fimLabel ? " ({$inicioLabel} até {$fimLabel})" : '';
-
         return response()->json([
-            'message' => "Mercado fechado durante o período de partidas{$range}.",
+            'message' => 'Mercado fechado. Fora da janela de mercado aberto.',
         ], 423);
     }
 }

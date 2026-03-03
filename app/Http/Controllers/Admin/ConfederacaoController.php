@@ -55,8 +55,8 @@ class ConfederacaoController extends Controller
             'jogo_id' => 'required|exists:jogos,id',
             'geracao_id' => 'required|exists:geracoes,id',
             'periodos' => 'array',
-            'periodos.*.inicio' => 'nullable|date',
-            'periodos.*.fim' => 'nullable|date',
+            'periodos.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'periodos.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'leiloes' => 'array',
             'leiloes.*.inicio' => 'nullable|date',
             'leiloes.*.fim' => 'nullable|date',
@@ -71,9 +71,9 @@ class ConfederacaoController extends Controller
             $data['imagem'] = $request->file('imagem')->store('confederacoes', 'public');
         }
 
-        $periodos = $this->normalizePeriodos($request->input('periodos', []));
+        $timezone = (string) ($data['timezone'] ?? 'America/Sao_Paulo');
+        $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
         $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        $this->assertLeilaoNaoConflitaComPeriodos($periodos, $leiloes);
         unset($data['periodos'], $data['leiloes']);
 
         $confederacao = Confederacao::create($data);
@@ -114,8 +114,8 @@ class ConfederacaoController extends Controller
             'jogo_id' => 'required|exists:jogos,id',
             'geracao_id' => 'required|exists:geracoes,id',
             'periodos' => 'array',
-            'periodos.*.inicio' => 'nullable|date',
-            'periodos.*.fim' => 'nullable|date',
+            'periodos.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'periodos.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'leiloes' => 'array',
             'leiloes.*.inicio' => 'nullable|date',
             'leiloes.*.fim' => 'nullable|date',
@@ -144,16 +144,18 @@ class ConfederacaoController extends Controller
             unset($data['jogo_id'], $data['geracao_id']);
         }
 
-        $periodos = $this->normalizePeriodos($request->input('periodos', []));
+        $timezone = (string) ($data['timezone'] ?? $confederacao->timezone ?? 'America/Sao_Paulo');
+        $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
         $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        $this->assertLeilaoNaoConflitaComPeriodos($periodos, $leiloes);
         unset($data['periodos'], $data['leiloes']);
 
         $confederacao->update($data);
+
         $confederacao->periodos()->delete();
         if ($periodos) {
             $confederacao->periodos()->createMany($periodos);
         }
+
         $confederacao->leiloes()->delete();
         if ($leiloes) {
             $confederacao->leiloes()->createMany($leiloes);
@@ -177,8 +179,12 @@ class ConfederacaoController extends Controller
         return redirect()->route('admin.confederacoes.index')->with('success', 'Confederacao removida com sucesso.');
     }
 
-    private function normalizePeriodos(array $periodos, string $field = 'periodos'): array
-    {
+    private function normalizePeriodos(
+        array $periodos,
+        string $field = 'periodos',
+        ?string $timezone = null,
+        bool $withTime = false,
+    ): array {
         $normalized = [];
 
         foreach ($periodos as $periodo) {
@@ -191,22 +197,34 @@ class ConfederacaoController extends Controller
 
             if (! $inicio || ! $fim) {
                 throw ValidationException::withMessages([
-                    $field => ['Informe data inicial e final para todos os registros.'],
+                    $field => ['Informe inicio e fim para todos os registros.'],
                 ]);
             }
 
-            $inicioDate = Carbon::parse($inicio)->startOfDay();
-            $fimDate = Carbon::parse($fim)->startOfDay();
+            $inicioDate = Carbon::parse($inicio, $timezone ?? config('app.timezone'));
+            $fimDate = Carbon::parse($fim, $timezone ?? config('app.timezone'));
+
+            if ($withTime) {
+                $inicioDate = $inicioDate->second(0);
+                $fimDate = $fimDate->second(0);
+            } else {
+                $inicioDate = $inicioDate->startOfDay();
+                $fimDate = $fimDate->startOfDay();
+            }
 
             if ($inicioDate->gt($fimDate)) {
                 throw ValidationException::withMessages([
-                    $field => ['A data inicial precisa ser menor ou igual a data final.'],
+                    $field => ['O inicio precisa ser menor ou igual ao fim.'],
                 ]);
             }
 
             $normalized[] = [
-                'inicio' => $inicioDate->toDateString(),
-                'fim' => $fimDate->toDateString(),
+                'inicio' => $withTime
+                    ? $inicioDate->format('Y-m-d H:i:s')
+                    : $inicioDate->toDateString(),
+                'fim' => $withTime
+                    ? $fimDate->format('Y-m-d H:i:s')
+                    : $fimDate->toDateString(),
             ];
         }
 
@@ -224,27 +242,5 @@ class ConfederacaoController extends Controller
         }
 
         return $normalized;
-    }
-
-    private function assertLeilaoNaoConflitaComPeriodos(array $periodos, array $leiloes): void
-    {
-        foreach ($leiloes as $leilao) {
-            $leilaoInicio = Carbon::parse($leilao['inicio'])->startOfDay();
-            $leilaoFim = Carbon::parse($leilao['fim'])->startOfDay();
-
-            foreach ($periodos as $periodo) {
-                $periodoInicio = Carbon::parse($periodo['inicio'])->startOfDay();
-                $periodoFim = Carbon::parse($periodo['fim'])->startOfDay();
-
-                $overlap = $leilaoInicio->lessThanOrEqualTo($periodoFim)
-                    && $leilaoFim->greaterThanOrEqualTo($periodoInicio);
-
-                if ($overlap) {
-                    throw ValidationException::withMessages([
-                        'leiloes' => ["Periodo de leilao {$leilaoInicio->toDateString()} - {$leilaoFim->toDateString()} conflita com periodo de partidas {$periodoInicio->toDateString()} - {$periodoFim->toDateString()}."],
-                    ]);
-                }
-            }
-        }
     }
 }

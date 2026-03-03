@@ -14,19 +14,20 @@ class MarketWindowService
 
     public function resolveForLiga(Liga $liga): array
     {
-        $matchPeriod = LigaPeriodo::activeRangeForLiga($liga);
+        $marketPeriod = LigaPeriodo::activeRangeForLiga($liga);
         $auctionPeriod = LigaLeilao::activeRangeForLiga($liga);
 
-        $mode = self::MODE_OPEN;
+        $mode = self::MODE_CLOSED;
         if ($auctionPeriod) {
             $mode = self::MODE_AUCTION;
-        } elseif ($matchPeriod) {
-            $mode = self::MODE_CLOSED;
+        } elseif ($marketPeriod) {
+            $mode = self::MODE_OPEN;
         }
 
         return [
             'mode' => $mode,
-            'match_period' => $matchPeriod,
+            'market_period' => $marketPeriod,
+            'match_period' => $marketPeriod, // Backward compatibility for older consumers.
             'auction_period' => $auctionPeriod,
             'is_open' => $mode === self::MODE_OPEN,
             'is_closed' => $mode === self::MODE_CLOSED,
@@ -39,4 +40,3 @@ class MarketWindowService
         return (bool) ($this->resolveForLiga($liga)['is_auction'] ?? false);
     }
 }
-

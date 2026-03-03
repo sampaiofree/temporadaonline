@@ -17,7 +17,7 @@ class ElencoController extends Controller
         $elenco->loadMissing('liga');
         $liga = $elenco->liga;
 
-        if ($liga && LigaPeriodo::activeRangeForLiga($liga)) {
+        if ($liga && ! LigaPeriodo::activeRangeForLiga($liga)) {
             $activeCount = LigaClubeElenco::query()
                 ->where('liga_id', $liga->id)
                 ->where('liga_clube_id', $elenco->liga_clube_id)

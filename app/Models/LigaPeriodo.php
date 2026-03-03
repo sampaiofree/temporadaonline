@@ -16,11 +16,6 @@ class LigaPeriodo extends Model
         'fim',
     ];
 
-    protected $casts = [
-        'inicio' => 'date',
-        'fim' => 'date',
-    ];
-
     public function confederacao(): BelongsTo
     {
         return $this->belongsTo(Confederacao::class, 'confederacao_id');
@@ -33,12 +28,14 @@ class LigaPeriodo extends Model
         }
 
         $tz = $liga->resolveTimezone();
-        $today = Carbon::now($tz)->toDateString();
+        $now = Carbon::now($tz);
+        $nowString = $now->format('Y-m-d H:i:s');
 
         $periods = self::query()
             ->where('confederacao_id', $liga->confederacao_id)
-            ->whereDate('inicio', '<=', $today)
-            ->whereDate('fim', '>=', $today)
+            ->where('inicio', '<=', $nowString)
+            ->where('fim', '>=', $nowString)
+            ->toBase()
             ->get(['inicio', 'fim']);
 
         if ($periods->isEmpty()) {
@@ -48,14 +45,14 @@ class LigaPeriodo extends Model
         $start = $periods->sortBy('inicio')->first()?->inicio;
         $end = $periods->sortByDesc('fim')->first()?->fim;
 
-        $startDate = $start instanceof Carbon ? $start : Carbon::parse((string) $start, $tz);
-        $endDate = $end instanceof Carbon ? $end : Carbon::parse((string) $end, $tz);
+        $startDate = Carbon::parse((string) $start, $tz);
+        $endDate = Carbon::parse((string) $end, $tz);
 
         return [
-            'inicio' => $startDate->toDateString(),
-            'fim' => $endDate->toDateString(),
-            'inicio_label' => $startDate->format('d/m/Y'),
-            'fim_label' => $endDate->format('d/m/Y'),
+            'inicio' => $startDate->format('Y-m-d\TH:i:s'),
+            'fim' => $endDate->format('Y-m-d\TH:i:s'),
+            'inicio_label' => $startDate->format('d/m/Y H:i'),
+            'fim_label' => $endDate->format('d/m/Y H:i'),
             'timezone' => $tz,
         ];
     }

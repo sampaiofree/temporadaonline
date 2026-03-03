@@ -66,7 +66,7 @@ export default function LigaClassificacao() {
                 )}
                 <div className="classificacao-note">
                     <p>
-                        As partidas realizadas fora deste intervalo não são contabilizadas no ranking oficial da liga.
+                        O ranking considera partidas com placar confirmado.
                     </p>
                 </div>
             </section>

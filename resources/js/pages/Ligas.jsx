@@ -510,7 +510,7 @@ export default function Ligas() {
                                 </div>
                             </div>
                             <div className="liga-modal-period">
-                                <span>Períodos de partidas</span>
+                                <span>Janelas de mercado aberto</span>
                                 {activeLiga.periodos && activeLiga.periodos.length > 0 ? (
                                     <div className="liga-modal-period-list">
                                         {activeLiga.periodos.map((periodo) => (
@@ -523,7 +523,7 @@ export default function Ligas() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <strong className="liga-modal-period-empty">Período não informado</strong>
+                                    <strong className="liga-modal-period-empty">Janela não informada</strong>
                                 )}
                             </div>
                         </div>
