@@ -7,6 +7,7 @@ use App\Models\Elencopadrao;
 use App\Models\Jogo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -619,6 +620,7 @@ class ElencoPadraoController extends Controller
         fgetcsv($handle, 0, ';');
         $indexes = array_flip($columns);
         $mappedFields = array_keys(array_filter($mapping));
+        $created = 0;
         $updated = 0;
         $ignored = 0;
 
@@ -668,19 +670,25 @@ class ElencoPadraoController extends Controller
             $this->normalizePayloadDates($payload);
 
             $target = null;
+            $mustCreate = false;
 
             if ($matchStrategy === self::MATCH_STRATEGY_PLAYER_ID) {
                 $targets = Elencopadrao::query()
+                    ->where('jogo_id', $jogoId)
                     ->where('player_id', $matchValue)
                     ->limit(2)
                     ->get();
 
-                if ($targets->count() !== 1) {
+                if ($targets->count() > 1) {
                     $ignored++;
                     continue;
                 }
 
-                $target = $targets->first();
+                if ($targets->count() === 1) {
+                    $target = $targets->first();
+                } else {
+                    $mustCreate = true;
+                }
             } else {
                 $targets = Elencopadrao::query()
                     ->where('jogo_id', $jogoId)
@@ -688,22 +696,41 @@ class ElencoPadraoController extends Controller
                     ->limit(2)
                     ->get();
 
-                if ($targets->count() !== 1) {
+                if ($targets->count() > 1) {
                     $ignored++;
                     continue;
                 }
 
-                $target = $targets->first();
+                if ($targets->count() === 1) {
+                    $target = $targets->first();
+                } else {
+                    $mustCreate = true;
+                }
             }
 
-            $target->update($payload);
-            $updated++;
+            try {
+                if ($mustCreate) {
+                    if (($payload['long_name'] ?? null) === null) {
+                        $ignored++;
+                        continue;
+                    }
+
+                    $payload['jogo_id'] = $jogoId;
+                    Elencopadrao::query()->create($payload);
+                    $created++;
+                } else {
+                    $target->update($payload);
+                    $updated++;
+                }
+            } catch (QueryException $exception) {
+                $ignored++;
+            }
         }
 
         fclose($handle);
 
         return [
-            'created' => 0,
+            'created' => $created,
             'updated' => $updated,
             'ignored' => $ignored,
         ];
