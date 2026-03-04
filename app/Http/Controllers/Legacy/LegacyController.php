@@ -1452,6 +1452,39 @@ class LegacyController extends Controller
             ->first();
 
         $messages = [];
+        $salaryReserveAlertCount = 0;
+
+        $walletSaldo = (int) (LigaClubeFinanceiro::query()
+            ->where('liga_id', (int) $liga->id)
+            ->where('clube_id', (int) $clube->id)
+            ->value('saldo') ?? $liga->saldo_inicial ?? 0);
+
+        $salaryReserve = (int) LigaClubeElenco::query()
+            ->where('liga_clube_id', (int) $clube->id)
+            ->where('ativo', true)
+            ->when(
+                $scopeConfederacaoId,
+                fn ($query) => $query->where('confederacao_id', $scopeConfederacaoId),
+                fn ($query) => $query->where('liga_id', (int) $liga->id),
+            )
+            ->sum('wage_eur');
+
+        if ($salaryReserve > 0 && $walletSaldo < $salaryReserve) {
+            $walletSaldoM = (int) max(0, round($walletSaldo / 1_000_000));
+            $salaryReserveM = (int) max(0, round($salaryReserve / 1_000_000));
+            $salaryReserveAlertCount = 1;
+            $messages[] = [
+                'id' => 'finance-salary-reserve-alert',
+                'type' => 'FINANCEIRO',
+                'title' => 'ALERTA DE RESERVA SALARIAL',
+                'sender' => 'MCO FINANCE',
+                'content' => "Seu saldo em caixa (M$ {$walletSaldoM}M) esta abaixo da reserva salarial (M$ {$salaryReserveM}M).",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'FINANCE',
+                'action_label' => 'ABRIR FINANCEIRO',
+            ];
+        }
 
         $esquemaLayout = $clube->esquema_tatico_layout;
         $esquemaPlayers = [];
@@ -1761,6 +1794,7 @@ class LegacyController extends Controller
             $availableAchievementCount,
             $availablePatrocinioCount,
             $tacticalSetupCount,
+            $salaryReserveAlertCount,
         );
 
         return response()->json([
@@ -1802,7 +1836,8 @@ class LegacyController extends Controller
         int $pastUnfinalizedMatchCount = 0,
         int $achievementClaimCount = 0,
         int $patrocinioClaimCount = 0,
-        int $tacticalSetupCount = 0
+        int $tacticalSetupCount = 0,
+        int $salaryReserveAlertCount = 0
     ): array
     {
         $scheduleCount = max(0, $scheduleCount);
@@ -1815,6 +1850,7 @@ class LegacyController extends Controller
         $achievementClaimCount = max(0, $achievementClaimCount);
         $patrocinioClaimCount = max(0, $patrocinioClaimCount);
         $tacticalSetupCount = max(0, $tacticalSetupCount);
+        $salaryReserveAlertCount = max(0, $salaryReserveAlertCount);
         $totalActions = $scheduleCount
             + $confirmationCount
             + $evaluationCount
@@ -1824,7 +1860,8 @@ class LegacyController extends Controller
             + $pastUnfinalizedMatchCount
             + $achievementClaimCount
             + $patrocinioClaimCount
-            + $tacticalSetupCount;
+            + $tacticalSetupCount
+            + $salaryReserveAlertCount;
         $totalMessages = ($scheduleCount > 0 ? 1 : 0)
             + ($proposalCount > 0 ? 1 : 0)
             + ($auctionOutbidCount > 0 ? 1 : 0)
@@ -1833,6 +1870,7 @@ class LegacyController extends Controller
             + ($achievementClaimCount > 0 ? 1 : 0)
             + ($patrocinioClaimCount > 0 ? 1 : 0)
             + ($tacticalSetupCount > 0 ? 1 : 0)
+            + ($salaryReserveAlertCount > 0 ? 1 : 0)
             + $confirmationCount
             + $evaluationCount;
 
@@ -1849,6 +1887,7 @@ class LegacyController extends Controller
                 'achievement_claim_count' => 0,
                 'patrocinio_claim_count' => 0,
                 'tactical_setup_count' => 0,
+                'salary_reserve_alert_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -1905,6 +1944,10 @@ class LegacyController extends Controller
             $segments[] = 'esquema tatico do clube pendente';
         }
 
+        if ($salaryReserveAlertCount > 0) {
+            $segments[] = 'saldo em caixa abaixo da reserva salarial';
+        }
+
         if ($confirmationCount > 0) {
             $segments[] = $confirmationCount === 1
                 ? '1 confirmacao de placar'
@@ -1933,13 +1976,16 @@ class LegacyController extends Controller
             'achievement_claim_count' => $achievementClaimCount,
             'patrocinio_claim_count' => $patrocinioClaimCount,
             'tactical_setup_count' => $tacticalSetupCount,
+            'salary_reserve_alert_count' => $salaryReserveAlertCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
             'detail' => implode(' e ', $segments).'.',
             'primary_action' => $scheduleCount > 0
                 ? 'SCHEDULE'
-                : ($tacticalSetupCount > 0
+                : ($salaryReserveAlertCount > 0
+                    ? 'FINANCE'
+                    : ($tacticalSetupCount > 0
                     ? 'TACTICAL_SETUP'
                     : ($proposalCount > 0
                         ? 'MARKET_PROPOSALS'
@@ -1949,7 +1995,7 @@ class LegacyController extends Controller
                                 ? 'MATCH'
                                 : ($achievementClaimCount > 0
                                     ? 'ACHIEVEMENTS'
-                                    : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH')))))),
+                                    : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH'))))))),
         ];
     }
 
