@@ -1386,9 +1386,14 @@ const PublicClubProfileView = ({
     escudoUrl: clubData?.escudoUrl ? String(clubData.escudoUrl) : null,
     wonTrophies: Array.isArray(clubData?.wonTrophies) ? clubData.wonTrophies : [],
     players: Array.isArray(clubData?.players) ? clubData.players : [],
+    financeiroSaldo: Number(clubData?.financeiroSaldo ?? 0),
+    financeiroSalarioElenco: Number(clubData?.financeiroSalarioElenco ?? 0),
+    financeiroPoderInvestimento: Number(clubData?.financeiroPoderInvestimento ?? 0),
     tacticalLayout: clubData?.tacticalLayout ?? null,
     tacticalFieldBackgroundUrl: clubData?.tacticalFieldBackgroundUrl ? String(clubData.tacticalFieldBackgroundUrl) : null,
   };
+
+  const toMValue = (value: any) => Math.round(Number(value ?? 0) / 1_000_000);
 
   const tacticalLayoutPlayers = useMemo(() => {
     const entries = Array.isArray(profile.tacticalLayout?.players) ? profile.tacticalLayout.players : [];
@@ -1573,6 +1578,27 @@ const PublicClubProfileView = ({
                  )}
                </div>
             </section>
+
+            <section className="space-y-4">
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">FINANCEIRO DO CLUBE</h4>
+               <div className="space-y-4">
+                 <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                   <p className="text-[8px] text-[#FFD700] font-black uppercase italic tracking-widest">SALDO EM CAIXA</p>
+                   <p className="text-3xl font-black italic font-heading text-white mt-1">M$ {toMValue(profile.financeiroSaldo)}M</p>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div className="bg-[#1E1E1E] p-5 border-l-[3px] border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                     <p className="text-[8px] text-[#B22222] font-black uppercase italic tracking-widest">SALARIO DO ELENCO</p>
+                     <p className="text-xl font-black italic font-heading text-white mt-1">M$ {toMValue(profile.financeiroSalarioElenco)}M</p>
+                   </div>
+                   <div className="bg-[#1E1E1E] p-5 border-l-[3px] border-[#008000]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                     <p className="text-[8px] text-[#008000] font-black uppercase italic tracking-widest">PODER DE INVESTIMENTO</p>
+                     <p className="text-xl font-black italic font-heading text-white mt-1">M$ {toMValue(profile.financeiroPoderInvestimento)}M</p>
+                   </div>
+                 </div>
+               </div>
+            </section>
+
 
             <section className="space-y-4">
                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">MÉTRICAS COMPETITIVAS</h4>
@@ -8735,6 +8761,9 @@ const App = () => {
         escudoUrl: clube.escudo_url ?? null,
         wonTrophies: Array.isArray(clube.won_trophies) ? clube.won_trophies : [],
         players: Array.isArray(clube.players) ? clube.players : [],
+        financeiroSaldo: Number(clube?.financeiro?.saldo ?? 0),
+        financeiroSalarioElenco: Number(clube?.financeiro?.salario_por_rodada ?? 0),
+        financeiroPoderInvestimento: Number(clube?.financeiro?.poder_investimento ?? 0),
         tacticalLayout: clube.esquema_tatico_layout ?? null,
         tacticalFieldBackgroundUrl: clube.esquema_tatico_field_background_url ?? null,
       });

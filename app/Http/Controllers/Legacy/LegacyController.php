@@ -3767,6 +3767,26 @@ class LegacyController extends Controller
             ? (float) max(1, min(5, round((float) $avaliacoes, 1)))
             : 5.0;
 
+        $walletSaldo = LigaClubeFinanceiro::query()
+            ->where('liga_id', $club->liga_id)
+            ->where('clube_id', $club->id)
+            ->value('saldo');
+
+        $saldo = $walletSaldo !== null ? (int) $walletSaldo : (int) ($liga->saldo_inicial ?? 0);
+
+        $salaryQuery = LigaClubeElenco::query()
+            ->where('liga_clube_id', $club->id)
+            ->where('ativo', true);
+
+        if ($scopeConfederacaoId) {
+            $salaryQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $salaryQuery->where('liga_id', $club->liga_id);
+        }
+
+        $salarioPorRodada = (int) $salaryQuery->sum('wage_eur');
+        $poderInvestimento = max(0, $saldo - $salarioPorRodada);
+
         $elencoEntries = LigaClubeElenco::query()
             ->with('elencopadrao')
             ->where('liga_clube_id', $club->id)
@@ -3819,6 +3839,11 @@ class LegacyController extends Controller
                 'skill_rating' => $skillRating,
                 'won_trophies' => $trophies,
                 'players' => $players,
+                'financeiro' => [
+                    'saldo' => $saldo,
+                    'salario_por_rodada' => $salarioPorRodada,
+                    'poder_investimento' => $poderInvestimento,
+                ],
                 'esquema_tatico_layout' => $club->esquema_tatico_layout,
                 'esquema_tatico_field_background_url' => $fieldBackgroundUrl,
             ],
