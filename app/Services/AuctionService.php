@@ -19,6 +19,7 @@ class AuctionService
 
     public function __construct(
         private readonly LeagueFinanceService $finance,
+        private readonly SalaryReserveGuardService $salaryReserveGuard,
         private readonly MarketWindowService $marketWindowService,
     ) {
     }
@@ -127,6 +128,14 @@ class AuctionService
                 $previousValue = (int) ($item->valor_atual ?? 0);
                 $newValue = $previousValue + $step;
             }
+
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $lockedLiga,
+                clubeId: (int) $lockedClube->id,
+                confederacaoId: $lockedLiga->confederacao_id ? (int) $lockedLiga->confederacao_id : null,
+                reserveDelta: 0,
+                balanceDelta: -$newValue,
+            );
 
             $this->finance->debit(
                 (int) $lockedLiga->id,
@@ -331,6 +340,19 @@ class AuctionService
                 $this->assertRosterLimit($winnerLiga, (int) $leaderClub->id, (int) $leaderClub->liga_id);
             } catch (\DomainException $exception) {
                 $this->cancelItemAndRefund($item, 'Leilao cancelado: elenco do clube lider esta cheio.', $now);
+                return true;
+            }
+
+            try {
+                $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                    liga: $winnerLiga,
+                    clubeId: (int) $leaderClub->id,
+                    confederacaoId: $item->confederacao_id ? (int) $item->confederacao_id : null,
+                    reserveDelta: (int) ($player->wage_eur ?? 0),
+                    balanceDelta: 0,
+                );
+            } catch (\DomainException $exception) {
+                $this->cancelItemAndRefund($item, 'Leilao cancelado: reserva salarial excederia o saldo em caixa.', $now);
                 return true;
             }
 

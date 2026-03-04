@@ -13,7 +13,10 @@ use Illuminate\Support\Facades\DB;
 
 class TransferService
 {
-    public function __construct(private readonly LeagueFinanceService $finance)
+    public function __construct(
+        private readonly LeagueFinanceService $finance,
+        private readonly SalaryReserveGuardService $salaryReserveGuard,
+    )
     {
     }
 
@@ -54,6 +57,13 @@ class TransferService
             $price = (int) ($player->value_eur ?? 0);
 
             $this->assertClubCanSpend($liga, $compradorClubeId, $price);
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $liga,
+                clubeId: $compradorClubeId,
+                confederacaoId: $liga->confederacao_id ? (int) $liga->confederacao_id : null,
+                reserveDelta: (int) ($player->wage_eur ?? 0),
+                balanceDelta: -$price,
+            );
 
             $this->finance->debit($ligaId, $compradorClubeId, $price, 'Compra de jogador livre');
 
@@ -176,6 +186,13 @@ class TransferService
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $price);
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $liga,
+                clubeId: $compradorClubeId,
+                confederacaoId: $liga->confederacao_id ? (int) $liga->confederacao_id : null,
+                reserveDelta: (int) ($entry->wage_eur ?? 0),
+                balanceDelta: -$price,
+            );
 
             $this->finance->debit($liga->id, $compradorClubeId, $price, 'Compra de jogador');
             $this->finance->credit($ligaVendedor->id, $vendedorClubeId, $price, 'Venda de jogador');
@@ -237,6 +254,13 @@ class TransferService
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $multa);
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $liga,
+                clubeId: $compradorClubeId,
+                confederacaoId: $liga->confederacao_id ? (int) $liga->confederacao_id : null,
+                reserveDelta: (int) ($entry->wage_eur ?? 0),
+                balanceDelta: -$multa,
+            );
 
             $this->finance->debit($liga->id, $compradorClubeId, $multa, 'Pagamento de multa');
             $this->finance->credit($ligaOrigem->id, $clubeOrigemId, $multa, 'Recebimento de multa');
@@ -301,6 +325,28 @@ class TransferService
             if ((int) $entryA->liga_clube_id !== (int) $clubeAId || (int) $entryB->liga_clube_id !== (int) $clubeBId) {
                 throw new \DomainException('Os jogadores informados nao pertencem aos clubes selecionados.');
             }
+
+            $balanceDeltaA = $ajusteValor === 0
+                ? 0
+                : ($ajusteValor > 0 ? -$ajusteValor : abs($ajusteValor));
+            $balanceDeltaB = -$balanceDeltaA;
+            $reserveDeltaA = (int) ($entryB->wage_eur ?? 0) - (int) ($entryA->wage_eur ?? 0);
+            $reserveDeltaB = -$reserveDeltaA;
+
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $liga,
+                clubeId: $clubeAId,
+                confederacaoId: $liga->confederacao_id ? (int) $liga->confederacao_id : null,
+                reserveDelta: $reserveDeltaA,
+                balanceDelta: $balanceDeltaA,
+            );
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $ligaB,
+                clubeId: $clubeBId,
+                confederacaoId: $ligaB->confederacao_id ? (int) $ligaB->confederacao_id : null,
+                reserveDelta: $reserveDeltaB,
+                balanceDelta: $balanceDeltaB,
+            );
 
             if ($ajusteValor !== 0) {
                 if ($ajusteValor > 0) {
@@ -421,6 +467,25 @@ class TransferService
             $this->assertRosterLimitForCount($ligaDestino, $buyerFinal);
 
             $valor = (int) $proposal->valor;
+            $offerWageTotal = (int) $offerEntries
+                ->sum(fn (LigaClubeElenco $entry): int => (int) ($entry->wage_eur ?? 0));
+            $targetWage = (int) ($targetEntry->wage_eur ?? 0);
+
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $ligaOrigem,
+                clubeId: (int) $clubeOrigem->id,
+                confederacaoId: $ligaOrigem->confederacao_id ? (int) $ligaOrigem->confederacao_id : null,
+                reserveDelta: $offerWageTotal - $targetWage,
+                balanceDelta: $valor > 0 ? $valor : 0,
+            );
+            $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
+                liga: $ligaDestino,
+                clubeId: (int) $clubeDestino->id,
+                confederacaoId: $ligaDestino->confederacao_id ? (int) $ligaDestino->confederacao_id : null,
+                reserveDelta: $targetWage - $offerWageTotal,
+                balanceDelta: $valor > 0 ? -$valor : 0,
+            );
+
             if ($valor > 0) {
                 $this->assertClubCanSpend($ligaDestino, $clubeDestino->id, $valor);
                 $this->finance->debit($ligaDestino->id, $clubeDestino->id, $valor, 'Proposta aceita');
