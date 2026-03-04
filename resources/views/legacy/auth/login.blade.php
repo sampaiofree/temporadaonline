@@ -9,6 +9,9 @@
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
         <link href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,700;1,900&family=Russo+One&display=swap" rel="stylesheet">
         @include('components.app_assets')
+        <script>
+            document.documentElement.classList.add('legacy-login-splash-enabled');
+        </script>
         <style>
             :root {
                 --legacy-bg: #121212;
@@ -50,10 +53,73 @@
                 z-index: 0;
                 opacity: 0.3;
             }
+
+            .legacy-login-splash {
+                display: none;
+            }
+
+            .legacy-login-splash-enabled .legacy-login-splash {
+                display: flex;
+            }
+
+            .legacy-login-splash.is-hiding {
+                opacity: 0;
+                visibility: hidden;
+                pointer-events: none;
+                transition: opacity 200ms ease, visibility 0s linear 200ms;
+            }
+
+            .legacy-login-splash-logo {
+                animation: legacyLoginSplashPulse 1.1s ease-out forwards;
+            }
+
+            .legacy-login-splash-bar {
+                transform: translateX(-100%);
+                animation: legacyLoginSplashLoad 1.1s linear forwards;
+            }
+
+            @keyframes legacyLoginSplashPulse {
+                0% { transform: scale(0.96); opacity: 0.75; }
+                60% { transform: scale(1.02); opacity: 1; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+
+            @keyframes legacyLoginSplashLoad {
+                from { transform: translateX(-100%); }
+                to { transform: translateX(0%); }
+            }
         </style>
     </head>
     <body class="min-h-screen antialiased">
-        <main class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10">
+        <div id="legacy-login-splash" class="legacy-login-splash fixed inset-0 z-[9999] items-center justify-center bg-[#121212]">
+            <div class="relative flex flex-col items-center gap-5">
+                <div class="absolute -inset-10 opacity-20 pointer-events-none"
+                     style="background: repeating-linear-gradient(135deg, #1E1E1E 0 12px, #121212 12px 24px);">
+                </div>
+
+                <img
+                    id="legacy-login-splash-logo"
+                    src=""
+                    alt="Legacy XI"
+                    class="legacy-login-splash-logo h-16 w-auto relative opacity-0"
+                    style="filter: drop-shadow(0 0 14px rgba(255,215,0,.18));"
+                >
+
+                <div class="w-44 h-1 bg-[#1E1E1E] relative overflow-hidden">
+                    <div class="legacy-login-splash-bar h-full bg-[#FFD700]"></div>
+                </div>
+
+                <button
+                    type="button"
+                    id="legacy-login-splash-skip"
+                    class="text-white/70 text-xs uppercase tracking-widest hover:text-white relative"
+                >
+                    Pular
+                </button>
+            </div>
+        </div>
+
+        <main id="legacy-login-main" class="relative z-10 min-h-screen flex items-center justify-center px-6 py-10">
             <section class="w-full max-w-md bg-[#1e1e1e] border-l-[6px] border-[#ffd700] p-8 legacy-clip shadow-[0_0_35px_rgba(0,0,0,0.55)]">
                 <header class="mb-8">
                     <p class="text-[10px] text-[#ffd700] font-black tracking-[0.35em] uppercase italic mb-2">Legacy XI</p>
@@ -117,5 +183,42 @@
                 </form>
             </section>
         </main>
+        <script>
+            (() => {
+                const splash = document.getElementById('legacy-login-splash');
+                if (!splash) return;
+
+                const logo = document.getElementById('legacy-login-splash-logo');
+                const skipButton = document.getElementById('legacy-login-splash-skip');
+                const appAssets = window.__APP_ASSETS__ || {};
+                const logoUrl = appAssets.logo_dark_url || appAssets.logo_padrao_url || '';
+                const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const displayMs = prefersReducedMotion ? 450 : 1100;
+                let hidden = false;
+
+                if (logo && logoUrl) {
+                    logo.setAttribute('src', logoUrl);
+                    logo.classList.remove('opacity-0');
+                } else if (logo) {
+                    logo.classList.remove('opacity-0');
+                }
+
+                const hideSplash = () => {
+                    if (hidden) return;
+                    hidden = true;
+                    splash.classList.add('is-hiding');
+                    window.setTimeout(() => {
+                        splash.remove();
+                    }, 260);
+                };
+
+                if (skipButton) {
+                    skipButton.addEventListener('click', hideSplash);
+                }
+
+                window.setTimeout(hideSplash, displayMs);
+                window.setTimeout(hideSplash, 3500);
+            })();
+        </script>
     </body>
 </html>
