@@ -6236,15 +6236,28 @@ const LegacyPlayerImage = ({
   );
 };
 
-const getLegacyPrimaryPosition = (positions: string | null | undefined) => {
-  const first = String(positions || '')
+const getLegacyPrimaryPositionCode = (positions: string | null | undefined) => (
+  String(positions || '')
     .split(',')
     .map((part) => part.trim().toUpperCase())
-    .find(Boolean);
+    .find(Boolean)
+    || ''
+);
+
+const getLegacyPrimaryPosition = (positions: string | null | undefined) => {
+  const first = getLegacyPrimaryPositionCode(positions);
 
   if (!first) return '---';
 
   return LEGACY_POSITION_ALIAS[first] || first;
+};
+
+const isLegacyGoalkeeperPosition = (positions: string | null | undefined) => {
+  const primaryCode = getLegacyPrimaryPositionCode(positions);
+  if (!primaryCode) return false;
+  if (primaryCode === 'GK' || primaryCode === 'GOL') return true;
+
+  return (LEGACY_POSITION_ALIAS[primaryCode] || primaryCode) === 'GOL';
 };
 
 const mapLegacyMarketPlayer = (player: any) => {
@@ -6253,12 +6266,18 @@ const mapLegacyMarketPlayer = (player: any) => {
   const valueM = toLegacyMoneyInMillions(valueEur);
   const salaryM = toLegacyMoneyInMillions(wageEur);
   const clubStatus = String(player?.club_status || 'livre');
+  const isGoalkeeper = isLegacyGoalkeeperPosition(player?.player_positions);
   const pace = toLegacyStatValue(player?.pace, player?.movement_sprint_speed ?? 65);
   const shooting = toLegacyStatValue(player?.shooting, player?.attacking_finishing ?? 65);
   const passing = toLegacyStatValue(player?.passing, player?.attacking_short_passing ?? 65);
   const dribbling = toLegacyStatValue(player?.dribbling, player?.skill_dribbling ?? 65);
   const defending = toLegacyStatValue(player?.defending, player?.defending_standing_tackle ?? 65);
   const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
+  const gkDiving = toLegacyStatValue(player?.goalkeeping_diving, player?.overall ?? 65);
+  const gkHandling = toLegacyStatValue(player?.goalkeeping_handling, player?.overall ?? 65);
+  const gkKicking = toLegacyStatValue(player?.goalkeeping_kicking, player?.overall ?? 65);
+  const gkReflexes = toLegacyStatValue(player?.goalkeeping_reflexes, player?.overall ?? 65);
+  const gkPositioning = toLegacyStatValue(player?.goalkeeping_positioning, player?.overall ?? 65);
   const playstyles = normalizeLegacyTraits(player?.player_traits);
   const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles);
   const auctionRaw = player?.auction || {};
@@ -6324,49 +6343,69 @@ const mapLegacyMarketPlayer = (player: any) => {
     weakFoot: toLegacyStarRating(player?.weak_foot, 3),
     playstyles,
     playstyleBadges,
-    stats: {
-      PAC: pace,
-      SHO: shooting,
-      PAS: passing,
-      DRI: dribbling,
-      DEF: defending,
-      PHY: physical,
-    },
-    detailedStats: {
-      PACE: {
-        Aceleracao: toLegacyStatValue(player?.movement_acceleration, pace),
-        Pique: toLegacyStatValue(player?.movement_sprint_speed, pace),
+    stats: isGoalkeeper
+      ? {
+        ELA: gkDiving,
+        MAN: gkHandling,
+        CHU: gkKicking,
+        REF: gkReflexes,
+        VEL: pace,
+        POS: gkPositioning,
+      }
+      : {
+        PAC: pace,
+        SHO: shooting,
+        PAS: passing,
+        DRI: dribbling,
+        DEF: defending,
+        PHY: physical,
       },
-      SHOOTING: {
-        Finalizacao: toLegacyStatValue(player?.attacking_finishing, shooting),
-        ForcaChute: toLegacyStatValue(player?.power_shot_power, shooting),
-        ChuteLongo: toLegacyStatValue(player?.power_long_shots, shooting),
+    detailedStats: isGoalkeeper
+      ? {
+        GOLEIRO: {
+          Elasticidade: gkDiving,
+          Manuseio: gkHandling,
+          Chute: gkKicking,
+          Reflexos: gkReflexes,
+          Velocidade: pace,
+          Posicionamento: gkPositioning,
+        },
+      }
+      : {
+        PACE: {
+          Aceleracao: toLegacyStatValue(player?.movement_acceleration, pace),
+          Pique: toLegacyStatValue(player?.movement_sprint_speed, pace),
+        },
+        SHOOTING: {
+          Finalizacao: toLegacyStatValue(player?.attacking_finishing, shooting),
+          ForcaChute: toLegacyStatValue(player?.power_shot_power, shooting),
+          ChuteLongo: toLegacyStatValue(player?.power_long_shots, shooting),
+        },
+        PASSING: {
+          PasseCurto: toLegacyStatValue(player?.attacking_short_passing, passing),
+          PasseLongo: toLegacyStatValue(player?.skill_long_passing, passing),
+          Visao: toLegacyStatValue(player?.mentality_vision, passing),
+        },
+        DRIBBLING: {
+          Drible: toLegacyStatValue(player?.skill_dribbling, dribbling),
+          Controle: toLegacyStatValue(player?.skill_ball_control, dribbling),
+          Agilidade: toLegacyStatValue(player?.movement_agility, dribbling),
+          Equilibrio: toLegacyStatValue(player?.movement_balance, dribbling),
+          Reacao: toLegacyStatValue(player?.movement_reactions, dribbling),
+        },
+        DEFENSE: {
+          Marcacao: toLegacyStatValue(player?.defending_marking_awareness, defending),
+          Interceptacao: toLegacyStatValue(player?.mentality_interceptions, defending),
+          Dividida: toLegacyStatValue(player?.defending_standing_tackle, defending),
+          Carrinho: toLegacyStatValue(player?.defending_sliding_tackle, defending),
+        },
+        PHYSICAL: {
+          Forca: toLegacyStatValue(player?.power_strength, physical),
+          Folego: toLegacyStatValue(player?.power_stamina, physical),
+          Salto: toLegacyStatValue(player?.power_jumping, physical),
+          Agressividade: toLegacyStatValue(player?.mentality_aggression, physical),
+        },
       },
-      PASSING: {
-        PasseCurto: toLegacyStatValue(player?.attacking_short_passing, passing),
-        PasseLongo: toLegacyStatValue(player?.skill_long_passing, passing),
-        Visao: toLegacyStatValue(player?.mentality_vision, passing),
-      },
-      DRIBBLING: {
-        Drible: toLegacyStatValue(player?.skill_dribbling, dribbling),
-        Controle: toLegacyStatValue(player?.skill_ball_control, dribbling),
-        Agilidade: toLegacyStatValue(player?.movement_agility, dribbling),
-        Equilibrio: toLegacyStatValue(player?.movement_balance, dribbling),
-        Reacao: toLegacyStatValue(player?.movement_reactions, dribbling),
-      },
-      DEFENSE: {
-        Marcacao: toLegacyStatValue(player?.defending_marking_awareness, defending),
-        Interceptacao: toLegacyStatValue(player?.mentality_interceptions, defending),
-        Dividida: toLegacyStatValue(player?.defending_standing_tackle, defending),
-        Carrinho: toLegacyStatValue(player?.defending_sliding_tackle, defending),
-      },
-      PHYSICAL: {
-        Forca: toLegacyStatValue(player?.power_strength, physical),
-        Folego: toLegacyStatValue(player?.power_stamina, physical),
-        Salto: toLegacyStatValue(player?.power_jumping, physical),
-        Agressividade: toLegacyStatValue(player?.mentality_aggression, physical),
-      },
-    },
   };
 };
 
