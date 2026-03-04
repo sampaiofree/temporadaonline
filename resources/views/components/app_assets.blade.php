@@ -39,6 +39,14 @@
     <link rel="icon" href="{{ $faviconUrl }}">
 @endif
 
+@if ($cardCompletoUrl)
+    <link rel="preload" as="image" href="{{ $cardCompletoUrl }}">
+@endif
+
+@if ($cardReduzidoUrl)
+    <link rel="preload" as="image" href="{{ $cardReduzidoUrl }}">
+@endif
+
 <script>
     window.__APP_ASSETS__ = @json($appAssetsPayload);
 </script>

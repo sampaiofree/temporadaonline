@@ -2891,15 +2891,7 @@ const LegacyMarketPlayerThumb = ({
   showBadges?: boolean,
 }) => {
   const templateSrc = useReducedTemplate ? LEGACY_MARKET_CARD_REDUZIDO_URL : '';
-  const [templateLoaded, setTemplateLoaded] = useState(false);
-  const [templateFailed, setTemplateFailed] = useState(false);
-
-  useEffect(() => {
-    setTemplateLoaded(false);
-    setTemplateFailed(false);
-  }, [templateSrc]);
-
-  const shouldUseTemplate = templateSrc !== '' && !templateFailed;
+  const { templateLoaded, shouldUseTemplate } = useLegacyTemplateImage(templateSrc);
 
   return (
     <div className={`relative ${thumbClassName} overflow-visible`}>
@@ -2914,11 +2906,6 @@ const LegacyMarketPlayerThumb = ({
               src={templateSrc}
               alt="Template do card reduzido"
               className={`absolute inset-0 z-0 w-full h-full object-contain object-center pointer-events-none transition-opacity ${templateLoaded ? 'opacity-100' : 'opacity-0'}`}
-              onLoad={() => setTemplateLoaded(true)}
-              onError={() => {
-                setTemplateFailed(true);
-                setTemplateLoaded(false);
-              }}
             />
           </>
         ) : null}
@@ -2959,15 +2946,7 @@ const LegacyUTCard = ({
 }) => {
   const statsEntries = Object.entries(player.stats || {});
   const templateSrc = preferAssetTemplate ? LEGACY_MARKET_CARD_COMPLETO_URL : '';
-  const [templateLoaded, setTemplateLoaded] = useState(false);
-  const [templateFailed, setTemplateFailed] = useState(false);
-
-  useEffect(() => {
-    setTemplateLoaded(false);
-    setTemplateFailed(false);
-  }, [templateSrc]);
-
-  const shouldUseTemplate = templateSrc !== '' && !templateFailed;
+  const { templateLoaded, shouldUseTemplate } = useLegacyTemplateImage(templateSrc);
 
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
@@ -2985,11 +2964,6 @@ const LegacyUTCard = ({
               src={templateSrc}
               alt="Template do card completo"
               className="absolute inset-0 z-0 w-full h-full object-contain object-center pointer-events-none"
-              onLoad={() => setTemplateLoaded(true)}
-              onError={() => {
-                setTemplateFailed(true);
-                setTemplateLoaded(false);
-              }}
             />
           </>
         ) : null}
@@ -6132,9 +6106,134 @@ const appendLegacyImageRetryParam = (value: string) => {
   }
 };
 
+type LegacyTemplateLoadStatus = 'idle' | 'loading' | 'loaded' | 'failed';
+
+type LegacyTemplateCacheEntry = {
+  status: LegacyTemplateLoadStatus;
+  retries: number;
+  listeners: Set<(status: LegacyTemplateLoadStatus) => void>;
+};
+
+const LEGACY_TEMPLATE_CACHE = new Map<string, LegacyTemplateCacheEntry>();
+
+const getLegacyTemplateEntry = (url: string) => {
+  const normalized = String(url || '').trim();
+  if (normalized === '') return null;
+
+  const existing = LEGACY_TEMPLATE_CACHE.get(normalized);
+  if (existing) return existing;
+
+  const created: LegacyTemplateCacheEntry = {
+    status: 'idle',
+    retries: 0,
+    listeners: new Set(),
+  };
+  LEGACY_TEMPLATE_CACHE.set(normalized, created);
+  return created;
+};
+
+const emitLegacyTemplateStatus = (url: string, status: LegacyTemplateLoadStatus) => {
+  const entry = getLegacyTemplateEntry(url);
+  if (!entry) return;
+
+  entry.status = status;
+  entry.listeners.forEach((listener) => listener(status));
+};
+
+const subscribeLegacyTemplateStatus = (
+  url: string,
+  listener: (status: LegacyTemplateLoadStatus) => void,
+) => {
+  const entry = getLegacyTemplateEntry(url);
+  if (!entry) {
+    return () => {};
+  }
+
+  entry.listeners.add(listener);
+  return () => {
+    entry.listeners.delete(listener);
+  };
+};
+
+const ensureLegacyTemplatePreload = (url: string) => {
+  const normalized = String(url || '').trim();
+  const entry = getLegacyTemplateEntry(normalized);
+  if (!entry) return;
+
+  if (entry.status === 'loaded' || entry.status === 'loading') {
+    return;
+  }
+
+  emitLegacyTemplateStatus(normalized, 'loading');
+
+  const attemptLoad = (src: string) => {
+    const image = new Image();
+
+    image.onload = () => {
+      emitLegacyTemplateStatus(normalized, 'loaded');
+    };
+
+    image.onerror = () => {
+      if (entry.retries < 1) {
+        entry.retries += 1;
+        attemptLoad(appendLegacyImageRetryParam(src));
+        return;
+      }
+
+      emitLegacyTemplateStatus(normalized, 'failed');
+    };
+
+    image.src = src;
+
+    if (image.complete && image.naturalWidth > 0) {
+      emitLegacyTemplateStatus(normalized, 'loaded');
+    }
+  };
+
+  attemptLoad(normalized);
+};
+
 const LEGACY_DEFAULT_PLAYER_IMAGE_URL = normalizeLegacyPlayerImageUrl(APP_ASSETS?.img_jogador_url);
 const LEGACY_MARKET_CARD_REDUZIDO_URL = String(APP_ASSETS?.card_reduzido_url || '').trim();
 const LEGACY_MARKET_CARD_COMPLETO_URL = String(APP_ASSETS?.card_completo_url || '').trim();
+
+if (typeof window !== 'undefined') {
+  ensureLegacyTemplatePreload(LEGACY_MARKET_CARD_REDUZIDO_URL);
+  ensureLegacyTemplatePreload(LEGACY_MARKET_CARD_COMPLETO_URL);
+}
+
+const useLegacyTemplateImage = (url: string) => {
+  const normalized = String(url || '').trim();
+  const [status, setStatus] = useState<LegacyTemplateLoadStatus>(() => {
+    if (normalized === '') return 'failed';
+
+    const entry = getLegacyTemplateEntry(normalized);
+    return entry?.status || 'idle';
+  });
+
+  useEffect(() => {
+    if (normalized === '') {
+      setStatus('failed');
+      return;
+    }
+
+    const entry = getLegacyTemplateEntry(normalized);
+    setStatus(entry?.status || 'idle');
+
+    const unsubscribe = subscribeLegacyTemplateStatus(normalized, setStatus);
+    ensureLegacyTemplatePreload(normalized);
+
+    return () => {
+      unsubscribe();
+    };
+  }, [normalized]);
+
+  return {
+    templateLoaded: status === 'loaded',
+    shouldUseTemplate: normalized !== '' && status !== 'failed',
+    templateStatus: status,
+  };
+};
 
 const LegacyPlayerImage = ({
   src,
