@@ -490,6 +490,7 @@ const MCOBottomNav = ({
 }) => {
   const navItems = [
     { id: 'hub-global', icon: 'fa-house', label: 'INÍCIO' },
+    { id: 'my-club', icon: 'fa-shield', label: 'MEU CLUBE' },
     { id: 'match-center', icon: 'fa-shield-halved', label: 'CONFRONTOS' },
     { id: 'inbox', icon: 'fa-envelope', label: 'INBOX', badge: true },
     { id: 'profile', icon: 'fa-user', label: 'PERFIL' }
@@ -499,8 +500,9 @@ const MCOBottomNav = ({
       {navItems.map((item) => {
         const isClubSubView = ['my-club', 'esquema-tatico', 'squad', 'achievements', 'patrocinios', 'finance', 'trophies'].includes(activeView);
         const active = activeView === item.id || 
+                       (item.id === 'my-club' && isClubSubView) ||
                        (item.id === 'match-center' && (activeView === 'report-match' || activeView === 'confirm-match' || activeView === 'schedule-matches')) || 
-                       (item.id === 'hub-global' && (activeView === 'tournaments' || isClubSubView || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
+                       (item.id === 'hub-global' && (activeView === 'tournaments' || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
         return (
           <button key={item.id} onClick={() => onViewChange(item.id)} className={`relative flex flex-col items-center p-3 transition-all ${active ? 'text-[#FFD700]' : 'text-white/20'}`}>
             {item.badge && hasInboxNotifications && (
@@ -907,6 +909,7 @@ const normalizeLegacyLeagueTableRows = (rows: any) => {
     pos: Math.max(1, Number(row?.pos ?? 0) || 1),
     clubId: Number(row?.club_id ?? 0) || 0,
     clubName: String(row?.club_name || 'CLUBE'),
+    clubEscudoUrl: row?.club_escudo_url ? String(row.club_escudo_url) : null,
     played: Math.max(0, Number(row?.played ?? 0) || 0),
     wins: Math.max(0, Number(row?.wins ?? 0) || 0),
     points: Math.max(0, Number(row?.points ?? 0) || 0),
@@ -1383,7 +1386,87 @@ const PublicClubProfileView = ({
     escudoUrl: clubData?.escudoUrl ? String(clubData.escudoUrl) : null,
     wonTrophies: Array.isArray(clubData?.wonTrophies) ? clubData.wonTrophies : [],
     players: Array.isArray(clubData?.players) ? clubData.players : [],
+    tacticalLayout: clubData?.tacticalLayout ?? null,
+    tacticalFieldBackgroundUrl: clubData?.tacticalFieldBackgroundUrl ? String(clubData.tacticalFieldBackgroundUrl) : null,
   };
+
+  const tacticalLayoutPlayers = useMemo(() => {
+    const entries = Array.isArray(profile.tacticalLayout?.players) ? profile.tacticalLayout.players : [];
+
+    return entries
+      .map((entry: any) => {
+        const id = Number(entry?.id ?? 0);
+        const rawX = Number(entry?.x ?? NaN);
+        const rawY = Number(entry?.y ?? NaN);
+
+        if (id <= 0 || !Number.isFinite(rawX) || !Number.isFinite(rawY)) return null;
+
+        const x = Math.max(0, Math.min(1, rawX));
+        const y = Math.max(0, Math.min(1, rawY));
+
+        return { id, x, y };
+      })
+      .filter((entry: any): entry is { id: number; x: number; y: number } => entry !== null);
+  }, [profile.tacticalLayout]);
+
+  const tacticalPlayerLookup = useMemo(() => {
+    const lookup = new Map<number, any>();
+    profile.players.forEach((player: any) => {
+      const id = Number(player?.id ?? 0);
+      if (id > 0 && !lookup.has(id)) {
+        lookup.set(id, player);
+      }
+    });
+    return lookup;
+  }, [profile.players]);
+
+  const tacticalPlacedPlayers = useMemo(
+    () => tacticalLayoutPlayers
+      .map((entry) => {
+        const player = tacticalPlayerLookup.get(entry.id);
+        if (!player) return null;
+
+        const name = String(player?.nome ?? 'ATLETA');
+        return {
+          id: entry.id,
+          x: entry.x,
+          y: entry.y,
+          name,
+          ovr: Number(player?.ovr ?? 0) || 0,
+          pos: String(player?.pos ?? '--').trim() || '--',
+          photo: String(player?.foto || player?.player_face_url || '').trim(),
+          initials: getLegacyInitials(name),
+        };
+      })
+      .filter((entry): entry is {
+        id: number;
+        x: number;
+        y: number;
+        name: string;
+        ovr: number;
+        pos: string;
+        photo: string;
+        initials: string;
+      } => entry !== null),
+    [tacticalLayoutPlayers, tacticalPlayerLookup],
+  );
+
+  const hasTacticalLayout = tacticalLayoutPlayers.length > 0;
+  const hasRenderableTacticalPlayers = tacticalPlacedPlayers.length > 0;
+
+  const tacticalFieldStyle = profile.tacticalFieldBackgroundUrl
+    ? {
+        clipPath: AGGRESSIVE_CLIP,
+        backgroundImage: `url(${profile.tacticalFieldBackgroundUrl})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }
+    : {
+        clipPath: AGGRESSIVE_CLIP,
+        background:
+          'linear-gradient(180deg, rgba(28,89,40,1) 0%, rgba(43,120,59,1) 50%, rgba(28,89,40,1) 100%)',
+      };
 
   const renderStars = (score: number) => {
     const stars = [];
@@ -1510,23 +1593,69 @@ const PublicClubProfileView = ({
             </section>
           </>
         ) : (
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
-             <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÇÕES ATIVAS</h4>
-             <div className="space-y-3">
-               {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
-                 <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+            {hasTacticalLayout && (
+              <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">ESQUEMA TÁTICO</h4>
+                {hasRenderableTacticalPlayers ? (
+                  <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <div
+                      className="relative w-full aspect-[9/14] max-h-[70vh] mx-auto overflow-hidden border-2 border-[#FFD700]/45"
+                      style={tacticalFieldStyle}
+                    >
+                      {tacticalPlacedPlayers.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="absolute -translate-x-1/2 -translate-y-1/2"
+                          style={{ left: `${entry.x * 100}%`, top: `${entry.y * 100}%` }}
+                          title={entry.name}
+                        >
+                          <div className="w-11 h-11 bg-[#121212] border-2 border-[#FFD700] flex items-center justify-center overflow-hidden shadow-[0_0_8px_rgba(255,215,0,0.2)]" style={{ clipPath: SHIELD_CLIP }}>
+                            <LegacyPlayerImage
+                              src={entry.photo}
+                              alt={entry.name}
+                              wrapperClassName="w-full h-full"
+                              imgClassName="w-full h-full object-cover"
+                              fallback={<span className="text-[9px] font-black italic text-[#FFD700]">{entry.initials}</span>}
+                            />
+                          </div>
+                          <span className="block mt-1 px-2 py-1 bg-[#1E1E1E]/90 border border-white/10 text-[7px] font-black italic uppercase text-white leading-none whitespace-nowrap text-center" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                            {entry.ovr || '--'} • {entry.pos}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-3 text-[8px] font-black uppercase italic text-white/40 text-center tracking-[0.14em]">
+                      PREVIEW ESTÁTICO DO ESQUEMA TÁTICO DO CLUBE
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[10px] font-black italic uppercase text-white/40">
+                      Esquema tático salvo, mas os jogadores do layout não estão disponíveis no elenco atual.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            <section className="space-y-4">
+              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÇÕES ATIVAS</h4>
+              <div className="space-y-3">
+                {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
+                  <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                     {(() => {
                       const playerImageUrl = String(player?.foto || player?.player_face_url || '').trim();
                       return (
-                    <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700] overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
-                      <LegacyPlayerImage
-                        src={playerImageUrl}
-                        alt={String(player?.nome ?? 'ATLETA')}
-                        wrapperClassName="w-full h-full"
-                        imgClassName="w-full h-full object-cover"
-                        fallback={<i className="fas fa-user text-[#FFD700]/30"></i>}
-                      />
-                    </div>
+                        <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700] overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                          <LegacyPlayerImage
+                            src={playerImageUrl}
+                            alt={String(player?.nome ?? 'ATLETA')}
+                            wrapperClassName="w-full h-full"
+                            imgClassName="w-full h-full object-cover"
+                            fallback={<i className="fas fa-user text-[#FFD700]/30"></i>}
+                          />
+                        </div>
                       );
                     })()}
                     <div className="flex-grow">
@@ -1534,17 +1663,18 @@ const PublicClubProfileView = ({
                       <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">{String(player?.pos ?? '-')} • OVR {Number(player?.ovr ?? 0)}</p>
                     </div>
                     <div className="text-right">
-                       <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
-                       <p className="text-[10px] font-black italic text-white uppercase">M$ {Number(player?.valor ?? 0)}M</p>
+                      <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
+                      <p className="text-[10px] font-black italic text-white uppercase">M$ {Number(player?.valor ?? 0)}M</p>
                     </div>
-                 </div>
-               )) : (
-                 <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  </div>
+                )) : (
+                  <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
                     <p className="text-[10px] font-black italic uppercase text-white/40">Sem elenco registrado para este clube.</p>
-                 </div>
-               )}
-             </div>
-          </section>
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
         )}
       </div>
     </div>
@@ -1586,29 +1716,49 @@ const ScheduleMatchesView = ({
   onBack,
   currentCareer,
   initialPartida,
+  onNotify,
 }: {
   onBack: () => void,
   currentCareer: any,
   initialPartida?: any,
+  onNotify?: (message: string, variant?: LegacyToastVariant) => void,
 }) => {
+  const initialTab: 'pending' | 'scheduled' =
+    String(initialPartida?.estado || '') === 'confirmacao_necessaria' ? 'pending' : 'scheduled';
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState<'pending' | 'scheduled'>(initialTab);
   const [selectedPartidaId, setSelectedPartidaId] = useState<number | null>(initialPartida?.id ?? null);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(Boolean(initialPartida?.id));
   const [calendarLoading, setCalendarLoading] = useState(false);
   const [calendarDays, setCalendarDays] = useState<any[]>([]);
+  const [selectedDayDate, setSelectedDayDate] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [scheduleNotice, setScheduleNotice] = useState('');
 
-  const pendingMatches = useMemo(
+  const schedulableMatches = useMemo(
     () => matches.filter((partida) => isLegacySchedulingAllowed(partida)),
     [matches],
   );
+  const confirmationPendingMatches = useMemo(
+    () => schedulableMatches.filter((partida) => String(partida?.estado || '') === 'confirmacao_necessaria'),
+    [schedulableMatches],
+  );
+  const confirmedOrScheduledMatches = useMemo(
+    () => schedulableMatches.filter((partida) => ['confirmada', 'agendada'].includes(String(partida?.estado || ''))),
+    [schedulableMatches],
+  );
+  const visibleMatches = activeTab === 'pending' ? confirmationPendingMatches : confirmedOrScheduledMatches;
 
   const selectedPartida = useMemo(
-    () => pendingMatches.find((partida) => partida.id === selectedPartidaId) || pendingMatches[0] || null,
-    [pendingMatches, selectedPartidaId],
+    () => schedulableMatches.find((partida) => partida.id === selectedPartidaId) || null,
+    [schedulableMatches, selectedPartidaId],
+  );
+  const selectedDay = useMemo(
+    () => calendarDays.find((day) => String(day?.date || '') === selectedDayDate) || null,
+    [calendarDays, selectedDayDate],
   );
 
   useEffect(() => {
@@ -1648,9 +1798,31 @@ const ScheduleMatchesView = ({
   }, [currentCareer?.id]);
 
   useEffect(() => {
-    if (!selectedPartida) {
+    if (activeTab === 'pending' && confirmationPendingMatches.length === 0 && confirmedOrScheduledMatches.length > 0) {
+      setActiveTab('scheduled');
+    }
+    if (activeTab === 'scheduled' && confirmedOrScheduledMatches.length === 0 && confirmationPendingMatches.length > 0) {
+      setActiveTab('pending');
+    }
+  }, [activeTab, confirmationPendingMatches.length, confirmedOrScheduledMatches.length]);
+
+  useEffect(() => {
+    if (selectedPartidaId === null) return;
+
+    const stillExists = schedulableMatches.some((partida) => Number(partida?.id ?? 0) === selectedPartidaId);
+    if (!stillExists) {
+      setSelectedPartidaId(null);
+      setIsScheduleModalOpen(false);
+    }
+  }, [schedulableMatches, selectedPartidaId]);
+
+  useEffect(() => {
+    if (!isScheduleModalOpen || !selectedPartida) {
       setCalendarDays([]);
+      setSelectedDayDate('');
       setSelectedSlot('');
+      setCalendarLoading(false);
+      setScheduleNotice('');
       return;
     }
 
@@ -1659,6 +1831,7 @@ const ScheduleMatchesView = ({
     const loadSlots = async () => {
       setCalendarLoading(true);
       setScheduleNotice('');
+      setSelectedDayDate('');
       setSelectedSlot('');
 
       try {
@@ -1679,11 +1852,37 @@ const ScheduleMatchesView = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedPartida?.id]);
+  }, [isScheduleModalOpen, selectedPartida?.id]);
+
+  const openScheduleModal = (partida: any) => {
+    const partidaId = Number(partida?.id ?? 0);
+    if (partidaId <= 0) return;
+
+    setSelectedPartidaId(partidaId);
+    setIsScheduleModalOpen(true);
+    setSelectedDayDate('');
+    setSelectedSlot('');
+    setScheduleNotice('');
+  };
+
+  const closeScheduleModal = (force = false) => {
+    if (!force && submitting) return;
+    setIsScheduleModalOpen(false);
+    setSelectedDayDate('');
+    setSelectedSlot('');
+    setScheduleNotice('');
+  };
+
+  const handleSelectDay = (date: string) => {
+    setSelectedDayDate(date);
+    setSelectedSlot('');
+    setScheduleNotice('');
+  };
 
   const handleSchedule = async () => {
     if (!selectedPartida?.id || !selectedSlot) return;
 
+    const wasPendingConfirmation = String(selectedPartida?.estado || '') === 'confirmacao_necessaria';
     setSubmitting(true);
     setScheduleNotice('');
     try {
@@ -1705,13 +1904,29 @@ const ScheduleMatchesView = ({
             : partida,
         ),
       );
-      setScheduleNotice('Horário confirmado com sucesso.');
+      closeScheduleModal(true);
+
+      const successMessage = String(
+        response?.message
+        || (wasPendingConfirmation
+          ? 'Horario confirmado com sucesso.'
+          : 'Horario reagendado com sucesso.'),
+      );
+      if (typeof onNotify === 'function') {
+        onNotify(successMessage, 'success');
+      }
     } catch (currentError: any) {
-      setScheduleNotice(currentError?.message || 'Não foi possível confirmar o horário.');
+      const message = currentError?.message || 'Nao foi possivel confirmar o horario.';
+      setScheduleNotice(message);
     } finally {
       setSubmitting(false);
     }
   };
+
+  const hasSchedulableMatches = schedulableMatches.length > 0;
+  const modalIsPendingConfirmation = String(selectedPartida?.estado || '') === 'confirmacao_necessaria';
+  const modalActionLabel = modalIsPendingConfirmation ? 'CONFIRMAR HORARIO' : 'REAGENDAR HORARIO';
+  const modalSubmittingLabel = modalIsPendingConfirmation ? 'CONFIRMANDO...' : 'REAGENDANDO...';
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
@@ -1731,86 +1946,212 @@ const ScheduleMatchesView = ({
         <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
           <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
         </div>
-      ) : pendingMatches.length === 0 ? (
+      ) : !hasSchedulableMatches ? (
         <div className="text-center py-24 opacity-20">
           <i className="fas fa-check-double text-6xl mb-4"></i>
           <p className="text-sm font-black uppercase italic tracking-[0.4em]">SEM PARTIDAS PARA AGENDAR</p>
         </div>
       ) : (
         <div className="space-y-6">
+          <section className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab('pending')}
+                className={`text-left px-3 py-3 border ${
+                  activeTab === 'pending'
+                    ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]'
+                    : 'bg-[#1E1E1E] text-white/65 border-white/10'
+                }`}
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <p className="text-[8px] font-black uppercase italic tracking-[0.2em]">CONFIRMACAO PENDENTE</p>
+                <p className="text-lg font-black italic font-heading leading-none mt-1">{confirmationPendingMatches.length}</p>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('scheduled')}
+                className={`text-left px-3 py-3 border ${
+                  activeTab === 'scheduled'
+                    ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]'
+                    : 'bg-[#1E1E1E] text-white/65 border-white/10'
+                }`}
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <p className="text-[8px] font-black uppercase italic tracking-[0.2em]">CONFIRMADA / AGENDADA</p>
+                <p className="text-lg font-black italic font-heading leading-none mt-1">{confirmedOrScheduledMatches.length}</p>
+              </button>
+            </div>
+          </section>
+
           <section className="space-y-2">
-            {pendingMatches.map((partida) => {
-              const isSelected = selectedPartida?.id === partida.id;
+            {visibleMatches.length === 0 ? (
+              <div className="bg-[#1E1E1E] border border-white/10 p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/45">
+                  {activeTab === 'pending'
+                    ? 'Nenhuma partida aguardando confirmacao.'
+                    : 'Nenhuma partida confirmada/agendada para reagendar.'}
+                </p>
+              </div>
+            ) : visibleMatches.map((partida) => {
               const opponent = partida.is_visitante ? partida.mandante : partida.visitante;
+              const isPending = String(partida?.estado || '') === 'confirmacao_necessaria';
 
               return (
                 <button
                   key={partida.id}
                   type="button"
-                  onClick={() => setSelectedPartidaId(partida.id)}
-                  className={`w-full text-left p-4 border transition-all ${isSelected ? 'bg-[#FFD700] text-[#121212] border-[#FFD700]' : 'bg-[#1E1E1E] text-white border-white/10'}`}
+                  onClick={() => openScheduleModal(partida)}
+                  className={`w-full text-left p-4 border transition-all active:scale-[0.995] ${
+                    isPending
+                      ? 'bg-[#1E1E1E] text-white border-[#B22222]/60'
+                      : 'bg-[#1E1E1E] text-white border-[#22C55E]/45'
+                  }`}
                   style={{ clipPath: AGGRESSIVE_CLIP }}
                 >
-                  <p className="text-[11px] font-black italic uppercase truncate">VS {opponent}</p>
-                  <p className={`text-[8px] font-bold uppercase italic tracking-widest mt-1 ${isSelected ? 'text-[#121212]/70' : 'text-white/40'}`}>
-                    {LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}
-                  </p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black italic uppercase truncate">VS {opponent}</p>
+                      <p className="text-[8px] font-bold uppercase italic tracking-widest mt-1 text-white/45">
+                        {LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}
+                      </p>
+                      <p className="text-[8px] font-black uppercase italic text-white/35 mt-2">
+                        {formatLegacyMatchDate(partida?.scheduled_at)}
+                      </p>
+                    </div>
+                    <span className={`text-[7px] font-black uppercase italic px-2 py-1 border ${
+                      isPending
+                        ? 'bg-[#B22222]/25 text-[#FFB4B4] border-[#B22222]/60'
+                        : 'bg-[#22C55E]/20 text-[#A7F3D0] border-[#22C55E]/45'
+                    }`}>
+                      {isPending ? 'ACAO NECESSARIA' : 'REAGENDAR'}
+                    </span>
+                  </div>
                 </button>
               );
             })}
           </section>
+        </div>
+      )}
 
-          {selectedPartida && (
-            <section className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <h4 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] mb-4">
-                Horários disponíveis
-              </h4>
-              <p className="text-[9px] font-bold uppercase italic text-white/40 mb-4">
-                {selectedPartida.is_visitante ? selectedPartida.mandante : selectedPartida.visitante}
-              </p>
-
-              {calendarLoading ? (
-                <p className="text-[10px] text-white/40 font-black uppercase italic">CARREGANDO HORÁRIOS...</p>
-              ) : calendarDays.length === 0 ? (
-                <p className="text-[10px] text-white/50 font-black uppercase italic">Sem horários disponíveis no momento.</p>
-              ) : (
-                <div className="space-y-4">
-                  {calendarDays.map((day) => (
-                    <div key={day.date}>
-                      <p className="text-[9px] font-black uppercase italic text-white/50 mb-2">{day.label}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {(day.slots || []).map((slot: any) => (
-                          <button
-                            key={slot.datetime_utc}
-                            type="button"
-                            onClick={() => setSelectedSlot(slot.datetime_utc)}
-                            className={`px-3 py-2 text-[9px] font-black uppercase italic ${selectedSlot === slot.datetime_utc ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#121212] text-[#FFD700] border border-[#FFD700]/25'}`}
-                            style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                          >
-                            {slot.time_label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {!!scheduleNotice && (
-                <p className="text-[9px] font-black uppercase italic text-[#FFD700] mt-4">{scheduleNotice}</p>
-              )}
-
-              <div className="mt-6">
-                <MCOButton
-                  className="w-full"
-                  disabled={submitting || !selectedSlot}
-                  onClick={handleSchedule}
-                >
-                  {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR HORÁRIO'}
-                </MCOButton>
+      {isScheduleModalOpen && selectedPartida && (
+        <div className="fixed inset-0 z-[120] bg-[#121212] overflow-y-auto">
+          <div className="sticky top-0 z-10 bg-[#121212]/95 backdrop-blur-sm border-b border-white/10 px-6 pt-8 pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase italic tracking-[0.25em] text-[#FFD700]">
+                  HORARIOS DISPONIVEIS
+                </p>
+                <h3 className="text-2xl font-black italic uppercase text-white leading-tight mt-2 truncate">
+                  VS {selectedPartida.is_visitante ? selectedPartida.mandante : selectedPartida.visitante}
+                </h3>
+                <p className="text-[8px] font-black uppercase italic text-white/45 mt-1">
+                  {LEGACY_MATCH_STATUS_LABELS[String(selectedPartida?.estado || '')] || String(selectedPartida?.estado || '')}
+                </p>
               </div>
-            </section>
-          )}
+              <button
+                type="button"
+                onClick={closeScheduleModal}
+                disabled={submitting}
+                className={`w-10 h-10 flex items-center justify-center border ${
+                  submitting ? 'bg-white/10 text-white/20 border-white/10' : 'bg-[#1E1E1E] text-[#FFD700] border-[#FFD700]/30'
+                }`}
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-6 pb-32">
+            {calendarLoading ? (
+              <div className="text-center py-20 text-white/45 text-[10px] font-black italic uppercase tracking-[0.2em]">
+                CARREGANDO HORARIOS...
+              </div>
+            ) : calendarDays.length === 0 ? (
+              <div className="bg-[#1E1E1E] border border-white/10 p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/55">Sem horarios disponiveis no momento.</p>
+              </div>
+            ) : selectedDayDate === '' ? (
+              <div className="space-y-4">
+                <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-white/50">
+                  ETAPA 1: ESCOLHA O DIA
+                </p>
+                <div className="grid grid-cols-1 gap-3">
+                  {calendarDays.map((day, dayIndex) => {
+                    const slots = Array.isArray(day?.slots) ? day.slots : [];
+                    return (
+                      <button
+                        key={String(day?.date || dayIndex)}
+                        type="button"
+                        onClick={() => handleSelectDay(String(day?.date || ''))}
+                        className="w-full text-left bg-[#1E1E1E] border border-[#FFD700]/35 px-4 py-4"
+                        style={{ clipPath: AGGRESSIVE_CLIP }}
+                      >
+                        <p className="text-[10px] font-black uppercase italic text-white">{String(day?.label || '--')}</p>
+                        <p className="text-[8px] font-black uppercase italic text-[#FFD700] mt-1">
+                          {slots.length} HORARIO{slots.length === 1 ? '' : 'S'} DISPONIVEL{slots.length === 1 ? '' : 'EIS'}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-[9px] font-black uppercase italic tracking-[0.2em] text-white/50">
+                    ETAPA 2: ESCOLHA O HORARIO
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedDayDate('')}
+                    className="text-[8px] font-black uppercase italic px-3 py-2 bg-white/10 text-white/70 border border-white/15"
+                    style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                    disabled={submitting}
+                  >
+                    TROCAR DIA
+                  </button>
+                </div>
+
+                <div className="bg-[#1E1E1E] border border-white/10 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <p className="text-[10px] font-black uppercase italic text-[#FFD700] mb-3">{String(selectedDay?.label || '--')}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(Array.isArray(selectedDay?.slots) ? selectedDay.slots : []).map((slot: any) => (
+                      <button
+                        key={slot.datetime_utc}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot.datetime_utc)}
+                        className={`px-3 py-2 text-[9px] font-black uppercase italic ${
+                          selectedSlot === slot.datetime_utc
+                            ? 'bg-[#FFD700] text-[#121212]'
+                            : 'bg-[#121212] text-[#FFD700] border border-[#FFD700]/25'
+                        }`}
+                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                        disabled={submitting}
+                      >
+                        {slot.time_label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!!scheduleNotice && (
+              <p className="text-[9px] font-black uppercase italic text-[#FFB4B4] mt-4">{scheduleNotice}</p>
+            )}
+
+            <div className="mt-6">
+              <MCOButton
+                className="w-full"
+                disabled={submitting || !selectedSlot}
+                onClick={handleSchedule}
+              >
+                {submitting ? modalSubmittingLabel : modalActionLabel}
+              </MCOButton>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -2494,9 +2835,13 @@ const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?
 const LegacyMarketPlayerThumb = ({
   player,
   useReducedTemplate = false,
+  thumbClassName = 'w-14 h-14',
+  showBadges = true,
 }: {
   player: any,
   useReducedTemplate?: boolean,
+  thumbClassName?: string,
+  showBadges?: boolean,
 }) => {
   const templateSrc = useReducedTemplate ? LEGACY_MARKET_CARD_REDUZIDO_URL : '';
   const [templateLoaded, setTemplateLoaded] = useState(false);
@@ -2510,9 +2855,9 @@ const LegacyMarketPlayerThumb = ({
   const shouldUseTemplate = templateSrc !== '' && !templateFailed;
 
   return (
-    <div className="relative w-14 h-14 overflow-visible">
+    <div className={`relative ${thumbClassName} overflow-visible`}>
       <div
-        className={`relative z-10 w-14 h-14 ${shouldUseTemplate ? '' : 'bg-[#121212]'} border-b-2 border-[#FFD700]/30 overflow-hidden`}
+        className={`relative z-10 ${thumbClassName} ${shouldUseTemplate ? '' : 'bg-[#121212]'} border-b-2 border-[#FFD700]/30 overflow-hidden`}
         style={{ clipPath: SHIELD_CLIP }}
       >
         {shouldUseTemplate ? (
@@ -2544,12 +2889,16 @@ const LegacyMarketPlayerThumb = ({
         />
       </div>
 
-      <div className="absolute bottom-0 right-0 z-30 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
-        {player.ovr}
-      </div>
-      <div className="absolute bottom-0 left-0 z-30 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
-        {player.pos}
-      </div>
+      {showBadges ? (
+        <>
+          <div className="absolute bottom-0 right-0 z-30 bg-[#FFD700] text-[#121212] text-[9px] font-black px-1 italic leading-none border-t border-l border-[#121212]/20 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+            {player.ovr}
+          </div>
+          <div className="absolute bottom-0 left-0 z-30 bg-[#1E1E1E] text-[#FFD700] text-[7px] font-black px-1 italic leading-none border-t border-r border-white/5 shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+            {player.pos}
+          </div>
+        </>
+      ) : null}
     </div>
   );
 };
@@ -2726,6 +3075,7 @@ const DetailedAttributes = ({ player }: { player: any }) => {
 // --- Views: Club Subs ---
 
 const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
+  const salaryAdjustOptions = [10, 30, 70, 100];
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [showDetailed, setShowDetailed] = useState(false);
   const [squadPlayersRaw, setSquadPlayersRaw] = useState<any[]>([]);
@@ -2736,6 +3086,10 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
   const [sellPlayer, setSellPlayer] = useState<any>(null);
   const [sellingEntryId, setSellingEntryId] = useState<number | null>(null);
   const [sellNotice, setSellNotice] = useState('');
+  const [salaryAdjustPlayer, setSalaryAdjustPlayer] = useState<any>(null);
+  const [salaryAdjustPercent, setSalaryAdjustPercent] = useState<number>(salaryAdjustOptions[0]);
+  const [salaryAdjustNotice, setSalaryAdjustNotice] = useState('');
+  const [salaryUpdatingEntryId, setSalaryUpdatingEntryId] = useState<number | null>(null);
 
   const squadPlayers = useMemo(() => squadPlayersRaw.map(mapLegacySquadPlayer), [squadPlayersRaw]);
   const closePlayer = () => { setSelectedPlayer(null); setShowDetailed(false); };
@@ -2748,6 +3102,18 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
     if (!player?.isActive) return;
     setSellNotice('');
     setSellPlayer(player);
+  };
+  const closeSalaryAdjustModal = () => {
+    if (salaryUpdatingEntryId !== null) return;
+    setSalaryAdjustPlayer(null);
+    setSalaryAdjustPercent(salaryAdjustOptions[0]);
+    setSalaryAdjustNotice('');
+  };
+  const openSalaryAdjustModal = (player: any) => {
+    if (!player?.isActive) return;
+    setSalaryAdjustPlayer(player);
+    setSalaryAdjustPercent(salaryAdjustOptions[0]);
+    setSalaryAdjustNotice('');
   };
   const handleSellPlayer = async () => {
     const entryId = Number(sellPlayer?.id ?? 0);
@@ -2777,6 +3143,84 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
       }
     } finally {
       setSellingEntryId(null);
+    }
+  };
+  const handleSalaryAdjust = async () => {
+    const entryId = Number(salaryAdjustPlayer?.id ?? 0);
+    if (!entryId || salaryUpdatingEntryId !== null) return;
+
+    const multiplier = 1 + (salaryAdjustPercent / 100);
+    const nextValueEur = Math.max(0, Math.round(Math.max(0, Number(salaryAdjustPlayer?.value_eur ?? 0)) * multiplier));
+    const nextWageEur = Math.max(0, Math.round(Math.max(0, Number(salaryAdjustPlayer?.wage_eur ?? 0)) * multiplier));
+
+    if (!Number.isFinite(nextValueEur) || !Number.isFinite(nextWageEur)) {
+      setSalaryAdjustNotice('Nao foi possivel calcular os novos valores.');
+      return;
+    }
+
+    setSalaryUpdatingEntryId(entryId);
+    setSalaryAdjustNotice('');
+
+    try {
+      const payload = await jsonRequest(`/elenco/${entryId}/valor`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          value_eur: nextValueEur,
+          wage_eur: nextWageEur,
+        }),
+      });
+
+      const savedValueEur = Math.max(0, Number(payload?.value_eur ?? nextValueEur) || 0);
+      const savedWageEur = Math.max(0, Number(payload?.wage_eur ?? nextWageEur) || 0);
+      const savedValueM = toLegacyMoneyInMillions(savedValueEur);
+      const savedWageM = toLegacyMoneyInMillions(savedWageEur);
+
+      setSquadPlayersRaw((current) => current.map((entry) => (
+        Number(entry?.id ?? 0) === entryId
+          ? {
+              ...entry,
+              value_eur: savedValueEur,
+              wage_eur: savedWageEur,
+            }
+          : entry
+      )));
+
+      setSelectedPlayer((current: any) => {
+        if (!current || Number(current?.id ?? 0) !== entryId) return current;
+        return {
+          ...current,
+          value_eur: savedValueEur,
+          wage_eur: savedWageEur,
+          value: savedValueM,
+          marketValue: savedValueM,
+          salary: savedWageM,
+        };
+      });
+      setSellPlayer((current: any) => {
+        if (!current || Number(current?.id ?? 0) !== entryId) return current;
+        return {
+          ...current,
+          value_eur: savedValueEur,
+          wage_eur: savedWageEur,
+          value: savedValueM,
+          marketValue: savedValueM,
+          salary: savedWageM,
+        };
+      });
+
+      setSalaryAdjustPlayer(null);
+      setSalaryAdjustPercent(salaryAdjustOptions[0]);
+      if (typeof onNotify === 'function') {
+        onNotify(String(payload?.message || 'Salario atualizado com sucesso.'), 'success');
+      }
+    } catch (currentError: any) {
+      const message = String(currentError?.message || 'Nao foi possivel atualizar o salario.');
+      setSalaryAdjustNotice(message);
+      if (typeof onNotify === 'function') {
+        onNotify(message, 'error');
+      }
+    } finally {
+      setSalaryUpdatingEntryId(null);
     }
   };
 
@@ -2847,8 +3291,25 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
       setSellNotice('');
     }
   }, [sellPlayer, squadPlayers, sellingEntryId]);
+  useEffect(() => {
+    if (!salaryAdjustPlayer) return;
+
+    const stillExists = squadPlayers.some((player) => Number(player.id) === Number(salaryAdjustPlayer.id));
+    if (!stillExists && salaryUpdatingEntryId === null) {
+      setSalaryAdjustPlayer(null);
+      setSalaryAdjustNotice('');
+      setSalaryAdjustPercent(salaryAdjustOptions[0]);
+    }
+  }, [salaryAdjustPlayer, squadPlayers, salaryUpdatingEntryId]);
 
   const hasClub = Boolean(clubData?.id);
+  const squadCount = squadPlayers.length;
+  const squadCountLabel = `${squadCount} ${squadCount === 1 ? 'JOGADOR' : 'JOGADORES'}`;
+  const salaryAdjustBaseValueEur = Math.max(0, Number(salaryAdjustPlayer?.value_eur ?? 0));
+  const salaryAdjustBaseWageEur = Math.max(0, Number(salaryAdjustPlayer?.wage_eur ?? 0));
+  const salaryAdjustMultiplier = 1 + (salaryAdjustPercent / 100);
+  const salaryAdjustValueEur = Math.max(0, Math.round(salaryAdjustBaseValueEur * salaryAdjustMultiplier));
+  const salaryAdjustWageEur = Math.max(0, Math.round(salaryAdjustBaseWageEur * salaryAdjustMultiplier));
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32">
@@ -2859,6 +3320,7 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MEU ELENCO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic mt-2">
           {clubData?.nome ? String(clubData.nome).toUpperCase() : 'CLUBE NÃO DEFINIDO'}
+          {hasClub ? ` • ${squadCountLabel}` : ''}
         </p>
       </header>
 
@@ -2894,18 +3356,12 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
               onClick={() => setSelectedPlayer(player)}
               style={{ clipPath: AGGRESSIVE_CLIP }}
             >
-              <LegacyPlayerImage
-                src={player.photo}
-                alt={player.name}
-                wrapperClassName="w-12 h-12"
-                wrapperStyle={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
-                imgClassName="w-full h-full object-cover"
-                fallback={
-                  <div className="w-full h-full flex items-center justify-center bg-[#121212] text-[#FFD700]/30">
-                    <i className="fas fa-user text-sm"></i>
-                  </div>
-                }
-              />
+              <div className="flex justify-center shrink-0">
+                <LegacyMarketPlayerThumb
+                  player={player}
+                  useReducedTemplate
+                />
+              </div>
               <div className="flex-grow overflow-hidden">
                 <p className="text-lg font-black italic font-heading text-white uppercase truncate">{player.name}</p>
                 <p className="text-[10px] text-[#FFD700] font-bold uppercase italic">
@@ -2954,6 +3410,16 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
             </div>
             <div className="mt-3 w-full">
               <MCOButton
+                variant="outline"
+                className="w-full py-4"
+                disabled={!selectedPlayer?.isActive || salaryUpdatingEntryId === Number(selectedPlayer?.id)}
+                onClick={() => openSalaryAdjustModal(selectedPlayer)}
+              >
+                {salaryUpdatingEntryId === Number(selectedPlayer?.id) ? 'ATUALIZANDO...' : 'REAJUSTAR SALARIO'}
+              </MCOButton>
+            </div>
+            <div className="mt-3 w-full">
+              <MCOButton
                 variant="danger"
                 className="w-full py-4"
                 disabled={!selectedPlayer?.isActive || sellingEntryId === Number(selectedPlayer?.id)}
@@ -2965,6 +3431,94 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
           </div>
         </div>
       )}
+      {salaryAdjustPlayer && (() => {
+        const entryId = Number(salaryAdjustPlayer?.id ?? 0);
+        const isBusy = salaryUpdatingEntryId === entryId;
+
+        return (
+          <div className="fixed inset-0 z-[112] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={closeSalaryAdjustModal}></div>
+            <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">REAJUSTE CONTRATUAL</p>
+              <h4 className="text-lg font-black italic uppercase text-white leading-tight">
+                {String(salaryAdjustPlayer?.name || 'ATLETA')}
+              </h4>
+              <p className="text-[8px] font-black italic uppercase text-white/40 mt-1">
+                O reajuste aplica novo valor de mercado e novo salario.
+              </p>
+
+              <div className="mt-4 bg-[#121212]/75 border border-white/10 p-3 space-y-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.15em]">SELECIONE O REAJUSTE</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {salaryAdjustOptions.map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setSalaryAdjustPercent(pct)}
+                      className={`text-[8px] font-black italic uppercase py-2 ${
+                        salaryAdjustPercent === pct
+                          ? 'bg-[#FFD700] text-[#121212]'
+                          : 'bg-white/10 text-white/55'
+                      }`}
+                      style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}
+                      disabled={isBusy}
+                    >
+                      +{pct}%
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[8px] font-black uppercase italic text-white/45">VALOR ATUAL</span>
+                    <span className="text-[9px] font-black italic uppercase text-white">EUR {toLegacyMoneyCompact(salaryAdjustBaseValueEur)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[8px] font-black uppercase italic text-white/45">SALARIO ATUAL</span>
+                    <span className="text-[9px] font-black italic uppercase text-white">EUR {toLegacyMoneyCompact(salaryAdjustBaseWageEur)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-2">
+                    <span className="text-[8px] font-black uppercase italic text-[#FFD700]">NOVO VALOR</span>
+                    <span className="text-[10px] font-black italic uppercase text-[#FFD700]">EUR {toLegacyMoneyCompact(salaryAdjustValueEur)}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[8px] font-black uppercase italic text-[#FFD700]">NOVO SALARIO</span>
+                    <span className="text-[10px] font-black italic uppercase text-[#FFD700]">EUR {toLegacyMoneyCompact(salaryAdjustWageEur)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {!!salaryAdjustNotice && (
+                <p className="text-[8px] font-black italic uppercase text-[#B22222] mt-3">
+                  {salaryAdjustNotice}
+                </p>
+              )}
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`text-[8px] font-black italic uppercase py-3 ${isBusy ? 'bg-white/10 text-white/25' : 'bg-white/10 text-white/60'}`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={closeSalaryAdjustModal}
+                  disabled={isBusy}
+                >
+                  CANCELAR
+                </button>
+                <button
+                  type="button"
+                  className={`text-[8px] font-black italic uppercase py-3 ${
+                    isBusy || !entryId ? 'bg-white/10 text-white/25' : 'bg-[#FFD700] text-[#121212]'
+                  }`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && !!entryId && void handleSalaryAdjust()}
+                  disabled={isBusy || !entryId}
+                >
+                  {isBusy ? 'ATUALIZANDO...' : 'APLICAR REAJUSTE'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {sellPlayer && (() => {
         const entryId = Number(sellPlayer?.id ?? 0);
         const isBusy = sellingEntryId === entryId;
@@ -4012,7 +4566,7 @@ const LeagueTableView = ({
       </header>
       <div className="flex-grow overflow-y-auto">
         <div className="min-w-full">
-           <div className="grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+           <div className="grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
               <span className="text-[8px] font-black text-white/40 italic uppercase">POS</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase">CLUBE</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">P</span>
@@ -4037,10 +4591,19 @@ const LeagueTableView = ({
                 <div
                   key={`${row.clubId}-${row.pos}`}
                   onClick={() => onOpenClub({ id: row.clubId, name: row.clubName })}
-                  className={`grid grid-cols-[30px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
+                  className={`grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
                   style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                 >
-                  <span className="text-[10px] font-black italic font-heading">{row.pos}o</span>
+                  <span className="flex items-center gap-2">
+                    <span className="text-[10px] font-black italic font-heading shrink-0">{row.pos}o</span>
+                    <span className={`w-5 h-5 flex items-center justify-center overflow-hidden border ${row.isUser ? 'bg-[#121212]/10 border-[#121212]/25' : 'bg-[#121212] border-[#FFD700]/30'}`} style={{ clipPath: SHIELD_CLIP }}>
+                      {row.clubEscudoUrl ? (
+                        <img src={row.clubEscudoUrl} alt={row.clubName} className="w-full h-full object-cover" />
+                      ) : (
+                        <i className={`fas fa-shield text-[10px] ${row.isUser ? 'text-[#121212]/30' : 'text-white/20'}`}></i>
+                      )}
+                    </span>
+                  </span>
                   <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
                   <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
@@ -5189,30 +5752,53 @@ const EsquemaTaticoView = ({ onBack, currentCareer }: any) => {
                   const name = String(player?.short_name || player?.long_name || 'ATLETA');
                   const posLabel = getLegacyPrimaryPosition(player?.player_positions);
                   const overall = Number(player?.overall ?? 0);
+                  const actionDisabled = saving || (!isPlaced && isLineupFull);
+                  const thumbPlayer = {
+                    photo: String(player?.player_face_url || ''),
+                    name,
+                    ovr: overall || '--',
+                    pos: posLabel,
+                  };
 
                   return (
-                    <article key={id} className="bg-[#121212] p-3 border border-white/10 flex items-center justify-between gap-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-black italic uppercase text-white truncate">{name}</p>
-                        <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.15em]">
+                    <article
+                      key={id}
+                      className="grid grid-cols-[70px_1fr_120px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
+                      style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                    >
+                      <div className="flex justify-center">
+                        <LegacyMarketPlayerThumb player={thumbPlayer} useReducedTemplate />
+                      </div>
+                      <div className="min-w-0 px-1">
+                        <p className="text-[11px] font-black italic uppercase text-white truncate leading-tight">{name}</p>
+                        <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.15em] mt-0.5">
                           OVR {overall || '--'} • {posLabel}
                         </p>
                       </div>
-                      <button
-                        type="button"
-                        className={`px-3 py-2 text-[8px] font-black uppercase italic transition-colors ${
+                      <div className="flex flex-col gap-1.5 px-1">
+                        <p className={`text-[7px] font-black uppercase italic text-center py-1 border ${
                           isPlaced
-                            ? 'bg-white/10 text-white/60 border border-white/20'
-                            : isLineupFull
-                            ? 'bg-white/10 text-white/30 border border-white/20'
-                            : 'bg-[#FFD700] text-[#121212]'
-                        }`}
-                        style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                        onClick={() => (isPlaced ? handleRemovePlayer(id) : handleAddPlayer(id))}
-                        disabled={saving || (!isPlaced && isLineupFull)}
-                      >
-                        {isPlaced ? 'REMOVER' : 'ADICIONAR'}
-                      </button>
+                            ? 'bg-[#22C55E]/15 text-[#A7F3D0] border-[#22C55E]/45'
+                            : 'bg-white/5 text-white/45 border-white/10'
+                        }`} style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}>
+                          {isPlaced ? 'NO CAMPO' : 'DISPONIVEL'}
+                        </p>
+                        <button
+                          type="button"
+                          className={`text-[8px] font-black italic uppercase py-2 px-1 leading-none transition-transform active:scale-95 ${
+                            isPlaced
+                              ? 'bg-white/10 text-white/70 border border-white/20'
+                              : isLineupFull
+                              ? 'bg-white/10 text-white/30 border border-white/20 cursor-not-allowed'
+                              : 'bg-[#FFD700] text-[#121212]'
+                          }`}
+                          style={{ clipPath: "polygon(2px 0, 100% 0, 100% 100%, 0 100%, 0 2px)" }}
+                          onClick={() => (isPlaced ? handleRemovePlayer(id) : handleAddPlayer(id))}
+                          disabled={actionDisabled}
+                        >
+                          {isPlaced ? 'REMOVER' : 'ADICIONAR'}
+                        </button>
+                      </div>
                     </article>
                   );
                 })
@@ -5917,6 +6503,32 @@ const getLegacyAuctionCountdown = (expiresAt: string | null | undefined, nowTime
   return `${minutesPart}:${secondsPart}`;
 };
 
+const parseLegacyPeriodEndTimestamp = (period: any, preferEndOfDayForDateOnly = false) => {
+  const raw = String(period?.fim || '').trim();
+  if (raw === '') return null;
+
+  let normalized = raw.replace(' ', 'T');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    normalized = preferEndOfDayForDateOnly ? `${normalized}T23:59:59` : `${normalized}T00:00:00`;
+  }
+
+  const timestamp = new Date(normalized).getTime();
+  if (!Number.isFinite(timestamp)) return null;
+  return timestamp;
+};
+
+const getLegacyLongCountdown = (targetTimestamp: number | null, nowTimestamp: number) => {
+  if (!targetTimestamp || !Number.isFinite(targetTimestamp)) return null;
+
+  const diffMs = targetTimestamp - nowTimestamp;
+  const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+  const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+  const seconds = (totalSeconds % 60).toString().padStart(2, '0');
+
+  return `${hours}:${minutes}:${seconds}`;
+};
+
 const MarketView = ({
   onBack,
   userStats,
@@ -5939,6 +6551,7 @@ const MarketView = ({
   const [marketError, setMarketError] = useState('');
   const [marketClosed, setMarketClosed] = useState(false);
   const [marketMode, setMarketMode] = useState<'open' | 'closed' | 'auction'>('open');
+  const [marketOpenPeriod, setMarketOpenPeriod] = useState<any>(null);
   const [marketAuctionPeriod, setMarketAuctionPeriod] = useState<any>(null);
   const [marketBidOptions, setMarketBidOptions] = useState<number[]>(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
   const [marketRadarIds, setMarketRadarIds] = useState<number[]>([]);
@@ -5984,6 +6597,7 @@ const MarketView = ({
     perPage: LEGACY_MARKET_PAGE_SIZE,
   });
   const marketPlayersCountRef = useRef(0);
+  const auctionLeaderStateRef = useRef<Map<number, { hasUserBid: boolean; isLeader: boolean }>>(new Map());
 
   const notifyMarket = (message: string, variant: LegacyToastVariant = 'info') => {
     const normalized = String(message || '').trim();
@@ -6124,6 +6738,7 @@ const MarketView = ({
         setMarketPlayersRaw([]);
         setMarketClosed(false);
         setMarketMode('open');
+        setMarketOpenPeriod(null);
         setMarketAuctionPeriod(null);
         setMarketBidOptions(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds([]);
@@ -6216,6 +6831,7 @@ const MarketView = ({
         setMarketPlayersRaw(players);
         setMarketClosed(Boolean(payload?.mercado?.closed));
         setMarketMode(normalizedMode);
+        setMarketOpenPeriod(payload?.mercado?.period ?? null);
         setMarketAuctionPeriod(payload?.mercado?.auction_period ?? null);
         setMarketBidOptions(bidOptionsRaw.length > 0 ? bidOptionsRaw : LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds(radarIds);
@@ -6239,6 +6855,7 @@ const MarketView = ({
         setMarketPlayersRaw([]);
         setMarketClosed(false);
         setMarketMode('open');
+        setMarketOpenPeriod(null);
         setMarketAuctionPeriod(null);
         setMarketBidOptions(LEGACY_AUCTION_BID_OPTIONS_DEFAULT);
         setMarketRadarIds([]);
@@ -6388,6 +7005,55 @@ const MarketView = ({
   const marketPlayers = useMemo(() => marketPlayersRaw.map(mapLegacyMarketPlayer), [marketPlayersRaw]);
   const marketRadarSet = useMemo(() => new Set(marketRadarIds), [marketRadarIds]);
   const isMarketDataMode = subMode === 'list' || subMode === 'watchlist';
+
+  useEffect(() => {
+    if (marketMode !== 'auction' || subMode !== 'list' || !currentCareer?.id) {
+      auctionLeaderStateRef.current = new Map();
+      return;
+    }
+
+    const previousStates = auctionLeaderStateRef.current;
+    const nextStates = new Map(previousStates);
+    const outbidPlayers: Array<{ name: string; leaderClubName: string | null }> = [];
+
+    marketPlayers.forEach((player) => {
+      const playerId = Number(player?.id ?? 0);
+      if (playerId <= 0) return;
+
+      const hasUserBid = Boolean(player?.auction?.hasUserBid);
+      const isLeader = Boolean(player?.auction?.isLeader);
+      const prev = previousStates.get(playerId);
+
+      if (prev?.hasUserBid && prev.isLeader && hasUserBid && !isLeader) {
+        outbidPlayers.push({
+          name: String(player?.name || 'ATLETA'),
+          leaderClubName: String(player?.auction?.leaderClubName || '').trim() || null,
+        });
+      }
+
+      nextStates.set(playerId, { hasUserBid, isLeader });
+    });
+
+    auctionLeaderStateRef.current = nextStates;
+
+    if (outbidPlayers.length === 0 || typeof onNotify !== 'function') {
+      return;
+    }
+
+    if (outbidPlayers.length === 1) {
+      const item = outbidPlayers[0];
+      const detail = item.leaderClubName
+        ? `${item.leaderClubName} cobriu seu lance por ${item.name}.`
+        : `Seu lance por ${item.name} foi coberto.`;
+      onNotify(detail, 'warning');
+      return;
+    }
+
+    onNotify(
+      `${outbidPlayers.length} lances foram cobertos no leilao. Abra o mercado e reaja aos novos valores.`,
+      'warning',
+    );
+  }, [marketMode, subMode, currentCareer?.id, marketPlayers, onNotify]);
 
   const setBusyFlag = (setter: (value: any) => void, playerId: number, busy: boolean) => {
     setter((prev: number[]) => {
@@ -6803,6 +7469,10 @@ const MarketView = ({
     : 0;
   const isAuctionMode = marketMode === 'auction';
   const proposalBusySet = useMemo(() => new Set(marketProposalBusyIds), [marketProposalBusyIds]);
+  const marketOpenEndsAtTimestamp = useMemo(
+    () => parseLegacyPeriodEndTimestamp(marketOpenPeriod, false),
+    [marketOpenPeriod],
+  );
   const marketPlayersById = useMemo(() => {
     const byId = new Map<number, any>();
     marketPlayers.forEach((player) => {
@@ -6813,6 +7483,26 @@ const MarketView = ({
     });
     return byId;
   }, [marketPlayers]);
+  const auctionItemMinExpiryTimestamp = useMemo(() => {
+    const timestamps = marketPlayers
+      .map((player) => {
+        const value = String(player?.auction?.expiresAt || '').trim();
+        if (value === '') return null;
+        const ts = new Date(value).getTime();
+        return Number.isFinite(ts) ? ts : null;
+      })
+      .filter((value): value is number => value !== null && value > marketNowTs);
+
+    if (timestamps.length === 0) return null;
+    return Math.min(...timestamps);
+  }, [marketPlayers, marketNowTs]);
+  const auctionPeriodEndTimestamp = useMemo(
+    () => parseLegacyPeriodEndTimestamp(marketAuctionPeriod, true),
+    [marketAuctionPeriod],
+  );
+  const auctionEndsAtTimestamp = auctionItemMinExpiryTimestamp ?? auctionPeriodEndTimestamp;
+  const marketCountdownLabel = getLegacyLongCountdown(marketOpenEndsAtTimestamp, marketNowTs);
+  const auctionCountdownLabel = getLegacyLongCountdown(auctionEndsAtTimestamp, marketNowTs);
   const totalReceivedProposals = marketReceivedProposals.length;
   const totalSentProposals = marketSentProposals.length;
 
@@ -7163,9 +7853,32 @@ const MarketView = ({
     </div>
   );
 
-  const renderPlayerList = (title: string, subtitle: string) => (
-    <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
+  const renderPlayerList = (title: string, subtitle: string) => {
+    const showMarketTimers = subMode === 'list';
+    const marketTimerText = marketCountdownLabel ? `TERMINA EM ${marketCountdownLabel}` : 'INATIVO';
+    const auctionTimerText = auctionCountdownLabel ? `TERMINA EM ${auctionCountdownLabel}` : 'INATIVO';
+
+    return (
+    <div className={`min-h-screen bg-[#121212] ${showMarketTimers ? 'pt-[130px]' : 'pt-16'} pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300`}>
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
+      {showMarketTimers && (
+        <div className="fixed top-16 left-0 right-0 z-[55] px-4 pt-2">
+          <div className="bg-[#1E1E1E]/95 border-b-[3px] border-[#FFD700] px-3 py-2 flex items-center gap-2" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="flex-1 min-w-0 bg-[#121212]/80 border border-[#FFD700]/30 px-2 py-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+              <p className="text-[7px] font-black uppercase italic text-[#FFD700] tracking-[0.18em] truncate">LEILAO</p>
+              <p className={`text-[9px] font-black italic uppercase truncate ${auctionCountdownLabel ? 'text-white' : 'text-white/35'}`}>
+                {auctionTimerText}
+              </p>
+            </div>
+            <div className="flex-1 min-w-0 bg-[#121212]/80 border border-[#22C55E]/30 px-2 py-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+              <p className="text-[7px] font-black uppercase italic text-[#22C55E] tracking-[0.18em] truncate">MERCADO ABERTO</p>
+              <p className={`text-[9px] font-black italic uppercase truncate ${marketCountdownLabel ? 'text-white' : 'text-white/35'}`}>
+                {marketTimerText}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="p-4">
         <header className="mb-6">
           <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
@@ -7674,6 +8387,7 @@ const MarketView = ({
       )}
     </div>
   );
+  };
 
   if (subMode === 'list') {
     return renderPlayerList(
@@ -8000,6 +8714,8 @@ const App = () => {
         escudoUrl: clube.escudo_url ?? null,
         wonTrophies: Array.isArray(clube.won_trophies) ? clube.won_trophies : [],
         players: Array.isArray(clube.players) ? clube.players : [],
+        tacticalLayout: clube.esquema_tatico_layout ?? null,
+        tacticalFieldBackgroundUrl: clube.esquema_tatico_field_background_url ?? null,
       });
     } catch (currentError: any) {
       setClubProfileToView(null);
@@ -8055,7 +8771,7 @@ const App = () => {
         }
       }} />;
       case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
-      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} />;
+      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} match={selectedPendingMatch} />;
       case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} quickAuctionStatusFilter={marketQuickAuctionStatusFilter} onQuickAuctionStatusFilterHandled={() => setMarketQuickAuctionStatusFilter(null)} />;

@@ -2506,10 +2506,10 @@ class LegacyController extends Controller
         }
 
         $clubs = LigaClube::query()
-            ->with('user:id,name')
+            ->with(['user:id,name', 'escudo:id,clube_imagem'])
             ->where('liga_id', $liga->id)
             ->orderBy('id')
-            ->get(['id', 'user_id', 'nome']);
+            ->get(['id', 'user_id', 'nome', 'escudo_clube_id']);
 
         if ($clubs->isEmpty()) {
             return response()->json([
@@ -2538,6 +2538,7 @@ class LegacyController extends Controller
             $stats[(int) $club->id] = [
                 'club_id' => (int) $club->id,
                 'club_name' => (string) $club->nome,
+                'club_escudo_url' => $this->resolveEscudoUrl($club->escudo?->clube_imagem),
                 'user_id' => (int) ($club->user_id ?? 0),
                 'played' => 0,
                 'wins' => 0,
@@ -2608,6 +2609,7 @@ class LegacyController extends Controller
                     'pos' => $index + 1,
                     'club_id' => (int) $row['club_id'],
                     'club_name' => (string) $row['club_name'],
+                    'club_escudo_url' => $row['club_escudo_url'] ?? null,
                     'user_id' => (int) $row['user_id'],
                     'played' => (int) $row['played'],
                     'wins' => (int) $row['wins'],
@@ -3538,6 +3540,9 @@ class LegacyController extends Controller
         }
 
         $scopeConfederacaoId = $liga->confederacao_id;
+        $fieldBackgroundUrl = $this->resolveEscudoUrl(
+            AppAsset::query()->value('imagem_campo'),
+        );
         $rawClubId = $request->query('club_id');
         $clubId = is_numeric($rawClubId) ? (int) $rawClubId : null;
         $clubName = trim((string) $request->query('club_name', ''));
@@ -3697,6 +3702,8 @@ class LegacyController extends Controller
                 'skill_rating' => $skillRating,
                 'won_trophies' => $trophies,
                 'players' => $players,
+                'esquema_tatico_layout' => $club->esquema_tatico_layout,
+                'esquema_tatico_field_background_url' => $fieldBackgroundUrl,
             ],
         ]);
     }
