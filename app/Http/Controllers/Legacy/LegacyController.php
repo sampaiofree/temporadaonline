@@ -401,12 +401,7 @@ class LegacyController extends Controller
             }
 
             if ($filterPos !== 'TODAS') {
-                $positionAliases = match ($filterPos) {
-                    'ATACANTES' => ['ATA', 'PE', 'PD', 'SA'],
-                    'MEIO' => ['MC', 'MEI', 'VOL', 'ME', 'MD'],
-                    'DEFESA' => ['ZAG', 'LD', 'LE', 'LWB', 'RWB'],
-                    default => [$filterPos],
-                };
+                $positionAliases = $this->legacyPositionFilterAliases($filterPos);
 
                 $playersQuery->where(function ($positionQuery) use ($positionAliases) {
                     foreach ($positionAliases as $positionAlias) {
@@ -933,8 +928,7 @@ class LegacyController extends Controller
                     }
                 }
 
-                $primaryPosition = $this->legacyPrimaryPositionAlias((string) ($player['player_positions'] ?? ''));
-                if (! $this->matchesLegacyPositionFilter($filterPos, $primaryPosition)) {
+                if (! $this->matchesLegacyPositionFilter($filterPos, (string) ($player['player_positions'] ?? ''))) {
                     return false;
                 }
 
@@ -1005,24 +999,6 @@ class LegacyController extends Controller
 
     private function legacyPrimaryPositionAlias(string $positions): string
     {
-        $positionMap = [
-            'GK' => 'GOL',
-            'RB' => 'LD',
-            'RWB' => 'LD',
-            'LB' => 'LE',
-            'LWB' => 'LE',
-            'CB' => 'ZAG',
-            'CDM' => 'VOL',
-            'CM' => 'MC',
-            'CAM' => 'MEI',
-            'RM' => 'MD',
-            'LM' => 'ME',
-            'RW' => 'PD',
-            'LW' => 'PE',
-            'ST' => 'ATA',
-            'CF' => 'SA',
-        ];
-
         $first = collect(explode(',', $positions))
             ->map(fn ($part) => Str::upper(trim((string) $part)))
             ->filter()
@@ -1032,21 +1008,116 @@ class LegacyController extends Controller
             return '---';
         }
 
-        return $positionMap[$first] ?? $first;
+        return $this->legacyPositionAliasFromCode($first);
     }
 
-    private function matchesLegacyPositionFilter(string $filterPos, string $position): bool
+    private function matchesLegacyPositionFilter(string $filterPos, string $positions): bool
     {
         if ($filterPos === 'TODAS') {
             return true;
         }
 
-        return match ($filterPos) {
-            'ATACANTES' => in_array($position, ['ATA', 'PE', 'PD', 'SA'], true),
-            'MEIO' => in_array($position, ['MC', 'MEI', 'VOL', 'ME', 'MD'], true),
-            'DEFESA' => in_array($position, ['ZAG', 'LD', 'LE', 'LWB', 'RWB'], true),
-            default => $position === $filterPos,
+        $allowedPositions = $this->legacyPositionFilterAliases($filterPos);
+        if ($allowedPositions === []) {
+            return false;
+        }
+
+        $playerPositions = collect(explode(',', $positions))
+            ->map(fn ($part) => Str::upper(trim((string) $part)))
+            ->filter()
+            ->values();
+
+        if ($playerPositions->isEmpty()) {
+            return false;
+        }
+
+        return $playerPositions->contains(function (string $position) use ($allowedPositions): bool {
+            if (in_array($position, $allowedPositions, true)) {
+                return true;
+            }
+
+            $alias = $this->legacyPositionAliasFromCode($position);
+            return in_array($alias, $allowedPositions, true);
+        });
+    }
+
+    private function legacyPositionFilterAliases(string $filterPos): array
+    {
+        $normalizedFilter = Str::upper(trim($filterPos));
+        if ($normalizedFilter === '' || $normalizedFilter === 'TODAS') {
+            return [];
+        }
+
+        $grouped = match ($normalizedFilter) {
+            'ATACANTES' => ['ATA', 'PE', 'PD', 'SA'],
+            'MEIO' => ['MC', 'MEI', 'VOL', 'ME', 'MD'],
+            'DEFESA' => ['ZAG', 'LD', 'LE'],
+            default => [$normalizedFilter],
         };
+
+        return collect($grouped)
+            ->flatMap(fn (string $position) => $this->legacyPositionTokensForAlias($position))
+            ->map(fn ($position) => Str::upper(trim((string) $position)))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function legacyPositionTokensForAlias(string $position): array
+    {
+        $positionMap = [
+            'GOL' => ['GOL', 'GK'],
+            'ZAG' => ['ZAG', 'CB', 'LCB', 'RCB'],
+            'LD' => ['LD', 'RB', 'RWB'],
+            'LE' => ['LE', 'LB', 'LWB'],
+            'VOL' => ['VOL', 'CDM', 'LDM', 'RDM'],
+            'MC' => ['MC', 'CM', 'LCM', 'RCM'],
+            'MEI' => ['MEI', 'CAM', 'LAM', 'RAM'],
+            'MD' => ['MD', 'RM'],
+            'ME' => ['ME', 'LM'],
+            'PD' => ['PD', 'RW', 'RF'],
+            'PE' => ['PE', 'LW', 'LF'],
+            'ATA' => ['ATA', 'ST'],
+            'SA' => ['SA', 'CF'],
+        ];
+
+        $normalized = Str::upper(trim($position));
+        return $positionMap[$normalized] ?? [$normalized];
+    }
+
+    private function legacyPositionAliasFromCode(string $position): string
+    {
+        $positionMap = [
+            'GK' => 'GOL',
+            'RB' => 'LD',
+            'RWB' => 'LD',
+            'LB' => 'LE',
+            'LWB' => 'LE',
+            'CB' => 'ZAG',
+            'LCB' => 'ZAG',
+            'RCB' => 'ZAG',
+            'CDM' => 'VOL',
+            'LDM' => 'VOL',
+            'RDM' => 'VOL',
+            'CM' => 'MC',
+            'LCM' => 'MC',
+            'RCM' => 'MC',
+            'CAM' => 'MEI',
+            'LAM' => 'MEI',
+            'RAM' => 'MEI',
+            'RM' => 'MD',
+            'LM' => 'ME',
+            'RW' => 'PD',
+            'RF' => 'PD',
+            'LW' => 'PE',
+            'LF' => 'PE',
+            'ST' => 'ATA',
+            'CF' => 'SA',
+        ];
+
+        $normalized = Str::upper(trim($position));
+        return $positionMap[$normalized] ?? $normalized;
     }
 
     private function matchesLegacyQualityFilter(string $filterQuality, int $overall): bool
