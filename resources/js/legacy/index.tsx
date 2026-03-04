@@ -1664,7 +1664,7 @@ const PublicClubProfileView = ({
                     </div>
                     <div className="text-right">
                       <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
-                      <p className="text-[10px] font-black italic text-white uppercase">M$ {Number(player?.valor ?? 0)}M</p>
+                      <p className="text-[10px] font-black italic text-white uppercase">M$ {toLegacyMoneyInMillions(player?.valor ?? 0)}M</p>
                     </div>
                   </div>
                 )) : (
