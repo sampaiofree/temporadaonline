@@ -1996,6 +1996,10 @@ const ScheduleMatchesView = ({
             ) : visibleMatches.map((partida) => {
               const opponent = partida.is_visitante ? partida.mandante : partida.visitante;
               const isPending = String(partida?.estado || '') === 'confirmacao_necessaria';
+              const homeName = String(partida?.mandante || 'MANDANTE');
+              const awayName = String(partida?.visitante || 'VISITANTE');
+              const homeLogo = String(partida?.mandante_logo || '').trim();
+              const awayLogo = String(partida?.visitante_logo || '').trim();
 
               return (
                 <button
@@ -2011,6 +2015,23 @@ const ScheduleMatchesView = ({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="w-7 h-7 bg-[#121212] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                          {homeLogo ? (
+                            <img src={homeLogo} alt={homeName} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-shield text-[11px] text-[#FFD700]/25"></i>
+                          )}
+                        </div>
+                        <span className="text-[8px] font-black uppercase italic text-white/35 tracking-[0.2em]">VS</span>
+                        <div className="w-7 h-7 bg-[#121212] border border-white/15 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                          {awayLogo ? (
+                            <img src={awayLogo} alt={awayName} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-shield text-[11px] text-white/25"></i>
+                          )}
+                        </div>
+                      </div>
                       <p className="text-[11px] font-black italic uppercase truncate">VS {opponent}</p>
                       <p className="text-[8px] font-bold uppercase italic tracking-widest mt-1 text-white/45">
                         {LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}
