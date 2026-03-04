@@ -3019,15 +3019,15 @@ const LegacyUTCard = ({
           </div>
         </div>
         <div className="relative z-20 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1">
-           <h3 className="text-xl font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter whitespace-nowrap overflow-hidden px-2">{player.name}</h3>
+           <h3 className="font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter whitespace-nowrap overflow-hidden px-2">{player.name}</h3>
         </div>
         <div className="relative z-20 grid grid-cols-2 gap-x-0 px-5">
-          <div className="flex flex-col gap-2 border-r border-[#FFD700]/10 pr-2">
+          <div className="flex flex-col gap-2 border-r border-[#FFD700]/10 pr-2 px-5">
             {statsEntries.slice(0, 3).map(([stat, val]) => (
               <div key={stat} className="flex items-center gap-3"><span className="text-lg font-black italic font-heading text-white">{val as number}</span><span className="text-[10px] font-black italic uppercase text-white/30 tracking-widest">{stat}</span></div>
             ))}
           </div>
-          <div className="flex flex-col gap-2 pl-4">
+          <div className="flex flex-col gap-2 pl-4 px-5">
             {statsEntries.slice(3, 6).map(([stat, val]) => (
               <div key={stat} className="flex items-center gap-3"><span className="text-lg font-black italic font-heading text-white">{val as number}</span><span className="text-[10px] font-black italic uppercase text-white/30 tracking-widest">{stat}</span></div>
             ))}
