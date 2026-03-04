@@ -41,6 +41,7 @@ class LegacyController extends Controller
     private const MATCH_WINNER_PRIZE = 750_000;
     private const MATCH_LOSER_PRIZE = 50_000;
     private const MATCH_DRAW_PRIZE = 300_000;
+    private const TARGET_ACTIVE_ROSTER_COUNT = 18;
 
     public function index(Request $request): View
     {
@@ -1473,21 +1474,54 @@ class LegacyController extends Controller
 
         $messages = [];
         $salaryReserveAlertCount = 0;
+        $rosterTargetAlertCount = 0;
 
         $walletSaldo = (int) (LigaClubeFinanceiro::query()
             ->where('liga_id', (int) $liga->id)
             ->where('clube_id', (int) $clube->id)
             ->value('saldo') ?? $liga->saldo_inicial ?? 0);
 
-        $salaryReserve = (int) LigaClubeElenco::query()
+        $activeRosterBaseQuery = LigaClubeElenco::query()
             ->where('liga_clube_id', (int) $clube->id)
             ->where('ativo', true)
             ->when(
                 $scopeConfederacaoId,
                 fn ($query) => $query->where('confederacao_id', $scopeConfederacaoId),
                 fn ($query) => $query->where('liga_id', (int) $liga->id),
-            )
-            ->sum('wage_eur');
+            );
+
+        $activeRosterCount = (int) (clone $activeRosterBaseQuery)->count();
+        $salaryReserve = (int) (clone $activeRosterBaseQuery)->sum('wage_eur');
+
+        if ($activeRosterCount > self::TARGET_ACTIVE_ROSTER_COUNT) {
+            $playersToSell = $activeRosterCount - self::TARGET_ACTIVE_ROSTER_COUNT;
+            $rosterTargetAlertCount = 1;
+            $messages[] = [
+                'id' => 'roster-target-over',
+                'type' => 'ELENCO',
+                'title' => 'ELENCO ACIMA DA META',
+                'sender' => 'MCO SYSTEM',
+                'content' => "Seu elenco ativo esta com {$activeRosterCount} jogadores. Venda {$playersToSell} para ficar exatamente com 18.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => true,
+                'action' => 'TRANSFER',
+                'action_label' => 'ABRIR MERCADO',
+            ];
+        } elseif ($activeRosterCount < self::TARGET_ACTIVE_ROSTER_COUNT) {
+            $playersToHire = self::TARGET_ACTIVE_ROSTER_COUNT - $activeRosterCount;
+            $rosterTargetAlertCount = 1;
+            $messages[] = [
+                'id' => 'roster-target-under',
+                'type' => 'ELENCO',
+                'title' => 'ELENCO ABAIXO DA META',
+                'sender' => 'MCO SYSTEM',
+                'content' => "Seu elenco ativo esta com {$activeRosterCount} jogadores. Contrate {$playersToHire} para chegar exatamente a 18.",
+                'date' => now('UTC')->toIso8601String(),
+                'urgent' => false,
+                'action' => 'TRANSFER',
+                'action_label' => 'ABRIR MERCADO',
+            ];
+        }
 
         if ($salaryReserve > 0 && $walletSaldo < $salaryReserve) {
             $walletSaldoM = (int) max(0, round($walletSaldo / 1_000_000));
@@ -1815,6 +1849,7 @@ class LegacyController extends Controller
             $availablePatrocinioCount,
             $tacticalSetupCount,
             $salaryReserveAlertCount,
+            $rosterTargetAlertCount,
         );
 
         return response()->json([
@@ -1857,7 +1892,8 @@ class LegacyController extends Controller
         int $achievementClaimCount = 0,
         int $patrocinioClaimCount = 0,
         int $tacticalSetupCount = 0,
-        int $salaryReserveAlertCount = 0
+        int $salaryReserveAlertCount = 0,
+        int $rosterTargetAlertCount = 0
     ): array
     {
         $scheduleCount = max(0, $scheduleCount);
@@ -1871,6 +1907,7 @@ class LegacyController extends Controller
         $patrocinioClaimCount = max(0, $patrocinioClaimCount);
         $tacticalSetupCount = max(0, $tacticalSetupCount);
         $salaryReserveAlertCount = max(0, $salaryReserveAlertCount);
+        $rosterTargetAlertCount = max(0, $rosterTargetAlertCount);
         $totalActions = $scheduleCount
             + $confirmationCount
             + $evaluationCount
@@ -1881,7 +1918,8 @@ class LegacyController extends Controller
             + $achievementClaimCount
             + $patrocinioClaimCount
             + $tacticalSetupCount
-            + $salaryReserveAlertCount;
+            + $salaryReserveAlertCount
+            + $rosterTargetAlertCount;
         $totalMessages = ($scheduleCount > 0 ? 1 : 0)
             + ($proposalCount > 0 ? 1 : 0)
             + ($auctionOutbidCount > 0 ? 1 : 0)
@@ -1891,6 +1929,7 @@ class LegacyController extends Controller
             + ($patrocinioClaimCount > 0 ? 1 : 0)
             + ($tacticalSetupCount > 0 ? 1 : 0)
             + ($salaryReserveAlertCount > 0 ? 1 : 0)
+            + ($rosterTargetAlertCount > 0 ? 1 : 0)
             + $confirmationCount
             + $evaluationCount;
 
@@ -1908,6 +1947,7 @@ class LegacyController extends Controller
                 'patrocinio_claim_count' => 0,
                 'tactical_setup_count' => 0,
                 'salary_reserve_alert_count' => 0,
+                'roster_target_alert_count' => 0,
                 'confirmation_count' => 0,
                 'evaluation_count' => 0,
                 'headline' => 'SEM ACOES PENDENTES',
@@ -1968,6 +2008,10 @@ class LegacyController extends Controller
             $segments[] = 'saldo em caixa abaixo da reserva salarial';
         }
 
+        if ($rosterTargetAlertCount > 0) {
+            $segments[] = 'elenco fora da meta de 18 jogadores';
+        }
+
         if ($confirmationCount > 0) {
             $segments[] = $confirmationCount === 1
                 ? '1 confirmacao de placar'
@@ -1997,6 +2041,7 @@ class LegacyController extends Controller
             'patrocinio_claim_count' => $patrocinioClaimCount,
             'tactical_setup_count' => $tacticalSetupCount,
             'salary_reserve_alert_count' => $salaryReserveAlertCount,
+            'roster_target_alert_count' => $rosterTargetAlertCount,
             'confirmation_count' => $confirmationCount,
             'evaluation_count' => $evaluationCount,
             'headline' => $headline,
@@ -2005,6 +2050,8 @@ class LegacyController extends Controller
                 ? 'SCHEDULE'
                 : ($salaryReserveAlertCount > 0
                     ? 'FINANCE'
+                    : ($rosterTargetAlertCount > 0
+                    ? 'TRANSFER'
                     : ($tacticalSetupCount > 0
                     ? 'TACTICAL_SETUP'
                     : ($proposalCount > 0
@@ -2015,7 +2062,7 @@ class LegacyController extends Controller
                                 ? 'MATCH'
                                 : ($achievementClaimCount > 0
                                     ? 'ACHIEVEMENTS'
-                                    : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH'))))))),
+                                    : ($patrocinioClaimCount > 0 ? 'PATROCINIOS' : 'MATCH')))))))),
         ];
     }
 
