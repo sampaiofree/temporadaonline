@@ -9209,6 +9209,9 @@ const App = () => {
           setMarketSubMode('list');
           setMarketQuickAuctionStatusFilter('MEUS_LANCES');
           setView('market');
+        } else if (t === 'SQUAD') {
+          setMarketQuickAuctionStatusFilter(null);
+          setView('squad');
         } else if (t === 'TACTICAL_SETUP') {
           setMarketQuickAuctionStatusFilter(null);
           setView('esquema-tatico');

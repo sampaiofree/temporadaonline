@@ -1504,8 +1504,8 @@ class LegacyController extends Controller
                 'content' => "Seu elenco ativo esta com {$activeRosterCount} jogadores. Venda {$playersToSell} para ficar exatamente com 18.",
                 'date' => now('UTC')->toIso8601String(),
                 'urgent' => true,
-                'action' => 'TRANSFER',
-                'action_label' => 'ABRIR MERCADO',
+                'action' => 'SQUAD',
+                'action_label' => 'ABRIR ELENCO',
             ];
         } elseif ($activeRosterCount < self::TARGET_ACTIVE_ROSTER_COUNT) {
             $playersToHire = self::TARGET_ACTIVE_ROSTER_COUNT - $activeRosterCount;
