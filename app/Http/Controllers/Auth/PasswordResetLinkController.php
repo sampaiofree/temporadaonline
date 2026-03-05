@@ -3,10 +3,9 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
@@ -14,10 +13,11 @@ class PasswordResetLinkController extends Controller
     /**
      * Display the password reset link request view.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
         return view('legacy.auth.forgot-password', [
             'status' => session('status'),
+            'email' => old('email', $request->query('email')),
         ]);
     }
 
@@ -28,27 +28,27 @@ class PasswordResetLinkController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'email' => 'required|email',
         ], [
             'email.required' => 'Informe um email.',
             'email.email' => 'Informe um email valido.',
         ]);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $email = mb_strtolower(trim((string) $validated['email']));
+        $user = User::query()->where('email', $email)->first();
 
-        if ($status == Password::RESET_LINK_SENT) {
-            return back()->with('status', 'Se o email existir em nossa base, enviaremos um link de redefinicao.');
+        if ($user) {
+            $sentAt = $user->password_reset_code_sent_at;
+            $canResend = ! $sentAt || $sentAt->diffInSeconds(now()) >= 60;
+
+            if ($canResend) {
+                $user->sendPasswordResetCodeNotification();
+            }
         }
 
-        if ($status == Password::RESET_THROTTLED) {
-            throw ValidationException::withMessages([
-                'email' => ['Aguarde alguns minutos antes de solicitar um novo link.'],
-            ]);
-        }
-
-        throw ValidationException::withMessages([
-            'email' => ['Nao foi possivel enviar o link de redefinicao. Tente novamente.'],
-        ]);
+        return redirect()
+            ->route('password.reset', ['email' => $email])
+            ->with('status', 'Se o email existir em nossa base, enviaremos um codigo de redefinicao.');
     }
 }

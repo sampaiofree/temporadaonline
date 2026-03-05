@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 
 const LEGACY_CONFIG = (window as any).__LEGACY_CONFIG__ || {};
@@ -209,6 +209,7 @@ type LegacyRequestInit = RequestInit & {
 };
 
 const LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS = 320;
+const LEGACY_VIEW_TRANSITION_DURATION_MS = 200;
 let legacyGlobalLoaderPendingCount = 0;
 let legacyGlobalLoaderVisible = false;
 
@@ -8727,8 +8728,13 @@ const MarketView = ({
 };
 
 const App = () => {
-  const [view, setView] = useState(() => getLegacyRouteStateFromUrl().view);
-  const [marketSubMode, setMarketSubMode] = useState<LegacyMarketSubMode>(() => getLegacyRouteStateFromUrl().marketSubMode);
+  const [initialRouteState] = useState<LegacyRouteState>(() => getLegacyRouteStateFromUrl());
+  const [view, setViewState] = useState(initialRouteState.view);
+  const [renderView, setRenderView] = useState(initialRouteState.view);
+  const [marketSubMode, setMarketSubMode] = useState<LegacyMarketSubMode>(initialRouteState.marketSubMode);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [viewTransitionState, setViewTransitionState] = useState<'idle' | 'fading-out' | 'fading-in'>('idle');
+  const viewTransitionTimersRef = useRef<number[]>([]);
   const [marketQuickAuctionStatusFilter, setMarketQuickAuctionStatusFilter] = useState<string | null>(null);
   const [selectedPendingMatch, setSelectedPendingMatch] = useState<any>(null);
   const [selectedScheduleMatch, setSelectedScheduleMatch] = useState<any>(null);
@@ -8744,6 +8750,76 @@ const App = () => {
   const [careers] = useState(getLegacyConfederacoes);
   const [currentCareerId, setCurrentCareerId] = useState(careers[0]?.id ?? 'none');
   const currentCareer = careers.find(c => c.id === currentCareerId) || null;
+
+  const clearViewTransitionTimers = useCallback(() => {
+    if (viewTransitionTimersRef.current.length === 0) return;
+
+    viewTransitionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    viewTransitionTimersRef.current = [];
+  }, []);
+
+  const setView = useCallback((nextView: React.SetStateAction<string>) => {
+    setViewState((currentView) => (
+      typeof nextView === 'function'
+        ? (nextView as (current: string) => string)(currentView)
+        : nextView
+    ));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    syncPreference();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', syncPreference);
+      return () => mediaQuery.removeEventListener('change', syncPreference);
+    }
+
+    mediaQuery.addListener(syncPreference);
+    return () => mediaQuery.removeListener(syncPreference);
+  }, []);
+
+  useEffect(() => {
+    if (view === renderView) return;
+
+    clearViewTransitionTimers();
+
+    if (prefersReducedMotion) {
+      setRenderView(view);
+      setViewTransitionState('idle');
+      return;
+    }
+
+    setViewTransitionState('fading-out');
+
+    const fadeOutTimer = window.setTimeout(() => {
+      setRenderView(view);
+      setViewTransitionState('fading-in');
+
+      const fadeInTimer = window.setTimeout(() => {
+        setViewTransitionState('idle');
+      }, LEGACY_VIEW_TRANSITION_DURATION_MS);
+
+      viewTransitionTimersRef.current.push(fadeInTimer);
+    }, LEGACY_VIEW_TRANSITION_DURATION_MS);
+
+    viewTransitionTimersRef.current.push(fadeOutTimer);
+
+    return clearViewTransitionTimers;
+  }, [clearViewTransitionTimers, prefersReducedMotion, renderView, view]);
+
+  useEffect(() => clearViewTransitionTimers, [clearViewTransitionTimers]);
+
+  const viewTransitionStyle = useMemo<React.CSSProperties>(() => ({
+    opacity: viewTransitionState === 'fading-out' ? 0 : 1,
+    transition: prefersReducedMotion ? 'none' : `opacity ${LEGACY_VIEW_TRANSITION_DURATION_MS}ms ease`,
+    willChange: prefersReducedMotion ? undefined : 'opacity',
+  }), [prefersReducedMotion, viewTransitionState]);
 
   useEffect(() => {
     syncLegacyRouteInUrl(view, marketSubMode);
@@ -9004,8 +9080,8 @@ const App = () => {
     }
   }, [view]);
 
-  const renderContent = () => {
-    switch(view) {
+  const renderContent = (activeView: string) => {
+    switch(activeView) {
       case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
       case 'season-stats': return <SeasonStatsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
@@ -9064,15 +9140,17 @@ const App = () => {
     }
   };
 
-  const hideBottomNav = view === 'hub-global' && !currentCareer?.id;
+  const hideBottomNav = renderView === 'hub-global' && !currentCareer?.id;
 
   return (
     <>
-      {renderContent()}
+      <div style={viewTransitionStyle}>
+        {renderContent(renderView)}
+      </div>
       <LegacyToastStack toasts={legacyToasts} hasBottomNav={!hideBottomNav} onClose={dismissLegacyToast} />
       {!hideBottomNav && (
         <MCOBottomNav
-          activeView={view}
+          activeView={renderView}
           onViewChange={setView}
           hasInboxNotifications={hasInboxNotifications}
         />

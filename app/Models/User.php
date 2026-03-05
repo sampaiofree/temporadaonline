@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Notifications\Auth\ResetPasswordNotification;
+use App\Notifications\Auth\ResetPasswordCodeNotification;
 use App\Notifications\Auth\VerifyEmailNotification;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -39,6 +40,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'remember_token',
         'email_verification_code_hash',
+        'password_reset_code_hash',
     ];
 
     /**
@@ -53,6 +55,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verification_code_expires_at' => 'datetime',
             'email_verification_code_sent_at' => 'datetime',
             'email_verification_code_attempts' => 'integer',
+            'password_reset_code_expires_at' => 'datetime',
+            'password_reset_code_sent_at' => 'datetime',
+            'password_reset_code_verified_at' => 'datetime',
+            'password_reset_code_attempts' => 'integer',
             'password' => 'hashed',
             'is_admin' => 'boolean',
         ];
@@ -104,6 +110,44 @@ class User extends Authenticatable implements MustVerifyEmail
             'email_verification_code_expires_at' => null,
             'email_verification_code_sent_at' => null,
             'email_verification_code_attempts' => 0,
+        ])->save();
+    }
+
+    public function generatePasswordResetCode(): string
+    {
+        return str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    }
+
+    public function sendPasswordResetCodeNotification(): void
+    {
+        $code = $this->generatePasswordResetCode();
+
+        $this->forceFill([
+            'password_reset_code_hash' => Hash::make($code),
+            'password_reset_code_expires_at' => now()->addMinutes(15),
+            'password_reset_code_sent_at' => now(),
+            'password_reset_code_verified_at' => null,
+            'password_reset_code_attempts' => 0,
+        ])->save();
+
+        $this->notify(new ResetPasswordCodeNotification($code));
+    }
+
+    public function clearPasswordResetCode(): void
+    {
+        $this->forceFill([
+            'password_reset_code_hash' => null,
+            'password_reset_code_expires_at' => null,
+            'password_reset_code_sent_at' => null,
+            'password_reset_code_verified_at' => null,
+            'password_reset_code_attempts' => 0,
+        ])->save();
+    }
+
+    public function markPasswordResetCodeVerified(): void
+    {
+        $this->forceFill([
+            'password_reset_code_verified_at' => now(),
         ])->save();
     }
 

@@ -58,7 +58,7 @@
                 <header class="mb-8">
                     <p class="text-[10px] text-[#ffd700] font-black tracking-[0.35em] uppercase italic mb-2">Legacy XI</p>
                     <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Recuperar Senha</h1>
-                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Enviaremos um link para redefinir sua conta</p>
+                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Enviaremos um codigo para redefinir sua conta</p>
                 </header>
 
                 @if (session('status'))
@@ -82,7 +82,7 @@
                             id="email"
                             name="email"
                             type="email"
-                            value="{{ old('email') }}"
+                            value="{{ old('email', $email ?? '') }}"
                             required
                             autofocus
                             class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
@@ -91,7 +91,7 @@
                     </div>
 
                     <button type="submit" class="w-full mt-3 bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
-                        Enviar Link de Recuperacao
+                        Enviar Codigo de Recuperacao
                     </button>
                 </form>
 

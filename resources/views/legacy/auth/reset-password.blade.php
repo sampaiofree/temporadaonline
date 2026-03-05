@@ -57,62 +57,133 @@
             <section class="w-full max-w-md bg-[#1e1e1e] border-l-[6px] border-[#ffd700] p-8 legacy-clip shadow-[0_0_35px_rgba(0,0,0,0.55)]">
                 <header class="mb-8">
                     <p class="text-[10px] text-[#ffd700] font-black tracking-[0.35em] uppercase italic mb-2">Legacy XI</p>
-                    <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Nova Senha</h1>
-                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Defina uma senha nova para sua conta</p>
+                    <h1 class="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tight">Redefinir Senha</h1>
+                    <p class="text-[10px] text-white/40 font-bold uppercase italic mt-3">Confirme o codigo e depois defina uma nova senha</p>
                 </header>
 
-                @if ($errors->any())
-                    <div class="mb-5 bg-[#b22222]/25 border border-[#b22222] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
-                        {{ $errors->first() }}
+                @if ($status)
+                    <div class="mb-5 bg-[#166534]/25 border border-[#22c55e] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
+                        {{ $status }}
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('password.store') }}" class="space-y-4">
-                    @csrf
-                    <input type="hidden" name="token" value="{{ $token }}">
-
-                    <div>
-                        <label for="email" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Email</label>
-                        <input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value="{{ old('email', $email) }}"
-                            required
-                            autofocus
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="voce@exemplo.com"
-                        >
+                @if (! $codeVerified)
+                    <div class="mb-5 bg-[#121212] border border-white/10 text-white px-4 py-4 legacy-clip text-xs font-bold uppercase italic leading-relaxed">
+                        Informe o email e o codigo enviado para continuar.
+                        @if (!empty($email))
+                            <span class="text-[#ffd700] block mt-1">{{ $email }}</span>
+                        @endif
                     </div>
 
-                    <div>
-                        <label for="password" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Senha</label>
-                        <input
-                            id="password"
-                            name="password"
-                            type="password"
-                            required
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="********"
-                        >
+                    @if ($errors->has('code'))
+                        <div class="mb-5 bg-[#b22222]/25 border border-[#b22222] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
+                            {{ $errors->first('code') }}
+                        </div>
+                    @elseif ($errors->any())
+                        <div class="mb-5 bg-[#b22222]/25 border border-[#b22222] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
+                            {{ $errors->first() }}
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('password.code.verify') }}" class="space-y-4 mb-3">
+                        @csrf
+
+                        <div>
+                            <label for="email" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Email</label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                value="{{ old('email', $email) }}"
+                                required
+                                autofocus
+                                class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
+                                placeholder="voce@exemplo.com"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="code" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Codigo de redefinicao</label>
+                            <input
+                                id="code"
+                                name="code"
+                                type="text"
+                                inputmode="numeric"
+                                pattern="[0-9]*"
+                                maxlength="6"
+                                required
+                                value="{{ old('code') }}"
+                                class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip tracking-[0.5em] text-center text-lg font-black"
+                                placeholder="000000"
+                            >
+                        </div>
+
+                        <button type="submit" class="w-full bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
+                            Confirmar Codigo
+                        </button>
+                    </form>
+
+                    <form method="POST" action="{{ route('password.email') }}" class="space-y-4">
+                        @csrf
+                        <input type="hidden" name="email" value="{{ old('email', $email) }}">
+
+                        <button type="submit" class="w-full bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
+                            Reenviar Codigo
+                        </button>
+                    </form>
+                @else
+                    <div class="mb-5 bg-[#121212] border border-white/10 text-white px-4 py-4 legacy-clip text-xs font-bold uppercase italic leading-relaxed">
+                        Codigo confirmado para:
+                        <span class="text-[#ffd700] block mt-1">{{ $email }}</span>
                     </div>
 
-                    <div>
-                        <label for="password_confirmation" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Confirmar senha</label>
-                        <input
-                            id="password_confirmation"
-                            name="password_confirmation"
-                            type="password"
-                            required
-                            class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
-                            placeholder="********"
-                        >
-                    </div>
+                    @if ($errors->any())
+                        <div class="mb-5 bg-[#b22222]/25 border border-[#b22222] text-white px-4 py-3 legacy-clip text-xs font-bold uppercase italic">
+                            {{ $errors->first() }}
+                        </div>
+                    @endif
 
-                    <button type="submit" class="w-full mt-3 bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
-                        Salvar Nova Senha
-                    </button>
-                </form>
+                    <form method="POST" action="{{ route('password.store') }}" class="space-y-4">
+                        @csrf
+                        <input type="hidden" name="email" value="{{ $email }}">
+
+                        <div>
+                            <label for="password" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Nova senha</label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                autofocus
+                                class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
+                                placeholder="********"
+                            >
+                        </div>
+
+                        <div>
+                            <label for="password_confirmation" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Confirmar senha</label>
+                            <input
+                                id="password_confirmation"
+                                name="password_confirmation"
+                                type="password"
+                                required
+                                class="w-full bg-[#121212] text-white px-4 py-3 border border-white/10 focus:border-[#ffd700] focus:outline-none legacy-clip"
+                                placeholder="********"
+                            >
+                        </div>
+
+                        <button type="submit" class="w-full mt-3 bg-[#ffd700] text-[#121212] px-6 py-4 font-black uppercase italic text-xs tracking-[0.15em] legacy-clip hover:brightness-95 active:translate-y-[1px] transition">
+                            Salvar Nova Senha
+                        </button>
+                    </form>
+                @endif
+
+                <p class="mt-6 text-[10px] text-white/50 font-bold uppercase italic tracking-[0.12em]">
+                    Lembrou a senha?
+                    <a href="{{ route('legacy.login') }}" class="text-[#ffd700] hover:text-white transition-colors">
+                        Voltar ao login
+                    </a>
+                </p>
             </section>
         </main>
     </body>

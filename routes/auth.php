@@ -30,8 +30,15 @@ Route::middleware('guest')->group(function () {
     Route::post('forgot-password', [PasswordResetLinkController::class, 'store'])
         ->name('password.email');
 
-    Route::get('reset-password/{token}', [NewPasswordController::class, 'create'])
+    Route::get('reset-password', [NewPasswordController::class, 'create'])
         ->name('password.reset');
+
+    Route::get('reset-password/{token}', [NewPasswordController::class, 'createFromToken'])
+        ->name('password.reset.legacy');
+
+    Route::post('reset-password/code', [NewPasswordController::class, 'verifyCode'])
+        ->middleware('throttle:10,1')
+        ->name('password.code.verify');
 
     Route::post('reset-password', [NewPasswordController::class, 'store'])
         ->name('password.store');
