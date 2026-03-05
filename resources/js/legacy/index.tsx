@@ -211,6 +211,7 @@ type LegacyRequestInit = RequestInit & {
 const LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS = 320;
 const LEGACY_VIEW_TRANSITION_DURATION_MS = 280;
 const LEGACY_VIEW_TRANSITION_HOLD_MS = 56;
+const LEGACY_SECTION_REVEAL_DURATION_MS = 320;
 const LEGACY_PREFETCH_TTL_MS = 45_000;
 const LEGACY_TOPBAR_BASE_HEIGHT_PX = 64;
 const LEGACY_TOPBAR_TOTAL_HEIGHT_CSS = `calc(${LEGACY_TOPBAR_BASE_HEIGHT_PX}px + env(safe-area-inset-top))`;
@@ -607,6 +608,67 @@ const MCOCard = ({ children, title, className = "", onClick, active = false, acc
     <div className="absolute right-0 top-0 bottom-0 w-[3px]" style={{ backgroundColor: active ? accentColor : 'rgba(255,255,255,0.05)' }}></div>
   </div>
 );
+
+const LegacyReveal = ({
+  children,
+  delayMs = 0,
+  yPx = 10,
+  className = '',
+}: {
+  children: React.ReactNode,
+  delayMs?: number,
+  yPx?: number,
+  className?: string,
+}) => {
+  const [visible, setVisible] = useState(false);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') {
+      return;
+    }
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    syncPreference();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', syncPreference);
+      return () => mediaQuery.removeEventListener('change', syncPreference);
+    }
+
+    mediaQuery.addListener(syncPreference);
+    return () => mediaQuery.removeListener(syncPreference);
+  }, []);
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setVisible(true);
+      return;
+    }
+
+    const rafId = window.requestAnimationFrame(() => setVisible(true));
+    return () => window.cancelAnimationFrame(rafId);
+  }, [prefersReducedMotion]);
+
+  const style = prefersReducedMotion
+    ? undefined
+    : {
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translate3d(0, 0, 0)' : `translate3d(0, ${Math.max(0, Number(yPx) || 0)}px, 0)`,
+        transitionProperty: 'opacity, transform',
+        transitionDuration: `${LEGACY_SECTION_REVEAL_DURATION_MS}ms`,
+        transitionTimingFunction: 'cubic-bezier(0.22, 1, 0.36, 1)',
+        transitionDelay: `${Math.max(0, Number(delayMs) || 0)}ms`,
+        willChange: 'opacity, transform',
+      } as React.CSSProperties;
+
+  return (
+    <div className={className} style={style}>
+      {children}
+    </div>
+  );
+};
 
 const MCOBottomNav = ({
   activeView,
@@ -1164,46 +1226,56 @@ const InboxView = ({
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6 overflow-y-auto">
-      <header className="mb-8">
-        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
-          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-        </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MCO INBOX</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÓCIOS</p>
-      </header>
+      <LegacyReveal delayMs={0}>
+        <header className="mb-8">
+          <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+          </MCOButton>
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MCO INBOX</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">CENTRAL DE NEGÓCIOS</p>
+        </header>
+      </LegacyReveal>
 
       <div className="space-y-4">
         {loading ? (
-          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[10px] font-black italic uppercase text-white/50">Carregando mensagens reais...</p>
-          </div>
-        ) : error ? (
-          <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[10px] font-black italic uppercase text-white/40">Sem mensagens pendentes no momento.</p>
-          </div>
-        ) : messages.map((msg) => (
-          <div key={String(msg.id)} className={`bg-[#1E1E1E] p-6 border-r-[3px] transition-all ${msg.urgent ? 'border-[#B22222]' : 'border-[#FFD700]'}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <span className={`text-[8px] font-black px-2 py-0.5 italic tracking-tighter ${msg.urgent ? 'bg-[#B22222] text-white' : 'bg-[#FFD700] text-[#121212]'}`}>{msg.type}</span>
-                <h4 className="text-[13px] font-black italic uppercase text-white mt-2 leading-none">{msg.title}</h4>
-                <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">DE: {msg.sender}</p>
-              </div>
-              <span className="text-[8px] font-black text-white/20 italic">{msg.date}</span>
+          <LegacyReveal delayMs={40}>
+            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando mensagens reais...</p>
             </div>
-            <p className="text-[10px] text-white/60 leading-relaxed uppercase italic font-bold mb-6">{msg.content}</p>
-            <button
-              onClick={() => onAction(String(msg.action || ''))}
-              className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
-              style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-            >
-              {String(msg.actionLabel || 'ACESSAR PENDÊNCIA')}
-            </button>
-          </div>
+          </LegacyReveal>
+        ) : error ? (
+          <LegacyReveal delayMs={40}>
+            <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
+            </div>
+          </LegacyReveal>
+        ) : messages.length === 0 ? (
+          <LegacyReveal delayMs={40}>
+            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black italic uppercase text-white/40">Sem mensagens pendentes no momento.</p>
+            </div>
+          </LegacyReveal>
+        ) : messages.map((msg, idx) => (
+          <LegacyReveal key={String(msg.id)} delayMs={40 + (idx * 28)}>
+            <div className={`bg-[#1E1E1E] p-6 border-r-[3px] transition-all ${msg.urgent ? 'border-[#B22222]' : 'border-[#FFD700]'}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <span className={`text-[8px] font-black px-2 py-0.5 italic tracking-tighter ${msg.urgent ? 'bg-[#B22222] text-white' : 'bg-[#FFD700] text-[#121212]'}`}>{msg.type}</span>
+                  <h4 className="text-[13px] font-black italic uppercase text-white mt-2 leading-none">{msg.title}</h4>
+                  <p className="text-[9px] font-bold text-[#FFD700] uppercase italic mt-1">DE: {msg.sender}</p>
+                </div>
+                <span className="text-[8px] font-black text-white/20 italic">{msg.date}</span>
+              </div>
+              <p className="text-[10px] text-white/60 leading-relaxed uppercase italic font-bold mb-6">{msg.content}</p>
+              <button
+                onClick={() => onAction(String(msg.action || ''))}
+                className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
+                style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+              >
+                {String(msg.actionLabel || 'ACESSAR PENDÊNCIA')}
+              </button>
+            </div>
+          </LegacyReveal>
         ))}
       </div>
     </div>
@@ -5148,93 +5220,107 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       
       <div className="p-4 space-y-6">
-        <header className="px-4 mb-4 flex justify-between items-end">
-          <div>
-            <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">DASHBOARD</h2>
-            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">MANAGER HUB</p>
-          </div>
-          <button onClick={onOpenOwnProfile} className="bg-[#1E1E1E] text-[#FFD700] text-[9px] font-black italic px-4 py-2 border-r-2 border-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-            VER PERFIL
-          </button>
-        </header>
+        <LegacyReveal delayMs={0}>
+          <header className="px-4 mb-4 flex justify-between items-end">
+            <div>
+              <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">DASHBOARD</h2>
+              <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">MANAGER HUB</p>
+            </div>
+            <button onClick={onOpenOwnProfile} className="bg-[#1E1E1E] text-[#FFD700] text-[9px] font-black italic px-4 py-2 border-r-2 border-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+              VER PERFIL
+            </button>
+          </header>
+        </LegacyReveal>
 
-        <section
-          onClick={handlePendingActionsClick}
-          className={`mx-4 p-4 flex items-center gap-4 cursor-pointer ${hasPendingActions ? 'bg-[#B22222] animate-pulse' : 'bg-[#1E1E1E] border border-white/10'}`}
-          style={{ clipPath: AGGRESSIVE_CLIP }}
-        >
-          <i className={`fas ${hasPendingActions ? 'fa-triangle-exclamation' : 'fa-inbox'} text-white text-xl`}></i>
-          <div className="flex-grow">
-            <p className="text-[10px] font-black italic uppercase text-white leading-none">
-              AÇÕES PENDENTES{pendingCountLabel}
-            </p>
-            <p className="text-[8px] font-bold text-white/60 uppercase italic">
-              {pendingText}
-            </p>
-          </div>
-          <i className="fas fa-chevron-right text-white/40 text-xs"></i>
-        </section>
+        <LegacyReveal delayMs={50}>
+          <section
+            onClick={handlePendingActionsClick}
+            className={`mx-4 p-4 flex items-center gap-4 cursor-pointer ${hasPendingActions ? 'bg-[#B22222] animate-pulse' : 'bg-[#1E1E1E] border border-white/10'}`}
+            style={{ clipPath: AGGRESSIVE_CLIP }}
+          >
+            <i className={`fas ${hasPendingActions ? 'fa-triangle-exclamation' : 'fa-inbox'} text-white text-xl`}></i>
+            <div className="flex-grow">
+              <p className="text-[10px] font-black italic uppercase text-white leading-none">
+                AÇÕES PENDENTES{pendingCountLabel}
+              </p>
+              <p className="text-[8px] font-bold text-white/60 uppercase italic">
+                {pendingText}
+              </p>
+            </div>
+            <i className="fas fa-chevron-right text-white/40 text-xs"></i>
+          </section>
+        </LegacyReveal>
 
         <div className="grid grid-cols-1 gap-4">
-          <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="relative z-10 flex justify-between items-center">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
+          <LegacyReveal delayMs={90}>
+            <section onClick={onOpenTournaments} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">COMPETIÇÕES</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">TORNEIOS</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-sitemap"></i>
+                </div>
               </div>
-              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                <i className="fas fa-sitemap"></i>
-              </div>
-            </div>
-          </section>
+            </section>
+          </LegacyReveal>
 
-          <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="relative z-10 flex justify-between items-center">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
+          <LegacyReveal delayMs={130}>
+            <section onClick={onOpenMarket} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">JANELA DE NEGÓCIOS</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MERCADO</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-right-left"></i>
+                </div>
               </div>
-              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                <i className="fas fa-right-left"></i>
-              </div>
-            </div>
-          </section>
+            </section>
+          </LegacyReveal>
 
-          <section onClick={onOpenLeaderboard} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="relative z-10 flex justify-between items-center">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">ESTADO DO META</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">RANKING GLOBAL</p>
+          <LegacyReveal delayMs={170}>
+            <section onClick={onOpenLeaderboard} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">ESTADO DO META</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">RANKING GLOBAL</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-ranking-star"></i>
+                </div>
               </div>
-              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                <i className="fas fa-ranking-star"></i>
-              </div>
-            </div>
-          </section>
+            </section>
+          </LegacyReveal>
 
-          <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="relative z-10 flex justify-between items-center">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
+          <LegacyReveal delayMs={210}>
+            <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">LEGADO HISTÓRICO</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ESTATÍSTICAS</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-chart-line"></i>
+                </div>
               </div>
-              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                <i className="fas fa-chart-line"></i>
-              </div>
-            </div>
-          </section>
+            </section>
+          </LegacyReveal>
 
-          <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="relative z-10 flex justify-between items-center">
-              <div>
-                <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
-                <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
+          <LegacyReveal delayMs={250}>
+            <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">GESTÃO DE CLUBE</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">MEU CLUBE</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-landmark"></i>
+                </div>
               </div>
-              <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                <i className="fas fa-landmark"></i>
-              </div>
-            </div>
-          </section>
+            </section>
+          </LegacyReveal>
         </div>
       </div>
     </div>
@@ -6037,40 +6123,52 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
-      <header className="mb-10">
-        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
-          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-        </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MEU CLUBE</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{clubName}</p>
-      </header>
-      {loading ? (
-        <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
-          CARREGANDO DADOS DO CLUBE...
-        </div>
-      ) : error ? (
-        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
-        </div>
-      ) : !hasClub ? (
-        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não possui clube nesta confederação.
-          </p>
-          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            CRIAR CLUBE NESTA CONFEDERAÇÃO
+      <LegacyReveal delayMs={0}>
+        <header className="mb-10">
+          <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
           </MCOButton>
-        </div>
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MEU CLUBE</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{clubName}</p>
+        </header>
+      </LegacyReveal>
+      {loading ? (
+        <LegacyReveal delayMs={40}>
+          <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+            CARREGANDO DADOS DO CLUBE...
+          </div>
+        </LegacyReveal>
+      ) : error ? (
+        <LegacyReveal delayMs={40}>
+          <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+          </div>
+        </LegacyReveal>
+      ) : !hasClub ? (
+        <LegacyReveal delayMs={40}>
+          <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+              Você ainda não possui clube nesta confederação.
+            </p>
+            <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+              CRIAR CLUBE NESTA CONFEDERAÇÃO
+            </MCOButton>
+          </div>
+        </LegacyReveal>
       ) : (
-        <FanProgressWidget fans={clubFans} clubSizeName={clubSizeName} />
+        <LegacyReveal delayMs={40}>
+          <FanProgressWidget fans={clubFans} clubSizeName={clubSizeName} />
+        </LegacyReveal>
       )}
       <div className={`grid grid-cols-2 gap-4 ${!hasClub ? 'opacity-40 pointer-events-none' : ''}`}>
-        {menus.map((m) => (
-          <MCOCard key={m.id} onClick={() => onOpenSubView(m.id)} className="p-6">
-            <i className={`fas ${m.icon} text-2xl text-[#FFD700] mb-4`}></i>
-            <h4 className="text-xs font-black italic uppercase font-heading text-white">{m.title}</h4>
-            <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1">{m.desc}</p>
-          </MCOCard>
+        {menus.map((m, idx) => (
+          <LegacyReveal key={m.id} delayMs={80 + (idx * 35)}>
+            <MCOCard onClick={() => onOpenSubView(m.id)} className="p-6">
+              <i className={`fas ${m.icon} text-2xl text-[#FFD700] mb-4`}></i>
+              <h4 className="text-xs font-black italic uppercase font-heading text-white">{m.title}</h4>
+              <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1">{m.desc}</p>
+            </MCOCard>
+          </LegacyReveal>
         ))}
       </div>
     </div>
@@ -6135,47 +6233,57 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
-      <header className="mb-10">
-        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
-          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-        </MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TORNEIOS</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÇÕES ATIVAS</p>
-      </header>
-      {loading ? (
-        <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
-          CARREGANDO TORNEIOS...
-        </div>
-      ) : error ? (
-        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
-        </div>
-      ) : !hasLeague ? (
-        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
-            Você ainda não participa de uma liga nesta confederação.
-          </p>
-          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
-            ENTRAR EM UMA LIGA
+      <LegacyReveal delayMs={0}>
+        <header className="mb-10">
+          <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
           </MCOButton>
-        </div>
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TORNEIOS</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">COMPETIÇÕES ATIVAS</p>
+        </header>
+      </LegacyReveal>
+      {loading ? (
+        <LegacyReveal delayMs={40}>
+          <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+            CARREGANDO TORNEIOS...
+          </div>
+        </LegacyReveal>
+      ) : error ? (
+        <LegacyReveal delayMs={40}>
+          <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+          </div>
+        </LegacyReveal>
+      ) : !hasLeague ? (
+        <LegacyReveal delayMs={40}>
+          <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+              Você ainda não participa de uma liga nesta confederação.
+            </p>
+            <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+              ENTRAR EM UMA LIGA
+            </MCOButton>
+          </div>
+        </LegacyReveal>
       ) : (
-        <div className="space-y-4">
-          <MCOCard onClick={onSelectTournament} accentColor="#FFD700" active={true} className="p-8">
-            <div className="flex justify-between items-center">
-              <div className="flex items-center gap-6">
-                <i className="fas fa-shield-halved text-4xl" style={{ color: '#FFD700' }}></i>
-                <div>
-                  <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
-                  <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                    {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
-                  </span>
+        <LegacyReveal delayMs={70}>
+          <div className="space-y-4">
+            <MCOCard onClick={onSelectTournament} accentColor="#FFD700" active={true} className="p-8">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-6">
+                  <i className="fas fa-shield-halved text-4xl" style={{ color: '#FFD700' }}></i>
+                  <div>
+                    <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
+                    <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                      {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
+                    </span>
+                  </div>
                 </div>
+                <i className="fas fa-chevron-right text-white/10"></i>
               </div>
-              <i className="fas fa-chevron-right text-white/10"></i>
-            </div>
-          </MCOCard>
-        </div>
+            </MCOCard>
+          </div>
+        </LegacyReveal>
       )}
     </div>
   );
