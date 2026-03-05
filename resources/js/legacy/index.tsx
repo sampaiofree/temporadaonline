@@ -2497,153 +2497,170 @@ const MatchCenterView = ({
   return (
     <div className="min-h-screen bg-[#121212] pb-32" style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}>
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
-      <header className="px-6 mb-8 mt-4">
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÚMULAS E CONFRONTOS</p>
-      </header>
+      <LegacyReveal delayMs={0}>
+        <header className="px-6 mb-8 mt-4">
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">SÚMULAS E CONFRONTOS</p>
+        </header>
+      </LegacyReveal>
       <div className="px-4 space-y-8">
         {loading ? (
-          <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
-            CARREGANDO CONFRONTOS...
-          </div>
+          <LegacyReveal delayMs={40}>
+            <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+              CARREGANDO CONFRONTOS...
+            </div>
+          </LegacyReveal>
         ) : error ? (
-          <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
-          </div>
+          <LegacyReveal delayMs={40}>
+            <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+            </div>
+          </LegacyReveal>
         ) : (
           <>
-            <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONFRONTO ATIVO</h4>
-              {activeMatch ? (
-                <div className="bg-[#1E1E1E] p-8 border-l-[6px] border-[#FFD700] relative overflow-hidden" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <div className="flex justify-between items-center relative z-10">
-                    <div className="text-center w-1/3">
-                      <div className="w-16 h-16 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                        {activeMatch?.mandante_logo ? (
-                          <img src={activeMatch.mandante_logo} alt={activeMatch.mandante} className="w-full h-full object-cover" />
-                        ) : (
-                          <i className="fas fa-shield text-2xl text-[#FFD700]/20"></i>
-                        )}
+            <LegacyReveal delayMs={40}>
+              <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONFRONTO ATIVO</h4>
+                {activeMatch ? (
+                  <div className="bg-[#1E1E1E] p-8 border-l-[6px] border-[#FFD700] relative overflow-hidden" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <div className="flex justify-between items-center relative z-10">
+                      <div className="text-center w-1/3">
+                        <div className="w-16 h-16 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                          {activeMatch?.mandante_logo ? (
+                            <img src={activeMatch.mandante_logo} alt={activeMatch.mandante} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-shield text-2xl text-[#FFD700]/20"></i>
+                          )}
+                        </div>
+                        <p className="text-[9px] font-black italic uppercase text-white truncate">{activeMatch?.mandante || 'MANDANTE'}</p>
                       </div>
-                      <p className="text-[9px] font-black italic uppercase text-white truncate">{activeMatch?.mandante || 'MANDANTE'}</p>
-                    </div>
-                    <div className="flex flex-col items-center">
-                      <span className="text-xs font-black text-[#FFD700] italic">VERSUS</span>
-                      <div className="w-8 h-[2px] bg-white/10 my-2"></div>
-                      <span className="bg-[#FFD700] text-[#121212] text-[8px] font-black px-2 py-0.5 italic">
-                        {LEGACY_MATCH_STATUS_LABELS[String(activeMatch?.estado)] || String(activeMatch?.estado || 'PENDENTE')}
-                      </span>
-                    </div>
-                    <div
-                      className="text-center w-1/3"
-                      onClick={() => activeMatch?.visitante && onOpenProfile({ id: activeMatch.visitante_id, name: activeMatch.visitante })}
-                    >
-                      <div className="w-16 h-16 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 border-white/10 cursor-pointer active:scale-95 transition-transform" style={{ clipPath: SHIELD_CLIP }}>
-                        {activeMatch?.visitante_logo ? (
-                          <img src={activeMatch.visitante_logo} alt={activeMatch.visitante} className="w-full h-full object-cover" />
-                        ) : (
-                          <i className="fas fa-shield text-2xl text-white/5"></i>
-                        )}
+                      <div className="flex flex-col items-center">
+                        <span className="text-xs font-black text-[#FFD700] italic">VERSUS</span>
+                        <div className="w-8 h-[2px] bg-white/10 my-2"></div>
+                        <span className="bg-[#FFD700] text-[#121212] text-[8px] font-black px-2 py-0.5 italic">
+                          {LEGACY_MATCH_STATUS_LABELS[String(activeMatch?.estado)] || String(activeMatch?.estado || 'PENDENTE')}
+                        </span>
                       </div>
-                      <p className="text-[9px] font-black italic uppercase text-white truncate">{activeMatch?.visitante || 'VISITANTE'}</p>
+                      <div
+                        className="text-center w-1/3"
+                        onClick={() => activeMatch?.visitante && onOpenProfile({ id: activeMatch.visitante_id, name: activeMatch.visitante })}
+                      >
+                        <div className="w-16 h-16 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 border-white/10 cursor-pointer active:scale-95 transition-transform" style={{ clipPath: SHIELD_CLIP }}>
+                          {activeMatch?.visitante_logo ? (
+                            <img src={activeMatch.visitante_logo} alt={activeMatch.visitante} className="w-full h-full object-cover" />
+                          ) : (
+                            <i className="fas fa-shield text-2xl text-white/5"></i>
+                          )}
+                        </div>
+                        <p className="text-[9px] font-black italic uppercase text-white truncate">{activeMatch?.visitante || 'VISITANTE'}</p>
+                      </div>
                     </div>
-                  </div>
-                  <p className="text-[8px] font-black uppercase italic text-white/45 tracking-[0.1em] text-center mt-6">
-                    {formatLegacyMatchDate(activeMatch?.scheduled_at)}
-                  </p>
-                  <div className="mt-6 grid grid-cols-1 gap-3">
-                    <MCOButton
-                      onClick={() => onOpenFinalize(activeMatch)}
-                      className="!py-5 !px-2 !text-[9px]"
-                      disabled={String(activeMatch?.estado || '') !== 'confirmada'}
-                    >
-                      FINALIZAR PARTIDA
-                    </MCOButton>
-                    <MCOButton
-                      variant="outline"
-                      onClick={() => onOpenSchedule(activeMatch)}
-                      className="!py-5 !px-2 !text-[9px]"
-                      disabled={!isLegacySchedulingAllowed(activeMatch)}
-                    >
-                      AGENDAR / REAGENDAR HORÁRIO
-                    </MCOButton>
-                  </div>
-                </div>
-              ) : (
-                <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederação.</p>
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃO DE AGENDA</h4>
-              <MCOCard onClick={() => onOpenSchedule(activeMatch)} className="p-6" active={true} accentColor="#FFD700">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-5">
-                    <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                      <i className="fas fa-calendar-alt text-[#FFD700] text-xl"></i>
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-black italic uppercase font-heading text-white">AGENDAR PARTIDAS</h4>
-                      <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">
-                        {pendingScheduleCount} JOGOS PENDENTES PARA AGENDAR
-                      </p>
-                    </div>
-                  </div>
-                  <i className="fas fa-chevron-right text-[#FFD700] opacity-30 text-xs"></i>
-                </div>
-              </MCOCard>
-            </section>
-
-            <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÚMULAS PENDENTES</h4>
-              {pendingSummaries.length > 0 ? pendingSummaries.map((match) => (
-                <div
-                  key={match.id}
-                  className="bg-[#1E1E1E] p-4 flex justify-between items-center border-r-[3px] border-[#FFD700]"
-                  style={{ clipPath: AGGRESSIVE_CLIP }}
-                >
-                  <div>
-                    <p className="text-[11px] font-black italic text-white uppercase truncate">
-                      VS {match?.is_mandante ? match?.visitante : match?.mandante}
+                    <p className="text-[8px] font-black uppercase italic text-white/45 tracking-[0.1em] text-center mt-6">
+                      {formatLegacyMatchDate(activeMatch?.scheduled_at)}
                     </p>
-                    <p className="text-[8px] font-bold text-[#FFD700] uppercase italic tracking-widest">PLACAR REGISTRADO</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
-                    <p className="text-xs font-black italic text-white">CONFIRMAÇÃO</p>
-                  </div>
-                </div>
-              )) : (
-                <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                  <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma súmula pendente.</p>
-                </div>
-              )}
-            </section>
-
-            <section className="space-y-4">
-              <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">RESULTADOS RECENTES</h4>
-              <div className="space-y-2">
-                {recentResults.length > 0 ? recentResults.map((partida) => (
-                  <div key={partida.id} className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
-                      <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
-                    </div>
-                    <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                      <span className="text-lg font-black italic font-heading text-white">{partida.placar_mandante ?? '-'}</span>
-                      <span className="text-[8px] text-white/10 font-black italic">X</span>
-                      <span className="text-lg font-black italic font-heading text-white">{partida.placar_visitante ?? '-'}</span>
+                    <div className="mt-6 grid grid-cols-1 gap-3">
+                      <MCOButton
+                        onClick={() => onOpenFinalize(activeMatch)}
+                        className="!py-5 !px-2 !text-[9px]"
+                        disabled={String(activeMatch?.estado || '') !== 'confirmada'}
+                      >
+                        FINALIZAR PARTIDA
+                      </MCOButton>
+                      <MCOButton
+                        variant="outline"
+                        onClick={() => onOpenSchedule(activeMatch)}
+                        className="!py-5 !px-2 !text-[9px]"
+                        disabled={!isLegacySchedulingAllowed(activeMatch)}
+                      >
+                        AGENDAR / REAGENDAR HORÁRIO
+                      </MCOButton>
                     </div>
                   </div>
-                )) : (
-                  <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                    <p className="text-[9px] text-white/40 font-black uppercase italic">Sem resultados recentes.</p>
+                ) : (
+                  <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederação.</p>
                   </div>
                 )}
-              </div>
-            </section>
+              </section>
+            </LegacyReveal>
+
+            <LegacyReveal delayMs={80}>
+              <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃO DE AGENDA</h4>
+                <MCOCard onClick={() => onOpenSchedule(activeMatch)} className="p-6" active={true} accentColor="#FFD700">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-5">
+                      <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                        <i className="fas fa-calendar-alt text-[#FFD700] text-xl"></i>
+                      </div>
+                      <div>
+                        <h4 className="text-lg font-black italic uppercase font-heading text-white">AGENDAR PARTIDAS</h4>
+                        <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">
+                          {pendingScheduleCount} JOGOS PENDENTES PARA AGENDAR
+                        </p>
+                      </div>
+                    </div>
+                    <i className="fas fa-chevron-right text-[#FFD700] opacity-30 text-xs"></i>
+                  </div>
+                </MCOCard>
+              </section>
+            </LegacyReveal>
+
+            <LegacyReveal delayMs={120}>
+              <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÚMULAS PENDENTES</h4>
+                {pendingSummaries.length > 0 ? pendingSummaries.map((match, idx) => (
+                  <LegacyReveal key={match.id} delayMs={140 + (idx * 22)}>
+                    <div
+                      className="bg-[#1E1E1E] p-4 flex justify-between items-center border-r-[3px] border-[#FFD700]"
+                      style={{ clipPath: AGGRESSIVE_CLIP }}
+                    >
+                      <div>
+                        <p className="text-[11px] font-black italic text-white uppercase truncate">
+                          VS {match?.is_mandante ? match?.visitante : match?.mandante}
+                        </p>
+                        <p className="text-[8px] font-bold text-[#FFD700] uppercase italic tracking-widest">PLACAR REGISTRADO</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
+                        <p className="text-xs font-black italic text-white">CONFIRMAÇÃO</p>
+                      </div>
+                    </div>
+                  </LegacyReveal>
+                )) : (
+                  <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma súmula pendente.</p>
+                  </div>
+                )}
+              </section>
+            </LegacyReveal>
+
+            <LegacyReveal delayMs={160}>
+              <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">RESULTADOS RECENTES</h4>
+                <div className="space-y-2">
+                  {recentResults.length > 0 ? recentResults.map((partida, idx) => (
+                    <LegacyReveal key={partida.id} delayMs={180 + (idx * 18)}>
+                      <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
+                          <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
+                        </div>
+                        <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                          <span className="text-lg font-black italic font-heading text-white">{partida.placar_mandante ?? '-'}</span>
+                          <span className="text-[8px] text-white/10 font-black italic">X</span>
+                          <span className="text-lg font-black italic font-heading text-white">{partida.placar_visitante ?? '-'}</span>
+                        </div>
+                      </div>
+                    </LegacyReveal>
+                  )) : (
+                    <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                      <p className="text-[9px] text-white/40 font-black uppercase italic">Sem resultados recentes.</p>
+                    </div>
+                  )}
+                </div>
+              </section>
+            </LegacyReveal>
           </>
         )}
       </div>
@@ -4787,56 +4804,67 @@ const LeagueTableView = ({
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 flex flex-col">
-      <header className="mb-8">
-        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
-        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{leagueName}</h2>
-        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÇÃO</p>
-      </header>
+      <LegacyReveal delayMs={0}>
+        <header className="mb-8">
+          <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton>
+          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{leagueName}</h2>
+          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TABELA DE CLASSIFICAÇÃO</p>
+        </header>
+      </LegacyReveal>
       <div className="flex-grow overflow-y-auto">
         <div className="min-w-full">
-           <div className="grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+          <LegacyReveal delayMs={40}>
+            <div className="grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
               <span className="text-[8px] font-black text-white/40 italic uppercase">POS</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase">CLUBE</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">P</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">V</span>
               <span className="text-[8px] font-black text-[#FFD700] italic uppercase text-right">PTS</span>
-           </div>
+            </div>
+          </LegacyReveal>
            {loading ? (
-            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificação...</p>
-            </div>
+            <LegacyReveal delayMs={70}>
+              <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black italic uppercase text-white/50">Carregando classificação...</p>
+              </div>
+            </LegacyReveal>
            ) : error ? (
-            <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
-            </div>
+            <LegacyReveal delayMs={70}>
+              <div className="bg-[#B22222]/20 border border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black italic uppercase text-white">{error}</p>
+              </div>
+            </LegacyReveal>
            ) : rows.length === 0 ? (
-            <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum clube encontrado na liga.</p>
-            </div>
+            <LegacyReveal delayMs={70}>
+              <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black italic uppercase text-white/40">Nenhum clube encontrado na liga.</p>
+              </div>
+            </LegacyReveal>
            ) : (
             <div className="space-y-1">
-              {rows.map((row) => (
-                <div
-                  key={`${row.clubId}-${row.pos}`}
-                  onClick={() => onOpenClub({ id: row.clubId, name: row.clubName })}
-                  className={`grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
-                  style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className="text-[10px] font-black italic font-heading shrink-0">{row.pos}o</span>
-                    <span className={`w-5 h-5 flex items-center justify-center overflow-hidden border ${row.isUser ? 'bg-[#121212]/10 border-[#121212]/25' : 'bg-[#121212] border-[#FFD700]/30'}`} style={{ clipPath: SHIELD_CLIP }}>
-                      {row.clubEscudoUrl ? (
-                        <img src={row.clubEscudoUrl} alt={row.clubName} className="w-full h-full object-cover" />
-                      ) : (
-                        <i className={`fas fa-shield text-[10px] ${row.isUser ? 'text-[#121212]/30' : 'text-white/20'}`}></i>
-                      )}
+              {rows.map((row, idx) => (
+                <LegacyReveal key={`${row.clubId}-${row.pos}`} delayMs={80 + (idx * 16)}>
+                  <div
+                    onClick={() => onOpenClub({ id: row.clubId, name: row.clubName })}
+                    className={`grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
+                    style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className="text-[10px] font-black italic font-heading shrink-0">{row.pos}o</span>
+                      <span className={`w-5 h-5 flex items-center justify-center overflow-hidden border ${row.isUser ? 'bg-[#121212]/10 border-[#121212]/25' : 'bg-[#121212] border-[#FFD700]/30'}`} style={{ clipPath: SHIELD_CLIP }}>
+                        {row.clubEscudoUrl ? (
+                          <img src={row.clubEscudoUrl} alt={row.clubName} className="w-full h-full object-cover" />
+                        ) : (
+                          <i className={`fas fa-shield text-[10px] ${row.isUser ? 'text-[#121212]/30' : 'text-white/20'}`}></i>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
-                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
-                  <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
-                  <span className="text-xs font-black italic font-heading text-right">{row.points}</span>
-                </div>
+                    <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
+                    <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
+                    <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
+                    <span className="text-xs font-black italic font-heading text-right">{row.points}</span>
+                  </div>
+                </LegacyReveal>
               ))}
             </div>
            )}
@@ -8025,30 +8053,37 @@ const MarketView = ({
     >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-4 space-y-5">
-        <header className="mb-6">
-          <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
-            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-          </MCOButton>
-          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PROPOSTAS</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">RECEBIDAS E ENVIADAS</p>
-          {isAuctionMode && (
-            <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-2">
-              Durante o leilao, novas propostas ficam bloqueadas.
-            </p>
-          )}
-        </header>
+        <LegacyReveal delayMs={0}>
+          <header className="mb-6">
+            <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
+              <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+            </MCOButton>
+            <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PROPOSTAS</h2>
+            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">RECEBIDAS E ENVIADAS</p>
+            {isAuctionMode && (
+              <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-2">
+                Durante o leilao, novas propostas ficam bloqueadas.
+              </p>
+            )}
+          </header>
+        </LegacyReveal>
 
         {marketProposalsLoading ? (
-          <div className="text-center py-16 bg-[#1E1E1E]/30" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[9px] font-black italic uppercase text-white/40">CARREGANDO PROPOSTAS...</p>
-          </div>
+          <LegacyReveal delayMs={40}>
+            <div className="text-center py-16 bg-[#1E1E1E]/30" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[9px] font-black italic uppercase text-white/40">CARREGANDO PROPOSTAS...</p>
+            </div>
+          </LegacyReveal>
         ) : marketProposalsError ? (
-          <div className="text-center py-16 bg-[#B22222]/20 border border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <p className="text-[9px] font-black italic uppercase text-white">{marketProposalsError}</p>
-          </div>
+          <LegacyReveal delayMs={40}>
+            <div className="text-center py-16 bg-[#B22222]/20 border border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[9px] font-black italic uppercase text-white">{marketProposalsError}</p>
+            </div>
+          </LegacyReveal>
         ) : (
           <>
-            <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <LegacyReveal delayMs={60}>
+              <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-[11px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">RECEBIDAS</h3>
                 <span className="text-[9px] font-black italic uppercase px-2 py-1 bg-[#121212] text-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
@@ -8060,7 +8095,7 @@ const MarketView = ({
                 <p className="text-[8px] font-black italic uppercase text-white/35">NENHUMA PROPOSTA RECEBIDA NO MOMENTO.</p>
               ) : (
                 <div className="space-y-3">
-                  {marketReceivedProposals.map((proposal) => {
+                  {marketReceivedProposals.map((proposal, idx) => {
                     const proposalId = Number(proposal?.id ?? 0);
                     const isBusy = proposalBusySet.has(proposalId);
                     const targetName = getProposalPlayerName(proposal?.elencopadrao);
@@ -8071,7 +8106,8 @@ const MarketView = ({
                     const offerPlayers = Array.isArray(proposal?.oferta_jogadores) ? proposal.oferta_jogadores : [];
 
                     return (
-                      <article key={proposalId} className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                      <LegacyReveal key={proposalId} delayMs={84 + (idx * 18)}>
+                        <article className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex items-start gap-3">
                             <button
@@ -8154,14 +8190,17 @@ const MarketView = ({
                             REJEITAR
                           </button>
                         </div>
-                      </article>
+                        </article>
+                      </LegacyReveal>
                     );
                   })}
                 </div>
               )}
-            </section>
+              </section>
+            </LegacyReveal>
 
-            <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700]/60 p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <LegacyReveal delayMs={120}>
+              <section className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700]/60 p-4 space-y-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-[11px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">MINHAS PROPOSTAS</h3>
                 <span className="text-[9px] font-black italic uppercase px-2 py-1 bg-[#121212] text-[#FFD700]" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
@@ -8173,7 +8212,7 @@ const MarketView = ({
                 <p className="text-[8px] font-black italic uppercase text-white/35">NENHUMA PROPOSTA ENVIADA NO MOMENTO.</p>
               ) : (
                 <div className="space-y-3">
-                  {marketSentProposals.map((proposal) => {
+                  {marketSentProposals.map((proposal, idx) => {
                     const proposalId = Number(proposal?.id ?? 0);
                     const isBusy = proposalBusySet.has(proposalId);
                     const targetName = getProposalPlayerName(proposal?.elencopadrao);
@@ -8184,7 +8223,8 @@ const MarketView = ({
                     const offerPlayers = Array.isArray(proposal?.oferta_jogadores) ? proposal.oferta_jogadores : [];
 
                     return (
-                      <article key={proposalId} className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                      <LegacyReveal key={proposalId} delayMs={144 + (idx * 18)}>
+                        <article className="bg-[#121212] border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex items-start gap-3">
                             <button
@@ -8254,12 +8294,14 @@ const MarketView = ({
                         >
                           {isBusy ? 'PROCESSANDO...' : 'CANCELAR'}
                         </button>
-                      </article>
+                        </article>
+                      </LegacyReveal>
                     );
                   })}
                 </div>
               )}
-            </section>
+              </section>
+            </LegacyReveal>
           </>
         )}
       </div>
@@ -8318,29 +8360,32 @@ const MarketView = ({
         </div>
       )}
       <div className="p-4">
-        <header className="mb-6">
-          <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
-            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-          </MCOButton>
-          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{title}</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{subtitle}</p>
-          {isMarketDataMode && marketClosed && (
-            <p className="text-[9px] text-[#B22222] font-black uppercase italic tracking-[0.2em] mt-2">
-              Mercado fechado para esta confederação
-            </p>
-          )}
-          {isMarketDataMode && isAuctionMode && (
-            <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em] mt-2">
-              Modo leilao ativo: apenas jogadores livres com lances.
-            </p>
-          )}
-          {isMarketDataMode && isAuctionMode && marketAuctionPeriod?.inicio_label && marketAuctionPeriod?.fim_label && (
-            <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-1">
-              Leilao: {marketAuctionPeriod.inicio_label} ate {marketAuctionPeriod.fim_label}
-            </p>
-          )}
-        </header>
-        <div className="bg-[#1E1E1E] p-4 mb-8 border-l-[3px] border-[#FFD700]" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+        <LegacyReveal delayMs={0}>
+          <header className="mb-6">
+            <MCOButton variant="ghost" onClick={() => setSubMode('menu')} className="!px-0 !py-0 mb-6 opacity-40">
+              <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+            </MCOButton>
+            <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">{title}</h2>
+            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{subtitle}</p>
+            {isMarketDataMode && marketClosed && (
+              <p className="text-[9px] text-[#B22222] font-black uppercase italic tracking-[0.2em] mt-2">
+                Mercado fechado para esta confederação
+              </p>
+            )}
+            {isMarketDataMode && isAuctionMode && (
+              <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.2em] mt-2">
+                Modo leilao ativo: apenas jogadores livres com lances.
+              </p>
+            )}
+            {isMarketDataMode && isAuctionMode && marketAuctionPeriod?.inicio_label && marketAuctionPeriod?.fim_label && (
+              <p className="text-[8px] text-white/45 font-black uppercase italic tracking-[0.15em] mt-1">
+                Leilao: {marketAuctionPeriod.inicio_label} ate {marketAuctionPeriod.fim_label}
+              </p>
+            )}
+          </header>
+        </LegacyReveal>
+        <LegacyReveal delayMs={40}>
+          <div className="bg-[#1E1E1E] p-4 mb-8 border-l-[3px] border-[#FFD700]" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
           <div className="flex items-center justify-between gap-2">
             <h4 className="text-[9px] font-black uppercase text-[#FFD700] italic tracking-widest">
               <i className="fas fa-filter mr-2"></i> FILTROS DE BUSCA
@@ -8428,8 +8473,10 @@ const MarketView = ({
               </div>
             </div>
           )}
-        </div>
-        <div className="min-w-full space-y-3">
+          </div>
+        </LegacyReveal>
+        <LegacyReveal delayMs={80}>
+          <div className="min-w-full space-y-3">
           <div className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] border-b border-white/5 opacity-50">
             <span className="text-[8px] font-black italic uppercase text-center">ATLETA</span>
             <span className="text-[8px] font-black italic uppercase">NOME</span>
@@ -8461,7 +8508,7 @@ const MarketView = ({
             <div className="text-center py-16 bg-[#B22222]/20 border border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[9px] font-black italic uppercase text-white">{marketError}</p>
             </div>
-          ) : totalFilteredPlayers > 0 ? paginatedPlayers.map((player) => {
+          ) : totalFilteredPlayers > 0 ? paginatedPlayers.map((player, idx) => {
             const isPrimaryBusy = marketActionBusyIds.includes(player.id);
             const isRadarBusy = radarBusyIds.includes(player.id);
             const isObserved = marketRadarSet.has(player.id);
@@ -8497,11 +8544,11 @@ const MarketView = ({
                 || isPrimaryBusy;
 
             return (
-              <div
-                key={player.id}
-                className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
-                style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
-              >
+              <LegacyReveal key={player.id} delayMs={100 + (idx * 14)}>
+                <div
+                  className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
+                  style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                >
                 <div className="flex justify-center">
                   <LegacyMarketPlayerThumb
                     player={player}
@@ -8564,7 +8611,8 @@ const MarketView = ({
                     {isRadarBusy ? '...' : isObserved ? 'OBSERVANDO' : 'OBSERVAR'}
                   </button>
                 </div>
-              </div>
+                </div>
+              </LegacyReveal>
             );
           }) : (
             <div className="text-center py-20 bg-[#1E1E1E]/20" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -8572,9 +8620,11 @@ const MarketView = ({
                <p className="text-[9px] font-black italic uppercase text-white/20">NENHUM ATLETA ENCONTRADO COM ESTES FILTROS</p>
             </div>
           )}
-        </div>
+          </div>
+        </LegacyReveal>
         {!marketLoading && !marketError && totalFilteredPlayers > LEGACY_MARKET_PAGE_SIZE && (
-          <div className="mt-4 flex items-center justify-between gap-2 bg-[#1E1E1E] p-3 border-l-[3px] border-[#FFD700]/45">
+          <LegacyReveal delayMs={120}>
+            <div className="mt-4 flex items-center justify-between gap-2 bg-[#1E1E1E] p-3 border-l-[3px] border-[#FFD700]/45">
             <button
               type="button"
               onClick={() => setMarketPage((current) => Math.max(1, current - 1))}
@@ -8604,7 +8654,8 @@ const MarketView = ({
             >
               PROXIMA
             </button>
-          </div>
+            </div>
+          </LegacyReveal>
         )}
       </div>
       {auctionBidPlayer && (() => {
@@ -8843,54 +8894,62 @@ const MarketView = ({
     >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-6">
-        <header className="mb-10">
-          <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
-            <i className="fas fa-arrow-left mr-2"></i> VOLTAR
-          </MCOButton>
-          <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MERCADO</h2>
-          <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÊNCIAS E NEGÓCIOS</p>
-        </header>
+        <LegacyReveal delayMs={0}>
+          <header className="mb-10">
+            <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+              <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+            </MCOButton>
+            <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MERCADO</h2>
+            <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">TRANSFERÊNCIAS E NEGÓCIOS</p>
+          </header>
+        </LegacyReveal>
         <div className="grid grid-cols-1 gap-4">
-          <MCOCard onClick={() => setSubMode('list')} className="p-8" active={true} accentColor="#FFD700">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                <i className="fas fa-right-left text-2xl text-[#FFD700]"></i>
-              </div>
-              <div>
-                <h4 className="text-xl font-black italic uppercase font-heading text-white">MERCADO ABERTO</h4>
-                <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">LISTA GLOBAL DE ATLETAS</p>
-              </div>
-            </div>
-          </MCOCard>
-          <MCOCard onClick={() => setSubMode('watchlist')} className="p-8" active={true} accentColor="#FFD700">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                <i className="fas fa-binoculars text-2xl text-[#FFD700]"></i>
-              </div>
-              <div>
-                <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÇÃO</h4>
-                <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">ATLETAS MONITORADOS</p>
-              </div>
-            </div>
-          </MCOCard>
-          <MCOCard onClick={() => setSubMode('proposals')} className="p-8" active={true} accentColor="#FFD700">
-            <div className="flex items-center justify-between gap-4">
+          <LegacyReveal delayMs={40}>
+            <MCOCard onClick={() => setSubMode('list')} className="p-8" active={true} accentColor="#FFD700">
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                  <i className="fas fa-envelope-open-text text-2xl text-[#FFD700]"></i>
+                  <i className="fas fa-right-left text-2xl text-[#FFD700]"></i>
                 </div>
                 <div>
-                  <h4 className="text-xl font-black italic uppercase font-heading text-white">PROPOSTAS</h4>
-                  <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">RECEBIDAS E ENVIADAS</p>
+                  <h4 className="text-xl font-black italic uppercase font-heading text-white">MERCADO ABERTO</h4>
+                  <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">LISTA GLOBAL DE ATLETAS</p>
                 </div>
               </div>
-              {proposalUnreadCount > 0 && (
-                <span className="text-[8px] font-black italic uppercase px-2 py-1 bg-[#B22222] text-white border border-[#FFB4B4]/45">
-                  {proposalUnreadCount}
-                </span>
-              )}
-            </div>
-          </MCOCard>
+            </MCOCard>
+          </LegacyReveal>
+          <LegacyReveal delayMs={80}>
+            <MCOCard onClick={() => setSubMode('watchlist')} className="p-8" active={true} accentColor="#FFD700">
+              <div className="flex items-center gap-6">
+                <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                  <i className="fas fa-binoculars text-2xl text-[#FFD700]"></i>
+                </div>
+                <div>
+                  <h4 className="text-xl font-black italic uppercase font-heading text-white">EM OBSERVAÇÃO</h4>
+                  <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">ATLETAS MONITORADOS</p>
+                </div>
+              </div>
+            </MCOCard>
+          </LegacyReveal>
+          <LegacyReveal delayMs={120}>
+            <MCOCard onClick={() => setSubMode('proposals')} className="p-8" active={true} accentColor="#FFD700">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-6">
+                  <div className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                    <i className="fas fa-envelope-open-text text-2xl text-[#FFD700]"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black italic uppercase font-heading text-white">PROPOSTAS</h4>
+                    <p className="text-[8px] text-white/30 font-bold uppercase italic mt-1 tracking-widest">RECEBIDAS E ENVIADAS</p>
+                  </div>
+                </div>
+                {proposalUnreadCount > 0 && (
+                  <span className="text-[8px] font-black italic uppercase px-2 py-1 bg-[#B22222] text-white border border-[#FFB4B4]/45">
+                    {proposalUnreadCount}
+                  </span>
+                )}
+              </div>
+            </MCOCard>
+          </LegacyReveal>
         </div>
       </div>
     </div>
