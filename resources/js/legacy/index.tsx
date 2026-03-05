@@ -8795,20 +8795,19 @@ const App = () => {
       return;
     }
 
+    // Swap view immediately, then fade in the new screen.
+    setRenderView(view);
     setViewTransitionState('fading-out');
 
-    const fadeOutTimer = window.setTimeout(() => {
-      setRenderView(view);
+    const fadeInStartTimer = window.setTimeout(() => {
       setViewTransitionState('fading-in');
+    }, 16);
 
-      const fadeInTimer = window.setTimeout(() => {
-        setViewTransitionState('idle');
-      }, LEGACY_VIEW_TRANSITION_DURATION_MS);
+    const fadeInEndTimer = window.setTimeout(() => {
+      setViewTransitionState('idle');
+    }, LEGACY_VIEW_TRANSITION_DURATION_MS + 24);
 
-      viewTransitionTimersRef.current.push(fadeInTimer);
-    }, LEGACY_VIEW_TRANSITION_DURATION_MS);
-
-    viewTransitionTimersRef.current.push(fadeOutTimer);
+    viewTransitionTimersRef.current.push(fadeInStartTimer, fadeInEndTimer);
 
     return clearViewTransitionTimers;
   }, [clearViewTransitionTimers, prefersReducedMotion, renderView, view]);
