@@ -2,7 +2,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
         <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
         <meta name="csrf-token" content="{{ csrf_token() }}">
         <title>Legacy XI</title>
         <script src="https://cdn.tailwindcss.com"></script>
@@ -31,6 +31,10 @@
 
             .safe-area-bottom {
                 padding-bottom: env(safe-area-inset-bottom);
+            }
+
+            .safe-area-top {
+                padding-top: env(safe-area-inset-top);
             }
 
             body::before {

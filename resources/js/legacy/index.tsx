@@ -209,9 +209,17 @@ type LegacyRequestInit = RequestInit & {
 };
 
 const LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS = 320;
-const LEGACY_VIEW_TRANSITION_DURATION_MS = 200;
+const LEGACY_VIEW_TRANSITION_DURATION_MS = 280;
+const LEGACY_VIEW_TRANSITION_HOLD_MS = 56;
+const LEGACY_PREFETCH_TTL_MS = 45_000;
+const LEGACY_TOPBAR_BASE_HEIGHT_PX = 64;
+const LEGACY_TOPBAR_TOTAL_HEIGHT_CSS = `calc(${LEGACY_TOPBAR_BASE_HEIGHT_PX}px + env(safe-area-inset-top))`;
+const LEGACY_CONTENT_TOP_PADDING_CSS = LEGACY_TOPBAR_TOTAL_HEIGHT_CSS;
+const LEGACY_MARKET_TIMERS_TOP_CSS = LEGACY_TOPBAR_TOTAL_HEIGHT_CSS;
+const LEGACY_MARKET_TIMERS_EXTRA_PADDING_PX = 66;
 let legacyGlobalLoaderPendingCount = 0;
 let legacyGlobalLoaderVisible = false;
+const legacyPrefetchTracker = new Map<string, number>();
 
 const withLegacyGlobalLoader = async <T,>(
   task: () => Promise<T>,
@@ -259,6 +267,41 @@ const shouldUseLegacyGlobalLoaderByMethod = (method: string, explicit?: boolean)
 
   const normalizedMethod = String(method || 'GET').toUpperCase();
   return normalizedMethod !== 'GET' && normalizedMethod !== 'HEAD' && normalizedMethod !== 'OPTIONS';
+};
+
+const runLegacyIdleTask = (task: () => void) => {
+  const win = window as any;
+
+  if (typeof win.requestIdleCallback === 'function') {
+    const idleId = win.requestIdleCallback(() => task(), { timeout: 1000 });
+    return () => {
+      if (typeof win.cancelIdleCallback === 'function') {
+        win.cancelIdleCallback(idleId);
+      }
+    };
+  }
+
+  const timeoutId = window.setTimeout(task, 220);
+  return () => window.clearTimeout(timeoutId);
+};
+
+const prefetchLegacyJson = (url: string) => {
+  const normalized = String(url || '').trim();
+  if (normalized === '') return;
+
+  const now = Date.now();
+  const lastPrefetch = legacyPrefetchTracker.get(normalized) ?? 0;
+  if (now - lastPrefetch < LEGACY_PREFETCH_TTL_MS) return;
+
+  legacyPrefetchTracker.set(normalized, now);
+
+  void fetch(normalized, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json',
+    },
+  }).catch(() => undefined);
 };
 
 const jsonRequest = async (url: string, options: LegacyRequestInit = {}) => {
@@ -736,7 +779,13 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRat
   };
 
   return (
-    <div className="fixed top-0 left-0 right-0 bg-[#1E1E1E] h-16 border-b-[3px] border-[#FFD700] z-[60] flex items-center px-4">
+    <div
+      className="fixed top-0 left-0 right-0 bg-[#1E1E1E] border-b-[3px] border-[#FFD700] z-[60] flex items-center px-4"
+      style={{
+        height: LEGACY_TOPBAR_TOTAL_HEIGHT_CSS,
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
+    >
       <div className="relative shrink-0 z-20">
         <button 
           onClick={() => setIsOpen(!isOpen)}
@@ -2374,7 +2423,7 @@ const MatchCenterView = ({
   );
 
   return (
-    <div className="min-h-screen bg-[#121212] pt-16 pb-32">
+    <div className="min-h-screen bg-[#121212] pb-32" style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}>
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <header className="px-6 mb-8 mt-4">
         <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">MATCH CENTER</h2>
@@ -5095,7 +5144,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
   }
 
   return (
-    <div className="min-h-screen bg-[#121212] pt-16 pb-32">
+    <div className="min-h-screen bg-[#121212] pb-32" style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}>
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       
       <div className="p-4 space-y-6">
@@ -7862,7 +7911,10 @@ const MarketView = ({
   };
 
   const renderProposalsView = () => (
-    <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300">
+    <div
+      className="min-h-screen bg-[#121212] pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300"
+      style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}
+    >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-4 space-y-5">
         <header className="mb-6">
@@ -8130,10 +8182,17 @@ const MarketView = ({
     const auctionTimerText = auctionCountdownLabel ? `TERMINA EM ${auctionCountdownLabel}` : 'INATIVO';
 
     return (
-    <div className={`min-h-screen bg-[#121212] ${showMarketTimers ? 'pt-[130px]' : 'pt-16'} pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300`}>
+    <div
+      className="min-h-screen bg-[#121212] pb-32 overflow-y-auto animate-in fade-in slide-in-from-right-4 duration-300"
+      style={{
+        paddingTop: showMarketTimers
+          ? `calc(${LEGACY_TOPBAR_TOTAL_HEIGHT_CSS} + ${LEGACY_MARKET_TIMERS_EXTRA_PADDING_PX}px)`
+          : LEGACY_CONTENT_TOP_PADDING_CSS,
+      }}
+    >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       {showMarketTimers && (
-        <div className="fixed top-16 left-0 right-0 z-[55] px-4 pt-2">
+        <div className="fixed left-0 right-0 z-[55] px-4 pt-2" style={{ top: LEGACY_MARKET_TIMERS_TOP_CSS }}>
           <div className="bg-[#1E1E1E]/95 border-b-[3px] border-[#FFD700] px-3 py-2 flex items-center gap-2" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="flex-1 min-w-0 bg-[#121212]/80 border border-[#FFD700]/30 px-2 py-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
               <p className="text-[7px] font-black uppercase italic text-[#FFD700] tracking-[0.18em] truncate">LEILAO</p>
@@ -8670,7 +8729,10 @@ const MarketView = ({
   if (subMode === 'proposals') return renderProposalsView();
 
   return (
-    <div className="min-h-screen bg-[#121212] pt-16 pb-32 overflow-y-auto">
+    <div
+      className="min-h-screen bg-[#121212] pb-32 overflow-y-auto"
+      style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}
+    >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       <div className="p-6">
         <header className="mb-10">
@@ -8735,6 +8797,8 @@ const App = () => {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [viewTransitionState, setViewTransitionState] = useState<'idle' | 'fading-out' | 'fading-in'>('idle');
   const viewTransitionTimersRef = useRef<number[]>([]);
+  const scrollRestoreTimersRef = useRef<number[]>([]);
+  const scrollByViewRef = useRef<Record<string, number>>({});
   const [marketQuickAuctionStatusFilter, setMarketQuickAuctionStatusFilter] = useState<string | null>(null);
   const [selectedPendingMatch, setSelectedPendingMatch] = useState<any>(null);
   const [selectedScheduleMatch, setSelectedScheduleMatch] = useState<any>(null);
@@ -8756,6 +8820,13 @@ const App = () => {
 
     viewTransitionTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
     viewTransitionTimersRef.current = [];
+  }, []);
+
+  const clearScrollRestoreTimers = useCallback(() => {
+    if (scrollRestoreTimersRef.current.length === 0) return;
+
+    scrollRestoreTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    scrollRestoreTimersRef.current = [];
   }, []);
 
   const setView = useCallback((nextView: React.SetStateAction<string>) => {
@@ -8788,6 +8859,7 @@ const App = () => {
     if (view === renderView) return;
 
     clearViewTransitionTimers();
+    scrollByViewRef.current[renderView] = Math.max(0, window.scrollY || window.pageYOffset || 0);
 
     if (prefersReducedMotion) {
       setRenderView(view);
@@ -8795,29 +8867,45 @@ const App = () => {
       return;
     }
 
+    // Swap view immediately, then fade in the new screen.
+    setRenderView(view);
     setViewTransitionState('fading-out');
 
-    const fadeOutTimer = window.setTimeout(() => {
-      setRenderView(view);
+    const fadeInStartTimer = window.setTimeout(() => {
       setViewTransitionState('fading-in');
+    }, LEGACY_VIEW_TRANSITION_HOLD_MS);
 
-      const fadeInTimer = window.setTimeout(() => {
-        setViewTransitionState('idle');
-      }, LEGACY_VIEW_TRANSITION_DURATION_MS);
+    const fadeInEndTimer = window.setTimeout(() => {
+      setViewTransitionState('idle');
+    }, LEGACY_VIEW_TRANSITION_DURATION_MS + LEGACY_VIEW_TRANSITION_HOLD_MS + 28);
 
-      viewTransitionTimersRef.current.push(fadeInTimer);
-    }, LEGACY_VIEW_TRANSITION_DURATION_MS);
-
-    viewTransitionTimersRef.current.push(fadeOutTimer);
-
-    return clearViewTransitionTimers;
+    viewTransitionTimersRef.current.push(fadeInStartTimer, fadeInEndTimer);
   }, [clearViewTransitionTimers, prefersReducedMotion, renderView, view]);
 
   useEffect(() => clearViewTransitionTimers, [clearViewTransitionTimers]);
 
+  useEffect(() => {
+    clearScrollRestoreTimers();
+
+    const targetScroll = Math.max(0, Number(scrollByViewRef.current[renderView] ?? 0) || 0);
+    const attempts = [0, 120, 320];
+
+    attempts.forEach((delay) => {
+      const timerId = window.setTimeout(() => {
+        window.scrollTo({ top: targetScroll, left: 0, behavior: 'auto' });
+      }, delay);
+
+      scrollRestoreTimersRef.current.push(timerId);
+    });
+
+    return clearScrollRestoreTimers;
+  }, [clearScrollRestoreTimers, renderView]);
+
+  useEffect(() => clearScrollRestoreTimers, [clearScrollRestoreTimers]);
+
   const viewTransitionStyle = useMemo<React.CSSProperties>(() => ({
-    opacity: viewTransitionState === 'fading-out' ? 0 : 1,
-    transition: prefersReducedMotion ? 'none' : `opacity ${LEGACY_VIEW_TRANSITION_DURATION_MS}ms ease`,
+    opacity: viewTransitionState === 'fading-out' ? 0.18 : 1,
+    transition: prefersReducedMotion ? 'none' : `opacity ${LEGACY_VIEW_TRANSITION_DURATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
     willChange: prefersReducedMotion ? undefined : 'opacity',
   }), [prefersReducedMotion, viewTransitionState]);
 
@@ -8835,6 +8923,28 @@ const App = () => {
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
   }, []);
+
+  useEffect(() => {
+    if (view !== 'hub-global' || !currentCareer?.id) {
+      return;
+    }
+
+    const confederacaoId = String(currentCareer.id);
+
+    return runLegacyIdleTask(() => {
+      const myClubEndpoint = new URL(LEGACY_MY_CLUB_DATA_URL, window.location.origin);
+      myClubEndpoint.searchParams.set('confederacao_id', confederacaoId);
+      prefetchLegacyJson(myClubEndpoint.toString());
+
+      const marketEndpoint = new URL(LEGACY_MARKET_DATA_URL, window.location.origin);
+      marketEndpoint.searchParams.set('confederacao_id', confederacaoId);
+      marketEndpoint.searchParams.set('paginate', '1');
+      marketEndpoint.searchParams.set('sub_mode', 'menu');
+      prefetchLegacyJson(marketEndpoint.toString());
+
+      prefetchLegacyJson(getLegacyInboxDataEndpoint(confederacaoId));
+    });
+  }, [currentCareer?.id, view]);
 
   const dismissLegacyToast = (toastId: number) => {
     const timerId = toastTimersRef.current.get(toastId);
