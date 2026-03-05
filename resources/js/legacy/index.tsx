@@ -203,17 +203,88 @@ const buildEmptyAvailability = () => ({
   DOM: [],
 });
 
-const jsonRequest = async (url: string, options: RequestInit = {}) => {
-  const response = await fetch(url, {
-    credentials: 'same-origin',
-    ...options,
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-      'X-CSRF-TOKEN': CSRF_TOKEN,
-      ...(options.headers || {}),
-    },
-  });
+type LegacyRequestInit = RequestInit & {
+  useGlobalLoader?: boolean;
+  globalLoaderDelayMs?: number;
+};
+
+const LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS = 320;
+let legacyGlobalLoaderPendingCount = 0;
+let legacyGlobalLoaderVisible = false;
+
+const withLegacyGlobalLoader = async <T,>(
+  task: () => Promise<T>,
+  enabled: boolean,
+  delayMs = LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS,
+): Promise<T> => {
+  if (!enabled || typeof window === 'undefined') {
+    return task();
+  }
+
+  legacyGlobalLoaderPendingCount += 1;
+  let timerId: number | null = null;
+
+  timerId = window.setTimeout(() => {
+    const loader = (window as any).MCOPageLoader;
+    if (loader && typeof loader.show === 'function') {
+      loader.show();
+      legacyGlobalLoaderVisible = true;
+    }
+  }, Math.max(0, Number(delayMs) || 0));
+
+  try {
+    return await task();
+  } finally {
+    if (timerId !== null) {
+      window.clearTimeout(timerId);
+    }
+
+    legacyGlobalLoaderPendingCount = Math.max(0, legacyGlobalLoaderPendingCount - 1);
+
+    if (legacyGlobalLoaderPendingCount === 0 && legacyGlobalLoaderVisible) {
+      const loader = (window as any).MCOPageLoader;
+      if (loader && typeof loader.hide === 'function') {
+        loader.hide();
+      }
+      legacyGlobalLoaderVisible = false;
+    }
+  }
+};
+
+const shouldUseLegacyGlobalLoaderByMethod = (method: string, explicit?: boolean) => {
+  if (typeof explicit === 'boolean') {
+    return explicit;
+  }
+
+  const normalizedMethod = String(method || 'GET').toUpperCase();
+  return normalizedMethod !== 'GET' && normalizedMethod !== 'HEAD' && normalizedMethod !== 'OPTIONS';
+};
+
+const jsonRequest = async (url: string, options: LegacyRequestInit = {}) => {
+  const {
+    useGlobalLoader,
+    globalLoaderDelayMs = LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS,
+    headers,
+    ...requestOptions
+  } = options;
+
+  const method = String(requestOptions.method || 'GET').toUpperCase();
+  const shouldUseGlobalLoader = shouldUseLegacyGlobalLoaderByMethod(method, useGlobalLoader);
+
+  const response = await withLegacyGlobalLoader(
+    () => fetch(url, {
+      credentials: 'same-origin',
+      ...requestOptions,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        ...(headers || {}),
+      },
+    }),
+    shouldUseGlobalLoader,
+    globalLoaderDelayMs,
+  );
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
@@ -229,18 +300,32 @@ const jsonRequest = async (url: string, options: RequestInit = {}) => {
   return payload;
 };
 
-const multipartRequest = async (url: string, formData: FormData, options: RequestInit = {}) => {
-  const response = await fetch(url, {
-    credentials: 'same-origin',
-    method: 'POST',
-    ...options,
-    body: formData,
-    headers: {
-      Accept: 'application/json',
-      'X-CSRF-TOKEN': CSRF_TOKEN,
-      ...(options.headers || {}),
-    },
-  });
+const multipartRequest = async (url: string, formData: FormData, options: LegacyRequestInit = {}) => {
+  const {
+    useGlobalLoader,
+    globalLoaderDelayMs = LEGACY_GLOBAL_LOADER_DELAY_DEFAULT_MS,
+    headers,
+    ...requestOptions
+  } = options;
+
+  const method = String(requestOptions.method || 'POST').toUpperCase();
+  const shouldUseGlobalLoader = shouldUseLegacyGlobalLoaderByMethod(method, useGlobalLoader);
+
+  const response = await withLegacyGlobalLoader(
+    () => fetch(url, {
+      credentials: 'same-origin',
+      method: 'POST',
+      ...requestOptions,
+      body: formData,
+      headers: {
+        Accept: 'application/json',
+        'X-CSRF-TOKEN': CSRF_TOKEN,
+        ...(headers || {}),
+      },
+    }),
+    shouldUseGlobalLoader,
+    globalLoaderDelayMs,
+  );
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
