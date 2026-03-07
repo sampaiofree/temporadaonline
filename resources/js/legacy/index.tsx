@@ -4405,8 +4405,10 @@ const AchievementsView = ({
                 </div>
 
                 <div className="min-w-0 flex-1">
-                  <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
-                  <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] line-clamp-2">
+                  <p className="text-[11px] font-black italic uppercase text-white whitespace-normal break-words leading-tight">
+                    {item.nome}
+                  </p>
+                  <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] whitespace-normal break-words leading-tight">
                     {resolveAchievementDescription(item)}
                   </p>
                   <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
@@ -4473,12 +4475,14 @@ const AchievementsView = ({
 
                         <div className="min-w-0 flex-1">
                           <div className="flex justify-between items-center mb-1 gap-2">
-                            <p className="text-xs font-black italic uppercase text-white truncate">{nextItem.nome}</p>
+                            <p className="text-xs font-black italic uppercase text-white whitespace-normal break-words leading-tight">
+                              {nextItem.nome}
+                            </p>
                             <span className="text-[9px] font-black text-[#FFD700] shrink-0">
                               {nextItem.current}/{nextItem.quantidade}
                             </span>
                           </div>
-                          <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] mb-2 line-clamp-2">
+                          <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] mb-2 whitespace-normal break-words leading-tight">
                             {resolveAchievementDescription(nextItem)}
                           </p>
 
