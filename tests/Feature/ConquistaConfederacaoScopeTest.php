@@ -10,6 +10,9 @@ use App\Models\Jogo;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeAjusteSalarial;
+use App\Models\LigaClubeVendaMercado;
+use App\Models\LigaProposta;
+use App\Models\LigaTransferencia;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDesempenho;
@@ -200,6 +203,144 @@ class ConquistaConfederacaoScopeTest extends TestCase
             'wage_novo' => 100000,
         ]);
 
+        LigaClubeVendaMercado::create([
+            'user_id' => $user->id,
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_id' => $ligaA->id,
+            'liga_clube_id' => $clubeA->id,
+            'elencopadrao_id' => $playerA1->id,
+            'valor_base' => 1000000,
+            'valor_credito' => 800000,
+            'tax_percent' => 20,
+            'tax_value' => 200000,
+        ]);
+        LigaClubeVendaMercado::create([
+            'user_id' => $user->id,
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_id' => $ligaA->id,
+            'liga_clube_id' => $clubeA->id,
+            'elencopadrao_id' => $playerA2->id,
+            'valor_base' => 900000,
+            'valor_credito' => 720000,
+            'tax_percent' => 20,
+            'tax_value' => 180000,
+        ]);
+        LigaClubeVendaMercado::create([
+            'user_id' => $user->id,
+            'confederacao_id' => $contextB['confederacao']->id,
+            'liga_id' => $ligaB->id,
+            'liga_clube_id' => $clubeB->id,
+            'elencopadrao_id' => $playerB1->id,
+            'valor_base' => 1100000,
+            'valor_credito' => 880000,
+            'tax_percent' => 20,
+            'tax_value' => 220000,
+        ]);
+
+        LigaTransferencia::create([
+            'liga_id' => $ligaA->id,
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => null,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA1->id,
+            'clube_origem_id' => null,
+            'clube_destino_id' => $clubeA->id,
+            'tipo' => 'jogador_livre',
+            'valor' => 1000000,
+            'observacao' => 'Compra livre',
+        ]);
+        LigaTransferencia::create([
+            'liga_id' => $ligaA->id,
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => null,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA2->id,
+            'clube_origem_id' => null,
+            'clube_destino_id' => $clubeA->id,
+            'tipo' => 'jogador_livre',
+            'valor' => 1200000,
+            'observacao' => 'Leilao encerrado',
+        ]);
+        LigaTransferencia::create([
+            'liga_id' => $ligaB->id,
+            'confederacao_id' => $contextB['confederacao']->id,
+            'liga_origem_id' => null,
+            'liga_destino_id' => $ligaB->id,
+            'elencopadrao_id' => $playerB1->id,
+            'clube_origem_id' => null,
+            'clube_destino_id' => $clubeB->id,
+            'tipo' => 'jogador_livre',
+            'valor' => 1300000,
+            'observacao' => 'Compra livre',
+        ]);
+
+        LigaProposta::create([
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => $ligaA->id,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA1->id,
+            'clube_origem_id' => $adversarioA->id,
+            'clube_destino_id' => $clubeA->id,
+            'valor' => 800000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'aberta',
+        ]);
+        LigaProposta::create([
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => $ligaA->id,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA2->id,
+            'clube_origem_id' => $adversarioA->id,
+            'clube_destino_id' => $clubeA->id,
+            'valor' => 900000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'aceita',
+        ]);
+        LigaProposta::create([
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => $ligaA->id,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA3->id,
+            'clube_origem_id' => $clubeA->id,
+            'clube_destino_id' => $adversarioA->id,
+            'valor' => 700000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'rejeitada',
+        ]);
+        LigaProposta::create([
+            'confederacao_id' => $contextA['confederacao']->id,
+            'liga_origem_id' => $ligaA->id,
+            'liga_destino_id' => $ligaA->id,
+            'elencopadrao_id' => $playerA1->id,
+            'clube_origem_id' => $clubeA->id,
+            'clube_destino_id' => $adversarioA->id,
+            'valor' => 750000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'cancelada',
+        ]);
+        LigaProposta::create([
+            'confederacao_id' => $contextB['confederacao']->id,
+            'liga_origem_id' => $ligaB->id,
+            'liga_destino_id' => $ligaB->id,
+            'elencopadrao_id' => $playerB1->id,
+            'clube_origem_id' => $adversarioB->id,
+            'clube_destino_id' => $clubeB->id,
+            'valor' => 650000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'aberta',
+        ]);
+        LigaProposta::create([
+            'confederacao_id' => $contextB['confederacao']->id,
+            'liga_origem_id' => $ligaB->id,
+            'liga_destino_id' => $ligaB->id,
+            'elencopadrao_id' => $playerB1->id,
+            'clube_origem_id' => $clubeB->id,
+            'clube_destino_id' => $adversarioB->id,
+            'valor' => 660000,
+            'oferta_elencopadrao_ids' => [],
+            'status' => 'rejeitada',
+        ]);
+
         /** @var ConquistaProgressService $service */
         $service = app(ConquistaProgressService::class);
         $progress = $service->progressForConfederacao($user->id, $contextA['confederacao']->id);
@@ -216,6 +357,10 @@ class ConquistaConfederacaoScopeTest extends TestCase
         $this->assertSame(2, (int) $progress['enviar_sumula']);
         $this->assertSame(1, (int) $progress['avaliacoes']);
         $this->assertSame(2, (int) $progress['ajuste_salarial']);
+        $this->assertSame(2, (int) $progress['venda_mercado']);
+        $this->assertSame(2, (int) $progress['compra_mercado']);
+        $this->assertSame(2, (int) $progress['negociacoes_enviadas']);
+        $this->assertSame(2, (int) $progress['negociacoes_recebidas']);
     }
 
     public function test_claims_are_unique_by_user_and_confederacao(): void

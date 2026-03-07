@@ -19,6 +19,10 @@ class Conquista extends Model
         'enviar_sumula' => 'Enviar sumula',
         'avaliacoes' => 'Avaliacoes',
         'ajuste_salarial' => 'Ajuste salarial',
+        'venda_mercado' => 'Venda de jogadores no mercado',
+        'compra_mercado' => 'Compra de jogadores no mercado',
+        'negociacoes_enviadas' => 'Negociacoes enviadas',
+        'negociacoes_recebidas' => 'Negociacoes recebidas',
     ];
 
     protected $fillable = [

@@ -8,6 +8,7 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaProposta;
 use App\Models\LigaTransferencia;
+use App\Models\LigaClubeVendaMercado;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
@@ -128,9 +129,28 @@ class TransferService
             $ligaId = (int) $model->liga_id;
             $clubeOrigemId = (int) $model->liga_clube_id;
             $elencopadraoId = (int) $model->elencopadrao_id;
+            $club = LigaClube::query()
+                ->select(['id', 'user_id', 'confederacao_id'])
+                ->lockForUpdate()
+                ->find($clubeOrigemId);
 
             if ($credit > 0) {
                 $this->finance->credit($ligaId, $clubeOrigemId, $credit, 'Venda ao mercado');
+            }
+
+            $confederacaoId = (int) ($model->confederacao_id ?? $club?->confederacao_id ?? 0);
+            if ($club && $confederacaoId > 0) {
+                LigaClubeVendaMercado::query()->create([
+                    'user_id' => (int) $club->user_id,
+                    'confederacao_id' => $confederacaoId,
+                    'liga_id' => $ligaId,
+                    'liga_clube_id' => $clubeOrigemId,
+                    'elencopadrao_id' => $elencopadraoId,
+                    'valor_base' => $baseValue,
+                    'valor_credito' => $credit,
+                    'tax_percent' => $taxPercent,
+                    'tax_value' => $taxValue,
+                ]);
             }
 
             $model->delete();

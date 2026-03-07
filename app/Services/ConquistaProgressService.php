@@ -4,6 +4,9 @@ namespace App\Services;
 
 use App\Models\LigaClube;
 use App\Models\LigaClubeAjusteSalarial;
+use App\Models\LigaClubeVendaMercado;
+use App\Models\LigaProposta;
+use App\Models\LigaTransferencia;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDesempenho;
@@ -29,6 +32,10 @@ class ConquistaProgressService
             'enviar_sumula' => 0,
             'avaliacoes' => 0,
             'ajuste_salarial' => 0,
+            'venda_mercado' => 0,
+            'compra_mercado' => 0,
+            'negociacoes_enviadas' => 0,
+            'negociacoes_recebidas' => 0,
         ];
     }
 
@@ -139,6 +146,27 @@ class ConquistaProgressService
             ->where('confederacao_id', $confederacaoId)
             ->count();
 
+        $vendasMercado = LigaClubeVendaMercado::query()
+            ->where('user_id', $userId)
+            ->where('confederacao_id', $confederacaoId)
+            ->count();
+
+        $comprasMercado = LigaTransferencia::query()
+            ->where('confederacao_id', $confederacaoId)
+            ->where('tipo', 'jogador_livre')
+            ->whereIn('clube_destino_id', $clubIds)
+            ->count();
+
+        $negociacoesEnviadas = LigaProposta::query()
+            ->where('confederacao_id', $confederacaoId)
+            ->whereIn('clube_destino_id', $clubIds)
+            ->count();
+
+        $negociacoesRecebidas = LigaProposta::query()
+            ->where('confederacao_id', $confederacaoId)
+            ->whereIn('clube_origem_id', $clubIds)
+            ->count();
+
         $progress['gols'] = (int) ($desempenhos?->total_gols ?? 0);
         $progress['assistencias'] = (int) ($desempenhos?->total_assistencias ?? 0);
         $progress['quantidade_jogos'] = (int) $matchesPlayed;
@@ -155,6 +183,10 @@ class ConquistaProgressService
         $progress['enviar_sumula'] = (int) $sumulas;
         $progress['avaliacoes'] = (int) $avaliacoesFeitas;
         $progress['ajuste_salarial'] = (int) $ajustesSalariais;
+        $progress['venda_mercado'] = (int) $vendasMercado;
+        $progress['compra_mercado'] = (int) $comprasMercado;
+        $progress['negociacoes_enviadas'] = (int) $negociacoesEnviadas;
+        $progress['negociacoes_recebidas'] = (int) $negociacoesRecebidas;
 
         return $progress;
     }

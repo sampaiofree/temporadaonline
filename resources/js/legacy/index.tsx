@@ -4281,6 +4281,12 @@ const AchievementsView = ({
     return amount === 1 ? 'registro' : 'registros';
   };
 
+  const resolveAchievementDescription = (item: any) => {
+    const description = String(item?.descricao || '').trim();
+
+    return description || 'Sem descricao cadastrada.';
+  };
+
   const toggleGroupExpanded = (groupType: string) => {
     const key = String(groupType || 'grupo');
     setExpandedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
@@ -4400,6 +4406,9 @@ const AchievementsView = ({
 
                 <div className="min-w-0 flex-1">
                   <p className="text-[11px] font-black italic uppercase text-white truncate">{item.nome}</p>
+                  <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] line-clamp-2">
+                    {resolveAchievementDescription(item)}
+                  </p>
                   <p className="text-[8px] font-black uppercase italic text-white/40 tracking-[0.14em]">
                     QUANTIDADE: {item.current}/{item.quantidade}
                   </p>
@@ -4469,6 +4478,9 @@ const AchievementsView = ({
                               {nextItem.current}/{nextItem.quantidade}
                             </span>
                           </div>
+                          <p className="text-[8px] font-bold uppercase italic text-white/35 tracking-[0.08em] mb-2 line-clamp-2">
+                            {resolveAchievementDescription(nextItem)}
+                          </p>
 
                           <div className="w-full h-2 bg-white/5 overflow-hidden">
                             <div
