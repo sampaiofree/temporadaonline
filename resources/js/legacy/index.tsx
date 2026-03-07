@@ -1161,13 +1161,43 @@ const normalizeLegacyPatrocinioGroups = (groups: any) => {
   }));
 };
 
+const normalizeLegacyInboxMatchPayload = (payload: any) => {
+  if (!payload || typeof payload !== 'object') return null;
+
+  const partidaId = Number(payload?.partida_id ?? payload?.id ?? 0);
+  if (!Number.isFinite(partidaId) || partidaId <= 0) return null;
+
+  const nota = Number(payload?.avaliacao?.nota);
+  const avaliadoUserId = Number(payload?.avaliacao?.avaliado_user_id ?? 0);
+
+  return {
+    id: partidaId,
+    estado: String(payload?.estado || ''),
+    mandante: String(payload?.mandante || 'MANDANTE'),
+    visitante: String(payload?.visitante || 'VISITANTE'),
+    mandante_logo: payload?.mandante_logo ? String(payload.mandante_logo) : null,
+    visitante_logo: payload?.visitante_logo ? String(payload.visitante_logo) : null,
+    placar_mandante: payload?.placar_mandante ?? null,
+    placar_visitante: payload?.placar_visitante ?? null,
+    placar_registrado_por: payload?.placar_registrado_por ?? null,
+    is_mandante: Boolean(payload?.is_mandante),
+    is_visitante: Boolean(payload?.is_visitante),
+    avaliacao: Number.isFinite(nota)
+      ? {
+          nota,
+          avaliado_user_id: Number.isFinite(avaliadoUserId) && avaliadoUserId > 0 ? avaliadoUserId : null,
+        }
+      : null,
+  };
+};
+
 const InboxView = ({
   onBack,
   onAction,
   currentCareer,
 }: {
   onBack: () => void,
-  onAction: (type: string) => void,
+  onAction: (type: string, payload?: any) => void,
   currentCareer: any,
 }) => {
   const [messages, setMessages] = useState<any[]>([]);
@@ -1205,6 +1235,9 @@ const InboxView = ({
           urgent: Boolean(item?.urgent),
           action: String(item?.action || ''),
           actionLabel: String(item?.action_label || 'ACESSAR PENDENCIA'),
+          actionPayload: item?.action_payload && typeof item.action_payload === 'object'
+            ? item.action_payload
+            : null,
         }));
 
         setMessages(nextMessages);
@@ -1268,7 +1301,7 @@ const InboxView = ({
               </div>
               <p className="text-[10px] text-white/60 leading-relaxed uppercase italic font-bold mb-6">{msg.content}</p>
               <button
-                onClick={() => onAction(String(msg.action || ''))}
+                onClick={() => onAction(String(msg.action || ''), msg?.actionPayload ?? null)}
                 className="w-full bg-[#121212] border-2 border-[#FFD700] text-[#FFD700] text-[9px] font-black italic py-3 transition-colors active:bg-[#FFD700] active:text-[#121212]"
                 style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
               >
@@ -2417,6 +2450,7 @@ const ScheduleMatchesView = ({
 const MatchCenterView = ({
   onOpenSchedule,
   onOpenFinalize,
+  onOpenConfirm,
   onOpenProfile,
   careers,
   currentCareer,
@@ -2426,6 +2460,7 @@ const MatchCenterView = ({
 }: {
   onOpenSchedule: (partida?: any) => void,
   onOpenFinalize: (partida: any) => void,
+  onOpenConfirm: (partida: any) => void,
   onOpenProfile: (name: string) => void,
   careers: any[],
   currentCareer: any,
@@ -2611,8 +2646,10 @@ const MatchCenterView = ({
                 <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SÚMULAS PENDENTES</h4>
                 {pendingSummaries.length > 0 ? pendingSummaries.map((match, idx) => (
                   <LegacyReveal key={match.id} delayMs={140 + (idx * 22)}>
-                    <div
-                      className="bg-[#1E1E1E] p-4 flex justify-between items-center border-r-[3px] border-[#FFD700]"
+                    <button
+                      type="button"
+                      onClick={() => onOpenConfirm(match)}
+                      className="w-full text-left bg-[#1E1E1E] p-4 flex justify-between items-center border-r-[3px] border-[#FFD700] cursor-pointer active:scale-[0.99] transition-transform"
                       style={{ clipPath: AGGRESSIVE_CLIP }}
                     >
                       <div>
@@ -2623,9 +2660,9 @@ const MatchCenterView = ({
                       </div>
                       <div className="text-right">
                         <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
-                        <p className="text-xs font-black italic text-white">CONFIRMAÇÃO</p>
+                        <p className="text-xs font-black italic text-white">CONFIRMAR</p>
                       </div>
-                    </div>
+                    </button>
                   </LegacyReveal>
                 )) : (
                   <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -2989,21 +3026,117 @@ const ReportMatchView = ({
 
 // --- Confirm Result View ---
 
-const ConfirmResultView = ({ onBack, match }: any) => {
+const ConfirmResultView = ({ onBack, match, onCompleted, onNotify }: any) => {
   const [scoreValue, setScoreValue] = useState(0);
+  const [reclamacaoMotivo, setReclamacaoMotivo] = useState('');
+  const [reclamacaoDescricao, setReclamacaoDescricao] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  const handleConfirm = () => {
-    if (scoreValue === 0) {
-      alert("ERRO: VOCÊ DEVE AVALIAR O OPONENTE ANTES DE CONFIRMAR O RESULTADO.");
+  const isMatchPending = String(match?.estado || '') === 'placar_registrado';
+  const hasEvaluation = Boolean(match?.avaliacao?.nota);
+  const requiresEvaluation = !hasEvaluation;
+  const opponentName = match?.is_mandante ? match?.visitante : match?.mandante;
+
+  useEffect(() => {
+    setScoreValue(0);
+    setReclamacaoMotivo('');
+    setReclamacaoDescricao('');
+    setSubmitting(false);
+    setError('');
+    setSuccess('');
+  }, [match?.id]);
+
+  const handleConfirm = async () => {
+    if (!match?.id) return;
+    if (!isMatchPending) {
+      setError('Esta súmula não está mais pendente de confirmação.');
       return;
     }
-    alert("RESULTADO CONFIRMADO! O LEGADO DO CLUBE FOI ATUALIZADO.");
-    onBack();
+    if (requiresEvaluation && scoreValue < 1) {
+      setError('Avalie o adversário antes de confirmar o resultado.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      if (requiresEvaluation) {
+        await jsonRequest(`/api/partidas/${match.id}/avaliacoes`, {
+          method: 'POST',
+          body: JSON.stringify({
+            nota: Number(scoreValue),
+          }),
+        });
+      }
+
+      const payload = await jsonRequest(`/api/partidas/${match.id}/confirmar-placar`, {
+        method: 'POST',
+      });
+
+      const message = String(payload?.message || 'Placar confirmado com sucesso.');
+      setSuccess(message);
+      if (typeof onNotify === 'function') {
+        onNotify(message, 'success');
+      }
+      if (typeof onCompleted === 'function') {
+        onCompleted();
+      } else {
+        onBack();
+      }
+    } catch (currentError: any) {
+      setError(currentError?.message || 'Não foi possível confirmar o resultado.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  const handleDispute = () => {
-    alert("DISPUTA ABERTA. UM ADMINISTRADOR DA LIGA IRÁ ANALISAR O CASO.");
-    onBack();
+  const handleDispute = async () => {
+    if (!match?.id) return;
+    if (!isMatchPending) {
+      setError('Esta súmula não está mais disponível para disputa.');
+      return;
+    }
+    if (reclamacaoMotivo === '') {
+      setError('Selecione um motivo para abrir a disputa.');
+      return;
+    }
+    if (reclamacaoDescricao.trim().length < 8) {
+      setError('Descreva a disputa com pelo menos 8 caracteres.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const payload = await jsonRequest(`/api/partidas/${match.id}/reclamacoes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          motivo: reclamacaoMotivo,
+          descricao: reclamacaoDescricao.trim(),
+        }),
+      });
+
+      const message = String(payload?.message || 'Disputa registrada com sucesso.');
+      setSuccess(message);
+      if (typeof onNotify === 'function') {
+        onNotify(message, 'warning');
+      }
+      if (typeof onCompleted === 'function') {
+        onCompleted();
+      } else {
+        onBack();
+      }
+    } catch (currentError: any) {
+      setError(currentError?.message || 'Não foi possível abrir a disputa.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (!match) return null;
@@ -3017,50 +3150,106 @@ const ConfirmResultView = ({ onBack, match }: any) => {
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONFIRMAR RESULTADO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÇÃO DO OPONENTE</p>
       </header>
-      <div className="space-y-8">
-        <div className="bg-[#1E1E1E] p-10 relative overflow-hidden text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
-           <div className="absolute top-0 left-0 w-full h-1 bg-[#FFD700]/30"></div>
-           <p className="text-[9px] font-black italic text-[#FFD700] uppercase tracking-[0.4em] mb-6">PLACAR ENVIADO POR {match.opponent}</p>
-           <div className="flex justify-center items-center gap-8">
-             <div className="text-center">
-               <div className="w-12 h-12 bg-[#121212] flex items-center justify-center mx-auto mb-2 border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
-                 <i className="fas fa-shield text-xl text-[#FFD700]/20"></i>
-               </div>
-               <p className="text-[9px] font-black italic text-white uppercase">CRUZEIRO</p>
-             </div>
-             <div className="flex items-center gap-4">
-                <span className="text-5xl font-black italic font-heading text-white">{match.reportedScoreH}</span>
-                <span className="text-sm font-black italic text-[#FFD700]/20">X</span>
-                <span className="text-5xl font-black italic font-heading text-white">{match.reportedScoreA}</span>
-             </div>
-             <div className="text-center">
-               <div className="w-12 h-12 bg-[#121212] flex items-center justify-center mx-auto mb-2 border-b-2 border-white/5" style={{ clipPath: SHIELD_CLIP }}>
-                 <i className="fas fa-shield text-xl text-white/5"></i>
-               </div>
-               <p className="text-[9px] font-black italic text-white uppercase truncate max-w-[60px]">{match.opponent}</p>
-             </div>
-           </div>
-           <div className="mt-8 pt-8 border-t border-white/5">
-             <p className="text-[11px] font-black italic text-white/40 uppercase mb-4">AVALIE A CONDUTA DO ADVERSÁRIO</p>
-             <div className="flex justify-center gap-3">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <button 
-                    key={star}
-                    onClick={() => setScoreValue(star)}
-                    className={`text-2xl transition-all ${scoreValue >= star ? 'text-[#FFD700]' : 'text-white/10'}`}
-                  >
-                    <i className={`fas fa-star ${scoreValue >= star ? 'drop-shadow-[0_0_8px_#FFD700]' : ''}`}></i>
-                  </button>
-                ))}
-             </div>
-           </div>
+      <div className="space-y-6">
+        <div className="bg-[#1E1E1E] p-6 relative overflow-hidden text-center border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[9px] font-black italic text-[#FFD700] uppercase tracking-[0.25em] mb-5">
+            PLACAR ENVIADO POR {String(opponentName || 'ADVERSÁRIO').toUpperCase()}
+          </p>
+          <div className="flex justify-center items-center gap-5">
+            <div className="text-center w-1/3">
+              <div className="w-12 h-12 bg-[#121212] flex items-center justify-center mx-auto mb-2 border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                {match?.mandante_logo ? (
+                  <img src={match.mandante_logo} alt={match.mandante || 'Mandante'} className="w-full h-full object-cover" />
+                ) : (
+                  <i className="fas fa-shield text-xl text-[#FFD700]/20"></i>
+                )}
+              </div>
+              <p className="text-[9px] font-black italic text-white uppercase truncate">{match?.mandante || 'MANDANTE'}</p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-4xl font-black italic font-heading text-white">{match?.placar_mandante ?? '-'}</span>
+              <span className="text-sm font-black italic text-[#FFD700]/20">X</span>
+              <span className="text-4xl font-black italic font-heading text-white">{match?.placar_visitante ?? '-'}</span>
+            </div>
+            <div className="text-center w-1/3">
+              <div className="w-12 h-12 bg-[#121212] flex items-center justify-center mx-auto mb-2 border-b-2 border-white/10" style={{ clipPath: SHIELD_CLIP }}>
+                {match?.visitante_logo ? (
+                  <img src={match.visitante_logo} alt={match.visitante || 'Visitante'} className="w-full h-full object-cover" />
+                ) : (
+                  <i className="fas fa-shield text-xl text-white/5"></i>
+                )}
+              </div>
+              <p className="text-[9px] font-black italic text-white uppercase truncate">{match?.visitante || 'VISITANTE'}</p>
+            </div>
+          </div>
+          <p className="text-[8px] text-white/35 font-black italic uppercase mt-5">
+            {LEGACY_MATCH_STATUS_LABELS[String(match?.estado || '')] || String(match?.estado || '').toUpperCase()}
+          </p>
         </div>
+
+        {requiresEvaluation ? (
+          <div className="bg-[#1E1E1E] p-5 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic text-white/60 uppercase mb-3">Avalie o adversário (obrigatório para confirmar)</p>
+            <div className="flex justify-center gap-3">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setScoreValue(star)}
+                  className={`text-2xl transition-all ${scoreValue >= star ? 'text-[#FFD700]' : 'text-white/10'}`}
+                  disabled={submitting}
+                >
+                  <i className={`fas fa-star ${scoreValue >= star ? 'drop-shadow-[0_0_8px_#FFD700]' : ''}`}></i>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-[#1E1E1E] p-4 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[9px] font-black italic uppercase text-[#FFD700]">
+              Você já avaliou o adversário nesta partida.
+            </p>
+          </div>
+        )}
+
+        <div className="bg-[#1E1E1E] p-5 border border-[#B22222]/40" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black italic uppercase text-[#FFB4B4] mb-3">Discorda do placar? Abra disputa</p>
+          <div className="space-y-3">
+            <select
+              value={reclamacaoMotivo}
+              onChange={(event) => setReclamacaoMotivo(event.target.value)}
+              className="w-full bg-[#121212] border border-[#B22222]/35 px-3 py-2 text-[11px] text-white font-black italic uppercase"
+              disabled={submitting}
+            >
+              <option value="">SELECIONE UM MOTIVO</option>
+              <option value="placar_incorreto">PLACAR INCORRETO</option>
+              <option value="wo_indevido">WO INDEVIDO</option>
+              <option value="queda_conexao">QUEDA DE CONEXÃO</option>
+              <option value="outro">OUTRO</option>
+            </select>
+            <textarea
+              value={reclamacaoDescricao}
+              onChange={(event) => setReclamacaoDescricao(event.target.value)}
+              placeholder="Descreva o que aconteceu"
+              className="w-full min-h-[96px] bg-[#121212] border border-[#B22222]/35 px-3 py-2 text-[11px] text-white font-bold italic"
+              disabled={submitting}
+            />
+          </div>
+        </div>
+
+        {!!error && <p className="text-[9px] font-black uppercase italic text-[#B22222]">{error}</p>}
+        {!!success && <p className="text-[9px] font-black uppercase italic text-[#16A34A]">{success}</p>}
+
         <div className="space-y-3">
-          <MCOButton onClick={handleConfirm} className="w-full py-6 text-lg">CONFIRMAR RESULTADO</MCOButton>
-          <MCOButton variant="outline" onClick={handleDispute} className="w-full py-5 !text-[10px] text-[#B22222] border-[#B22222]/30">DISCORDAR / ABRIR DISPUTA</MCOButton>
+          <MCOButton onClick={handleConfirm} className="w-full py-6 text-lg" disabled={submitting || !isMatchPending || (requiresEvaluation && scoreValue < 1)}>
+            {submitting ? 'CONFIRMANDO...' : 'CONFIRMAR RESULTADO'}
+          </MCOButton>
+          <MCOButton variant="outline" onClick={handleDispute} className="w-full py-5 !text-[10px] text-[#B22222] border-[#B22222]/30" disabled={submitting || !isMatchPending}>
+            {submitting ? 'ENVIANDO...' : 'ABRIR DISPUTA'}
+          </MCOButton>
         </div>
         <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest text-center px-4 leading-relaxed">
-           * AO CONFIRMAR, VOCÊ CONCORDA QUE O PLACAR ACIMA É VERÍDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
+          * AO CONFIRMAR, VOCÊ CONCORDA QUE O PLACAR ACIMA É VERÍDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
         </p>
       </div>
     </div>
@@ -9363,11 +9552,21 @@ const App = () => {
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
       case 'season-stats': return <SeasonStatsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
       case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} currentCareer={currentCareer} />;
-      case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t) => {
+      case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t, payload) => {
         if (t === 'SCHEDULE') {
           setMarketQuickAuctionStatusFilter(null);
           setSelectedScheduleMatch(null);
           setView('schedule-matches');
+        } else if (t === 'MATCH_CONFIRM') {
+          setMarketQuickAuctionStatusFilter(null);
+          const matchPayload = normalizeLegacyInboxMatchPayload(payload);
+          if (matchPayload) {
+            setSelectedPendingMatch(matchPayload);
+            setView('confirm-match');
+          } else {
+            pushLegacyToast('Não foi possível abrir a confirmação deste confronto.', 'warning');
+            setView('match-center');
+          }
         } else if (t === 'MARKET_PROPOSALS') {
           setMarketQuickAuctionStatusFilter(null);
           setMarketSubMode('proposals');
@@ -9399,10 +9598,10 @@ const App = () => {
           setView('hub-global');
         }
       }} />;
-      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
+      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
       case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
-      case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} match={selectedPendingMatch} />;
+      case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedPendingMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedPendingMatch} />;
       case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} quickAuctionStatusFilter={marketQuickAuctionStatusFilter} onQuickAuctionStatusFilterHandled={() => setMarketQuickAuctionStatusFilter(null)} />;
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} currentCareer={currentCareer} />;
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;

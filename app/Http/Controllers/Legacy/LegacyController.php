@@ -1328,7 +1328,12 @@ class LegacyController extends Controller
         }
 
         $partidas = Partida::query()
-            ->with(['mandante:id,nome,user_id', 'visitante:id,nome,user_id'])
+            ->with([
+                'mandante:id,nome,user_id,escudo_clube_id',
+                'visitante:id,nome,user_id,escudo_clube_id',
+                'mandante.escudo:id,clube_imagem',
+                'visitante.escudo:id,clube_imagem',
+            ])
             ->where('liga_id', $liga->id)
             ->whereIn('estado', [
                 'confirmacao_necessaria',
@@ -1807,6 +1812,7 @@ class LegacyController extends Controller
             $opponent = $this->legacyOpponentName($partida, (int) $clube->id);
             $mandante = $partida->placar_mandante ?? '-';
             $visitante = $partida->placar_visitante ?? '-';
+            $avaliacao = $avaliacoes->get($partida->id);
 
             $messages[] = [
                 'id' => 'confirmation-'.$partida->id,
@@ -1816,8 +1822,25 @@ class LegacyController extends Controller
                 'content' => "Seu adversario registrou {$mandante} x {$visitante}. Confirme ou conteste no Match Center.",
                 'date' => $partida->placar_registrado_em?->toIso8601String(),
                 'urgent' => true,
-                'action' => 'MATCH',
-                'action_label' => 'IR PARA CONFRONTOS',
+                'action' => 'MATCH_CONFIRM',
+                'action_label' => 'CONFIRMAR RESULTADO',
+                'action_payload' => [
+                    'partida_id' => (int) $partida->id,
+                    'estado' => (string) $partida->estado,
+                    'mandante' => (string) ($partida->mandante?->nome ?? 'MANDANTE'),
+                    'visitante' => (string) ($partida->visitante?->nome ?? 'VISITANTE'),
+                    'mandante_logo' => $this->resolveEscudoUrl($partida->mandante?->escudo?->clube_imagem),
+                    'visitante_logo' => $this->resolveEscudoUrl($partida->visitante?->escudo?->clube_imagem),
+                    'placar_mandante' => $partida->placar_mandante,
+                    'placar_visitante' => $partida->placar_visitante,
+                    'placar_registrado_por' => $partida->placar_registrado_por,
+                    'is_mandante' => (int) $partida->mandante_id === (int) $clube->id,
+                    'is_visitante' => (int) $partida->visitante_id === (int) $clube->id,
+                    'avaliacao' => $avaliacao ? [
+                        'nota' => $avaliacao->nota,
+                        'avaliado_user_id' => $avaliacao->avaliado_user_id,
+                    ] : null,
+                ],
             ];
         }
 

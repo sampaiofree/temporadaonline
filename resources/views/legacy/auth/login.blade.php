@@ -141,6 +141,7 @@
 
                 <form method="POST" action="{{ route('legacy.login.store') }}" class="space-y-4">
                     @csrf
+                    <input type="hidden" name="remember" value="1">
 
                     <div>
                         <label for="email" class="block text-[10px] font-black text-[#ffd700] uppercase italic tracking-[0.22em] mb-2">Email</label>

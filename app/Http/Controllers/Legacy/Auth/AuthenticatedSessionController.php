@@ -23,7 +23,7 @@ class AuthenticatedSessionController extends Controller
                 return redirect()->route('legacy.primeiro_acesso');
             }
 
-            return redirect()->route('legacy.index');
+            return redirect()->to($this->legacyHubUrl());
         }
 
         return view('legacy.auth.login');
@@ -32,7 +32,12 @@ class AuthenticatedSessionController extends Controller
     public function store(LoginRequest $request): RedirectResponse
     {
         if ($request->user()) {
-            return redirect()->route('legacy.index');
+            return redirect()->to($this->legacyHubUrl());
+        }
+
+        // Legacy login keeps users authenticated by default, even without a visible "remember me" checkbox.
+        if (! $request->has('remember')) {
+            $request->merge(['remember' => '1']);
         }
 
         $request->authenticate();
@@ -42,7 +47,9 @@ class AuthenticatedSessionController extends Controller
             return redirect()->route('legacy.primeiro_acesso');
         }
 
-        return redirect()->intended(route('legacy.index'));
+        $request->session()->forget('url.intended');
+
+        return redirect()->to($this->legacyHubUrl());
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -66,5 +73,10 @@ class AuthenticatedSessionController extends Controller
             ->exists();
 
         return ! ($this->hasCompleteProfile($user->profile) && $hasAvailability);
+    }
+
+    private function legacyHubUrl(): string
+    {
+        return route('legacy.index', ['view' => 'hub-global']);
     }
 }
