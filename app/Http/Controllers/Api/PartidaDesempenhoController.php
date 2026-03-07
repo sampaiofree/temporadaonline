@@ -7,7 +7,6 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\Partida;
 use App\Models\PartidaDesempenho;
-use App\Services\LeagueFinanceService;
 use App\Services\PartidaDesempenhoAiService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -19,13 +18,8 @@ class PartidaDesempenhoController extends Controller
 {
     public function __construct(
         private readonly PartidaDesempenhoAiService $aiService,
-        private readonly LeagueFinanceService $finance,
     ) {
     }
-
-    private const WINNER_PRIZE = 750_000;
-    private const LOSER_PRIZE = 50_000;
-    private const DRAW_PRIZE = 300_000;
 
     public function confirm(Request $request, Partida $partida): JsonResponse
     {
@@ -81,8 +75,6 @@ class PartidaDesempenhoController extends Controller
             foreach ($entries as $entry) {
                 PartidaDesempenho::create($entry);
             }
-
-            $this->awardMatchBonus($partida, $placarMandante, $placarVisitante);
         });
 
         return response()->json([
@@ -91,35 +83,6 @@ class PartidaDesempenhoController extends Controller
             'placar_visitante' => $placarVisitante,
             'estado' => $partida->estado,
         ]);
-    }
-
-    private function awardMatchBonus(Partida $partida, int $placarMandante, int $placarVisitante): void
-    {
-        $winnerClubId = null;
-        $loserClubId = null;
-        $prizeDescription = "Premiação da partida {$partida->id}";
-
-        if ($placarMandante === $placarVisitante) {
-            $this->finance->credit($partida->liga_id, $partida->mandante_id, self::DRAW_PRIZE, "{$prizeDescription} (empate)");
-            $this->finance->credit($partida->liga_id, $partida->visitante_id, self::DRAW_PRIZE, "{$prizeDescription} (empate)");
-            return;
-        }
-
-        if ($placarMandante > $placarVisitante) {
-            $winnerClubId = $partida->mandante_id;
-            $loserClubId = $partida->visitante_id;
-        } else {
-            $winnerClubId = $partida->visitante_id;
-            $loserClubId = $partida->mandante_id;
-        }
-
-        if ($winnerClubId) {
-            $this->finance->credit($partida->liga_id, $winnerClubId, self::WINNER_PRIZE, "{$prizeDescription} (vencedor)");
-        }
-
-        if ($loserClubId) {
-            $this->finance->credit($partida->liga_id, $loserClubId, self::LOSER_PRIZE, "{$prizeDescription} (derrotado)");
-        }
     }
 
     public function preview(Request $request, Partida $partida): JsonResponse

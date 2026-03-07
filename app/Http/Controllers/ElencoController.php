@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaClubeAjusteSalarial;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaPeriodo;
 use App\Services\SalaryReserveGuardService;
@@ -121,6 +122,23 @@ class ElencoController extends Controller
                     $entry->wage_eur = $nextWage;
                 }
                 $entry->save();
+
+                if ($nextWage !== $currentWage) {
+                    $confederacaoId = (int) ($entry->confederacao_id ?? $liga->confederacao_id ?? 0);
+                    if ($confederacaoId <= 0) {
+                        return $entry;
+                    }
+
+                    LigaClubeAjusteSalarial::query()->create([
+                        'user_id' => (int) $club->user_id,
+                        'confederacao_id' => $confederacaoId,
+                        'liga_id' => (int) $entry->liga_id,
+                        'liga_clube_id' => (int) $entry->liga_clube_id,
+                        'liga_clube_elenco_id' => (int) $entry->id,
+                        'wage_anterior' => $currentWage,
+                        'wage_novo' => $nextWage,
+                    ]);
+                }
 
                 return $entry;
             }, 3);

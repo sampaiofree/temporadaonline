@@ -2,13 +2,15 @@
 
 namespace App\Services;
 
-use App\Models\LigaClubeElenco;
 use App\Models\Partida;
+use App\Models\PartidaFolhaPagamento;
 use Illuminate\Support\Facades\DB;
 
 class PartidaPayrollService
 {
-    private const WO_FINE_MULTIPLIER = 0.2;
+    private const DEFAULT_WIN_REWARD = 750000;
+    private const DEFAULT_DRAW_REWARD = 300000;
+    private const DEFAULT_LOSS_REWARD = 50000;
 
     public function __construct(private readonly LeagueFinanceService $finance)
     {
@@ -29,30 +31,26 @@ class PartidaPayrollService
             return;
         }
 
-        $wagesByClub = LigaClubeElenco::query()
-            ->selectRaw('liga_clube_id, SUM(wage_eur) as total_wage')
-            ->where('liga_id', $partida->liga_id)
-            ->whereIn('liga_clube_id', $clubIds)
-            ->where('ativo', true)
-            ->groupBy('liga_clube_id')
-            ->pluck('total_wage', 'liga_clube_id');
-
-        $penalizedClubId = $partida->estado === 'wo' ? $this->resolveWoPenalizedClubId($partida) : null;
+        $rewardsByClub = $this->resolveRewardsByClub($partida, $clubIds);
         $now = now();
 
         foreach ($clubIds as $clubId) {
-            $totalWage = (int) ($wagesByClub[$clubId] ?? 0);
-            $multaWo = $penalizedClubId && (int) $penalizedClubId === (int) $clubId
-                ? (int) round($totalWage * self::WO_FINE_MULTIPLIER)
-                : 0;
+            $reward = $rewardsByClub[$clubId] ?? null;
+            if (! is_array($reward)) {
+                continue;
+            }
 
-            DB::transaction(function () use ($partida, $clubId, $totalWage, $multaWo, $now): void {
+            $tipo = (string) ($reward['tipo'] ?? PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD);
+            $valor = max(0, (int) ($reward['valor'] ?? 0));
+
+            DB::transaction(function () use ($partida, $clubId, $tipo, $valor, $now): void {
                 $inserted = DB::table('partida_folha_pagamento')->insertOrIgnore([
                     'liga_id' => $partida->liga_id,
                     'partida_id' => $partida->id,
                     'clube_id' => $clubId,
-                    'total_wage' => $totalWage,
-                    'multa_wo' => $multaWo,
+                    'tipo' => $tipo,
+                    'total_wage' => $valor,
+                    'multa_wo' => 0,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -61,15 +59,119 @@ class PartidaPayrollService
                     return;
                 }
 
-                $this->finance->debit(
+                if ($valor <= 0) {
+                    return;
+                }
+
+                $reason = match ($tipo) {
+                    PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => "Ganho de vitória da partida {$partida->id}",
+                    PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => "Ganho de empate da partida {$partida->id}",
+                    PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => "Ganho de derrota da partida {$partida->id}",
+                    default => "Ganho da partida {$partida->id}",
+                };
+
+                $this->finance->credit(
                     $partida->liga_id,
                     $clubId,
-                    $totalWage + $multaWo,
-                    "Cobrança de salário da partida {$partida->id}",
-                    allowNegative: true,
+                    $valor,
+                    $reason,
                 );
             }, 3);
         }
+    }
+
+    /**
+     * @param array<int, int> $clubIds
+     * @return array<int, array{tipo: string, valor: int}>
+     */
+    private function resolveRewardsByClub(Partida $partida, array $clubIds): array
+    {
+        $partida->loadMissing(['liga.confederacao', 'mandante.user', 'visitante.user']);
+
+        $winReward = max(
+            0,
+            (int) ($partida->liga?->confederacao?->ganho_vitoria_partida ?? self::DEFAULT_WIN_REWARD)
+        );
+        $drawReward = max(
+            0,
+            (int) ($partida->liga?->confederacao?->ganho_empate_partida ?? self::DEFAULT_DRAW_REWARD)
+        );
+        $lossReward = max(
+            0,
+            (int) ($partida->liga?->confederacao?->ganho_derrota_partida ?? self::DEFAULT_LOSS_REWARD)
+        );
+
+        if ($partida->estado === 'wo') {
+            $loserClubId = $this->resolveWoPenalizedClubId($partida);
+            if (! $loserClubId) {
+                return [];
+            }
+
+            $winnerClubId = null;
+            foreach ($clubIds as $clubId) {
+                if ((int) $clubId !== (int) $loserClubId) {
+                    $winnerClubId = (int) $clubId;
+                    break;
+                }
+            }
+
+            if (! $winnerClubId) {
+                return [];
+            }
+
+            return [
+                $winnerClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
+                    'valor' => $winReward,
+                ],
+                (int) $loserClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
+                    'valor' => $lossReward,
+                ],
+            ];
+        }
+
+        $mandanteGoals = (int) ($partida->placar_mandante ?? 0);
+        $visitanteGoals = (int) ($partida->placar_visitante ?? 0);
+        $mandanteClubId = (int) $partida->mandante_id;
+        $visitanteClubId = (int) $partida->visitante_id;
+
+        if ($mandanteGoals === $visitanteGoals) {
+            return [
+                $mandanteClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD,
+                    'valor' => $drawReward,
+                ],
+                $visitanteClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD,
+                    'valor' => $drawReward,
+                ],
+            ];
+        }
+
+        if ($mandanteGoals > $visitanteGoals) {
+            return [
+                $mandanteClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
+                    'valor' => $winReward,
+                ],
+                $visitanteClubId => [
+                    'tipo' => PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
+                    'valor' => $lossReward,
+                ],
+            ];
+        }
+
+        return [
+            $mandanteClubId => [
+                'tipo' => PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
+                'valor' => $lossReward,
+            ],
+            $visitanteClubId => [
+                'tipo' => PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
+                'valor' => $winReward,
+            ],
+        ];
     }
 
     private function resolveWoPenalizedClubId(Partida $partida): ?int

@@ -48,7 +48,6 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/partidas/{partida}/registrar-placar', [PartidaActionsController::class, 'registrarPlacar']);
     Route::post('/partidas/{partida}/confirmar-placar', [PartidaActionsController::class, 'confirmarPlacar']);
     Route::post('/partidas/{partida}/reclamacoes', [PartidaActionsController::class, 'reclamar']);
-    Route::post('/partidas/{partida}/denunciar', [PartidaActionsController::class, 'denunciar']);
     Route::post('/partidas/{partida}/avaliacoes', [PartidaAvaliacaoController::class, 'store']);
     Route::post('/partidas/{partida}/desistir', [PartidaActionsController::class, 'desistir']);
     Route::post('/partidas/{partida}/desempenho/preview', [PartidaDesempenhoController::class, 'preview']);

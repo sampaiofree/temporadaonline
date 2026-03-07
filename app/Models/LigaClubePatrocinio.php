@@ -12,11 +12,15 @@ class LigaClubePatrocinio extends Model
     protected $fillable = [
         'liga_id',
         'liga_clube_id',
+        'user_id',
+        'confederacao_id',
         'patrocinio_id',
         'claimed_at',
     ];
 
     protected $casts = [
+        'user_id' => 'integer',
+        'confederacao_id' => 'integer',
         'claimed_at' => 'datetime',
     ];
 

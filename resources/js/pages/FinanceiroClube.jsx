@@ -31,8 +31,12 @@ const TYPE_LABELS = {
     multa: 'Multa',
     troca: 'Troca',
     compra: 'Compra',
+    debito_salario_legacy: 'Débito salarial legado',
     salario_partida: 'Salário da partida',
     multa_wo: 'Multa W.O.',
+    ganho_partida_vitoria: 'Ganho por vitória',
+    ganho_partida_empate: 'Ganho por empate',
+    ganho_partida_derrota: 'Ganho por derrota',
 };
 
 export default function FinanceiroClube() {

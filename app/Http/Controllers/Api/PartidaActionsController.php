@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
-use App\Models\PartidaDenuncia;
 use App\Models\ReclamacaoPartida;
 use App\Services\PartidaStateService;
 use Carbon\Carbon;
@@ -253,42 +252,6 @@ class PartidaActionsController extends Controller
             'wo_motivo' => $partida->wo_motivo,
             'placar_mandante' => $partida->placar_mandante,
             'placar_visitante' => $partida->placar_visitante,
-        ]);
-    }
-
-    public function denunciar(Request $request, Partida $partida): JsonResponse
-    {
-        $user = $request->user();
-        $this->assertParticipante($user->id, $partida);
-        $this->state->assertActionAllowed($partida, ['placar_registrado']);
-
-        if ($partida->placar_registrado_por === $user->id) {
-            abort(403, 'O registrante nao pode denunciar a partida.');
-        }
-
-        $data = $request->validate([
-            'descricao' => ['required', 'string', 'max:1000'],
-        ]);
-
-        $denuncia = PartidaDenuncia::create([
-            'partida_id' => $partida->id,
-            'user_id' => $user->id,
-            'motivo' => 'texto',
-            'descricao' => $data['descricao'],
-        ]);
-
-        $this->state->transitionTo(
-            $partida,
-            'em_reclamacao',
-            [],
-            'placar_denunciado',
-            $user->id,
-            ['denuncia_id' => $denuncia->id],
-        );
-
-        return response()->json([
-            'message' => 'Denúncia registrada.',
-            'estado' => $partida->estado,
         ]);
     }
 

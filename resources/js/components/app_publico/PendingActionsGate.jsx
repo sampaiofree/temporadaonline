@@ -120,8 +120,10 @@ export default function PendingActionsGate() {
         setError('');
 
         try {
-            await window.axios.post(`/api/partidas/${activeConfirmation.id}/denunciar`, {
+            await window.axios.post(`/api/partidas/${activeConfirmation.id}/reclamacoes`, {
+                motivo: 'outro',
                 descricao: denunciaTexto.trim(),
+                imagem: null,
             });
             await fetchPending();
         } catch (err) {

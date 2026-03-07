@@ -15,6 +15,10 @@ class Conquista extends Model
         'n_gols_sofridos' => 'Gols sofridos',
         'n_vitorias' => 'Vitorias',
         'n_hat_trick' => 'Hat-trick',
+        'agendar_partidas' => 'Agendar partidas',
+        'enviar_sumula' => 'Enviar sumula',
+        'avaliacoes' => 'Avaliacoes',
+        'ajuste_salarial' => 'Ajuste salarial',
     ];
 
     protected $fillable = [

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesLiga;
-use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaClubeConquista;
@@ -41,12 +40,13 @@ class LigaClubePerfilController extends Controller
             ->where('clube_id', $clube->id)
             ->value('saldo') ?? 0);
         $clubValue = $valorElenco + $saldo;
-        $fansTotal = $this->sumClaimedConquistaFans($liga, $clube);
+        $confederacaoId = (int) ($clube->confederacao_id ?? $liga->confederacao_id ?? 0);
+        $fansTotal = $this->sumClaimedConquistaFans((int) $clube->user_id, $confederacaoId);
 
         $achievements = LigaClubeConquista::query()
             ->with('conquista')
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $confederacaoId)
             ->whereNotNull('claimed_at')
             ->orderByDesc('claimed_at')
             ->get()
@@ -139,11 +139,15 @@ class LigaClubePerfilController extends Controller
         return \Storage::disk('public')->url($path);
     }
 
-    private function sumClaimedConquistaFans(Liga $liga, LigaClube $clube): int
+    private function sumClaimedConquistaFans(int $userId, int $confederacaoId): int
     {
+        if ($userId <= 0 || $confederacaoId <= 0) {
+            return 0;
+        }
+
         return (int) LigaClubeConquista::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $userId)
+            ->where('confederacao_id', $confederacaoId)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');

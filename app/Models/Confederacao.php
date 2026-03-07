@@ -15,9 +15,18 @@ class Confederacao extends Model
         'descricao',
         'imagem',
         'timezone',
+        'ganho_vitoria_partida',
+        'ganho_empate_partida',
+        'ganho_derrota_partida',
         'jogo_id',
         'geracao_id',
         'plataforma_id',
+    ];
+
+    protected $casts = [
+        'ganho_vitoria_partida' => 'integer',
+        'ganho_empate_partida' => 'integer',
+        'ganho_derrota_partida' => 'integer',
     ];
 
     public function ligas(): HasMany

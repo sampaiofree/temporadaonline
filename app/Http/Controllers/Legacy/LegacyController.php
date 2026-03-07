@@ -26,6 +26,7 @@ use App\Models\PlayerFavorite;
 use App\Models\Temporada;
 use App\Models\User;
 use App\Services\AuctionService;
+use App\Services\ConquistaProgressService;
 use App\Services\LeagueFinanceService;
 use App\Services\MarketWindowService;
 use Illuminate\Http\JsonResponse;
@@ -38,10 +39,12 @@ use Illuminate\View\View;
 
 class LegacyController extends Controller
 {
-    private const MATCH_WINNER_PRIZE = 750_000;
-    private const MATCH_LOSER_PRIZE = 50_000;
-    private const MATCH_DRAW_PRIZE = 300_000;
     private const TARGET_ACTIVE_ROSTER_COUNT = 18;
+
+    public function __construct(
+        private readonly ConquistaProgressService $conquistaProgressService,
+    ) {
+    }
 
     public function index(Request $request): View
     {
@@ -1577,8 +1580,8 @@ class LegacyController extends Controller
 
         $conquistaProgress = $this->computeLegacyConquistaProgress($liga, $clube);
         $claimedConquistaIds = LigaClubeConquista::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->whereNotNull('claimed_at')
             ->pluck('conquista_id')
             ->map(fn ($id) => (int) $id)
@@ -1627,15 +1630,15 @@ class LegacyController extends Controller
         }
 
         $fans = (int) LigaClubeConquista::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
 
         $claimedPatrocinioIds = LigaClubePatrocinio::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->whereNotNull('claimed_at')
             ->pluck('patrocinio_id')
             ->map(fn ($id) => (int) $id)
@@ -2154,8 +2157,8 @@ class LegacyController extends Controller
             ->count();
 
         $fans = (int) LigaClubeConquista::query()
-            ->where('liga_id', $userClub->liga_id)
-            ->where('liga_clube_id', $userClub->id)
+            ->where('user_id', $userClub->user_id)
+            ->where('confederacao_id', $scopeConfederacaoId)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
@@ -2857,11 +2860,7 @@ class LegacyController extends Controller
                 'message' => 'Nenhuma liga encontrada para esta confederacao.',
                 'liga' => null,
                 'clube' => null,
-                'progress' => [
-                    'gols' => 0,
-                    'assistencias' => 0,
-                    'quantidade_jogos' => 0,
-                ],
+                'progress' => $this->conquistaProgressService->emptyProgress(),
                 'groups' => [],
                 'onboarding_url' => route('legacy.onboarding_clube'),
             ], 404);
@@ -2880,8 +2879,8 @@ class LegacyController extends Controller
         $claimedByConquistaId = collect();
         if ($clube) {
             $claimedByConquistaId = LigaClubeConquista::query()
-                ->where('liga_id', $liga->id)
-                ->where('liga_clube_id', $clube->id)
+                ->where('user_id', $clube->user_id)
+                ->where('confederacao_id', $liga->confederacao_id)
                 ->whereNotNull('claimed_at')
                 ->get(['conquista_id', 'claimed_at'])
                 ->mapWithKeys(fn (LigaClubeConquista $registro) => [
@@ -3001,8 +3000,8 @@ class LegacyController extends Controller
 
         $fans = $clube
             ? (int) LigaClubeConquista::query()
-                ->where('liga_id', $liga->id)
-                ->where('liga_clube_id', $clube->id)
+                ->where('user_id', $clube->user_id)
+                ->where('confederacao_id', $liga->confederacao_id)
                 ->whereNotNull('claimed_at')
                 ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
                 ->sum('conquistas.fans')
@@ -3011,8 +3010,8 @@ class LegacyController extends Controller
         $claimedByPatrocinioId = collect();
         if ($clube) {
             $claimedByPatrocinioId = LigaClubePatrocinio::query()
-                ->where('liga_id', $liga->id)
-                ->where('liga_clube_id', $clube->id)
+                ->where('user_id', $clube->user_id)
+                ->where('confederacao_id', $liga->confederacao_id)
                 ->whereNotNull('claimed_at')
                 ->get(['patrocinio_id', 'claimed_at'])
                 ->mapWithKeys(fn (LigaClubePatrocinio $registro) => [
@@ -3118,8 +3117,8 @@ class LegacyController extends Controller
         }
 
         $fans = (int) LigaClubeConquista::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
@@ -3131,8 +3130,8 @@ class LegacyController extends Controller
         }
 
         $existing = LigaClubePatrocinio::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->where('patrocinio_id', $patrocinio->id)
             ->first();
 
@@ -3151,6 +3150,8 @@ class LegacyController extends Controller
         $record->fill([
             'liga_id' => $liga->id,
             'liga_clube_id' => $clube->id,
+            'user_id' => $clube->user_id,
+            'confederacao_id' => $liga->confederacao_id,
             'patrocinio_id' => $patrocinio->id,
         ]);
         $record->claimed_at = now();
@@ -3471,45 +3472,41 @@ class LegacyController extends Controller
             ? (int) floor($saldo / $salarioPorRodada)
             : null;
 
-        $matches = Partida::query()
-            ->with(['mandante:id,nome', 'visitante:id,nome'])
+        $tiposGanhosPartida = [
+            PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
+            PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD,
+            PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
+        ];
+        $ganhosPartidasTotal = (int) PartidaFolhaPagamento::query()
             ->where('liga_id', $liga->id)
-            ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
-            ->where(function ($query) use ($userClub): void {
-                $query->where('mandante_id', $userClub->id)
-                    ->orWhere('visitante_id', $userClub->id);
+            ->where('clube_id', $userClub->id)
+            ->whereIn('tipo', $tiposGanhosPartida)
+            ->sum('total_wage');
+
+        $ganhosPartidasDetalhes = PartidaFolhaPagamento::query()
+            ->with('partida:id,scheduled_at')
+            ->where('liga_id', $liga->id)
+            ->where('clube_id', $userClub->id)
+            ->whereIn('tipo', $tiposGanhosPartida)
+            ->latest()
+            ->limit(5)
+            ->get(['id', 'partida_id', 'tipo', 'total_wage', 'created_at'])
+            ->map(function (PartidaFolhaPagamento $pagamento): array {
+                return [
+                    'id' => "partida-ganho-{$pagamento->id}",
+                    'partida_id' => $pagamento->partida_id,
+                    'label' => match ($pagamento->tipo) {
+                        PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => "Vitória na partida #{$pagamento->partida_id}",
+                        PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => "Empate na partida #{$pagamento->partida_id}",
+                        PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => "Derrota na partida #{$pagamento->partida_id}",
+                        default => "Ganho da partida #{$pagamento->partida_id}",
+                    },
+                    'valor' => (int) $pagamento->total_wage,
+                    'scheduled_at' => $pagamento->partida?->scheduled_at?->toDateString(),
+                ];
             })
-            ->orderByDesc('id')
-            ->get([
-                'id',
-                'mandante_id',
-                'visitante_id',
-                'placar_mandante',
-                'placar_visitante',
-                'estado',
-                'scheduled_at',
-            ]);
-
-        $ganhosPartidasTotal = 0;
-        $ganhosPartidasDetalhes = [];
-        foreach ($matches as $partida) {
-            $earnings = $this->calculateMatchEarningsForClub($partida, (int) $userClub->id);
-
-            if ($earnings <= 0) {
-                continue;
-            }
-
-            $ganhosPartidasTotal += $earnings;
-            $ganhosPartidasDetalhes[] = [
-                'id' => "partida-ganho-{$partida->id}",
-                'partida_id' => $partida->id,
-                'label' => $this->describeMatchEarningsLabel($partida, (int) $userClub->id),
-                'valor' => $earnings,
-                'scheduled_at' => $partida->scheduled_at?->toDateString(),
-            ];
-        }
-
-        $ganhosPartidasDetalhes = array_slice($ganhosPartidasDetalhes, 0, 5);
+            ->values()
+            ->all();
 
         $movimentosTransferenciasQuery = LigaTransferencia::query()
             ->where(function ($query) use ($userClub): void {
@@ -3564,15 +3561,39 @@ class LegacyController extends Controller
             ->where('clube_id', $userClub->id)
             ->latest()
             ->limit(10)
-            ->get(['id', 'partida_id', 'total_wage', 'multa_wo', 'created_at'])
+            ->get(['id', 'partida_id', 'tipo', 'total_wage', 'multa_wo', 'created_at'])
             ->flatMap(function (PartidaFolhaPagamento $pagamento) use ($userClub) {
                 $items = [];
+                $tipo = (string) ($pagamento->tipo ?: PartidaFolhaPagamento::TYPE_LEGACY_SALARY_DEBIT);
+
+                if (in_array($tipo, [
+                    PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
+                    PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD,
+                    PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
+                ], true)) {
+                    $items[] = [
+                        'id' => 'partida-ganho-'.$pagamento->id,
+                        'tipo' => $tipo,
+                        'valor' => (int) $pagamento->total_wage,
+                        'observacao' => match ($tipo) {
+                            PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => "Ganho por vitória da partida #{$pagamento->partida_id}",
+                            PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => "Ganho por empate da partida #{$pagamento->partida_id}",
+                            PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => "Ganho por derrota da partida #{$pagamento->partida_id}",
+                            default => "Ganho da partida #{$pagamento->partida_id}",
+                        },
+                        'created_at' => $pagamento->created_at,
+                        'clube_origem_id' => null,
+                        'clube_destino_id' => $userClub->id,
+                    ];
+
+                    return $items;
+                }
 
                 $items[] = [
                     'id' => 'partida-salario-'.$pagamento->id,
-                    'tipo' => 'salario_partida',
+                    'tipo' => PartidaFolhaPagamento::TYPE_LEGACY_SALARY_DEBIT,
                     'valor' => (int) $pagamento->total_wage,
-                    'observacao' => "SalÃƒÆ’Ã‚Â¡rio da partida #{$pagamento->partida_id}",
+                    'observacao' => "Débito salarial legado da partida #{$pagamento->partida_id}",
                     'created_at' => $pagamento->created_at,
                     'clube_origem_id' => $userClub->id,
                     'clube_destino_id' => null,
@@ -3603,8 +3624,8 @@ class LegacyController extends Controller
 
         $patrocinioResgatados = LigaClubePatrocinio::query()
             ->with('patrocinio')
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $userClub->id)
+            ->where('user_id', $userClub->user_id)
+            ->where('confederacao_id', $scopeConfederacaoId)
             ->whereNotNull('claimed_at')
             ->orderByDesc('claimed_at')
             ->get()
@@ -3696,8 +3717,8 @@ class LegacyController extends Controller
         }
 
         $existing = LigaClubeConquista::query()
-            ->where('liga_id', $liga->id)
-            ->where('liga_clube_id', $clube->id)
+            ->where('user_id', $clube->user_id)
+            ->where('confederacao_id', $liga->confederacao_id)
             ->where('conquista_id', $conquista->id)
             ->first();
 
@@ -3713,6 +3734,8 @@ class LegacyController extends Controller
         $record->fill([
             'liga_id' => $liga->id,
             'liga_clube_id' => $clube->id,
+            'user_id' => $clube->user_id,
+            'confederacao_id' => $liga->confederacao_id,
             'conquista_id' => $conquista->id,
         ]);
         $record->claimed_at = now();
@@ -3817,16 +3840,16 @@ class LegacyController extends Controller
             ->sum('assistencias') ?? 0);
 
         $fans = (int) LigaClubeConquista::query()
-            ->where('liga_id', $club->liga_id)
-            ->where('liga_clube_id', $club->id)
+            ->where('user_id', $club->user_id)
+            ->where('confederacao_id', $club->confederacao_id)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
         $clubSize = $this->resolveClubeTamanhoByFans($fans);
 
         $trophies = LigaClubeConquista::query()
-            ->where('liga_id', $club->liga_id)
-            ->where('liga_clube_id', $club->id)
+            ->where('user_id', $club->user_id)
+            ->where('confederacao_id', $club->confederacao_id)
             ->whereNotNull('claimed_at')
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->orderByDesc('liga_clube_conquistas.claimed_at')
@@ -4463,42 +4486,18 @@ class LegacyController extends Controller
     }
 
     /**
-     * @return array{gols:int,assistencias:int,quantidade_jogos:int}
+     * @return array<string, int|float>
      */
     private function computeLegacyConquistaProgress(?Liga $liga, ?LigaClube $clube): array
     {
         if (! $liga || ! $clube) {
-            return [
-                'gols' => 0,
-                'assistencias' => 0,
-                'quantidade_jogos' => 0,
-            ];
+            return $this->conquistaProgressService->emptyProgress();
         }
 
-        $states = ['placar_registrado', 'placar_confirmado', 'wo'];
-        $partidasJogadas = Partida::query()
-            ->where('liga_id', $liga->id)
-            ->whereIn('estado', $states)
-            ->where(function ($query) use ($clube): void {
-                $query->where('mandante_id', $clube->id)
-                    ->orWhere('visitante_id', $clube->id);
-            })
-            ->count();
-
-        $desempenhos = PartidaDesempenho::query()
-            ->selectRaw('COALESCE(SUM(gols), 0) as total_gols, COALESCE(SUM(assistencias), 0) as total_assistencias')
-            ->where('liga_clube_id', $clube->id)
-            ->whereHas('partida', function ($query) use ($liga, $states): void {
-                $query->where('liga_id', $liga->id)
-                    ->whereIn('estado', $states);
-            })
-            ->first();
-
-        return [
-            'gols' => (int) ($desempenhos?->total_gols ?? 0),
-            'assistencias' => (int) ($desempenhos?->total_assistencias ?? 0),
-            'quantidade_jogos' => (int) $partidasJogadas,
-        ];
+        return $this->conquistaProgressService->progressForConfederacao(
+            (int) $clube->user_id,
+            (int) ($liga->confederacao_id ?? 0),
+        );
     }
 
     private function resolveMarketLiga(User $user, ?int $confederacaoId): ?Liga
@@ -4544,39 +4543,6 @@ class LegacyController extends Controller
             'ligas.confederacao_id',
             'ligas.timezone',
         ]);
-    }
-
-    private function calculateMatchEarningsForClub(Partida $partida, int $clubeId): int
-    {
-        $mandanteGoals = (int) ($partida->placar_mandante ?? 0);
-        $visitanteGoals = (int) ($partida->placar_visitante ?? 0);
-
-        if ($mandanteGoals === $visitanteGoals) {
-            return self::MATCH_DRAW_PRIZE;
-        }
-
-        $isMandante = (int) $clubeId === (int) $partida->mandante_id;
-        $mandanteWins = $mandanteGoals > $visitanteGoals;
-        $clubWon = ($isMandante && $mandanteWins) || (! $isMandante && ! $mandanteWins);
-
-        return $clubWon ? self::MATCH_WINNER_PRIZE : self::MATCH_LOSER_PRIZE;
-    }
-
-    private function describeMatchEarningsLabel(Partida $partida, int $clubeId): string
-    {
-        $isMandante = (int) $clubeId === (int) $partida->mandante_id;
-        $mandanteGoals = (int) ($partida->placar_mandante ?? 0);
-        $visitanteGoals = (int) ($partida->placar_visitante ?? 0);
-        $opponent = $isMandante ? $partida->visitante?->nome : $partida->mandante?->nome;
-        $opponent = $opponent ?: 'adversÃƒÆ’Ã‚Â¡rio';
-
-        if ($mandanteGoals === $visitanteGoals) {
-            return "Empate vs {$opponent}";
-        }
-
-        $result = ($isMandante === ($mandanteGoals > $visitanteGoals)) ? 'VitÃƒÆ’Ã‚Â³ria' : 'Derrota';
-
-        return "{$result} vs {$opponent}";
     }
 
     private function resolveEscudoUrl(?string $path): ?string

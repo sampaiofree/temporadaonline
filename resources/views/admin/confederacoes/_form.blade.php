@@ -19,6 +19,9 @@
     $currentJogoId = old('jogo_id', $confederacao->jogo_id ?? '');
     $currentGeracaoId = old('geracao_id', $confederacao->geracao_id ?? '');
     $timezoneAtual = old('timezone', $confederacao->timezone ?? 'America/Sao_Paulo');
+    $ganhoVitoriaPartidaAtual = old('ganho_vitoria_partida', $confederacao->ganho_vitoria_partida ?? 750000);
+    $ganhoEmpatePartidaAtual = old('ganho_empate_partida', $confederacao->ganho_empate_partida ?? 300000);
+    $ganhoDerrotaPartidaAtual = old('ganho_derrota_partida', $confederacao->ganho_derrota_partida ?? 50000);
 
     $periodos = old('periodos');
     if ($periodos === null) {
@@ -148,6 +151,63 @@
         @error('timezone')
             <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
         @enderror
+    </div>
+
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-4">
+        <div>
+            <p class="text-sm font-semibold text-slate-700">Ganhos por partida</p>
+            <p class="text-xs text-slate-500">Valores em EUR creditados após confirmação final da partida.</p>
+        </div>
+        <div class="grid gap-4 md:grid-cols-3">
+            <div>
+                <label for="ganho_vitoria_partida" class="block text-sm font-semibold text-slate-700">Vitória</label>
+                <input
+                    type="number"
+                    id="ganho_vitoria_partida"
+                    name="ganho_vitoria_partida"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ $ganhoVitoriaPartidaAtual }}"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @error('ganho_vitoria_partida')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label for="ganho_empate_partida" class="block text-sm font-semibold text-slate-700">Empate</label>
+                <input
+                    type="number"
+                    id="ganho_empate_partida"
+                    name="ganho_empate_partida"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ $ganhoEmpatePartidaAtual }}"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @error('ganho_empate_partida')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+            <div>
+                <label for="ganho_derrota_partida" class="block text-sm font-semibold text-slate-700">Derrota</label>
+                <input
+                    type="number"
+                    id="ganho_derrota_partida"
+                    name="ganho_derrota_partida"
+                    min="0"
+                    step="1"
+                    required
+                    value="{{ $ganhoDerrotaPartidaAtual }}"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                >
+                @error('ganho_derrota_partida')
+                    <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
+        </div>
     </div>
 
     @if($lockSelections)

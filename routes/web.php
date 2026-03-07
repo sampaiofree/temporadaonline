@@ -15,7 +15,7 @@ use App\Http\Controllers\Admin\LigaJogadorController as AdminLigaJogadorControll
 use App\Http\Controllers\Admin\ClubeTamanhoController as AdminClubeTamanhoController;
 use App\Http\Controllers\Admin\EscudoClubeController as AdminEscudoClubeController;
 use App\Http\Controllers\Admin\PlaystyleController as AdminPlaystyleController;
-use App\Http\Controllers\Admin\PartidaDenunciaController as AdminPartidaDenunciaController;
+use App\Http\Controllers\Admin\PartidaReclamacaoController as AdminPartidaReclamacaoController;
 use App\Http\Controllers\Admin\AppAssetController as AdminAppAssetController;
 use App\Http\Controllers\Admin\IdiomaRegiaoController as AdminIdiomaRegiaoController;
 use App\Http\Controllers\Admin\ConquistaController as AdminConquistaController;
@@ -119,8 +119,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::post('whatsapp/{connection}/status', [AdminWhatsappConnectionController::class, 'refreshStatus'])->name('whatsapp.status');
     Route::post('whatsapp/{connection}/restart', [AdminWhatsappConnectionController::class, 'restart'])->name('whatsapp.restart');
     Route::post('whatsapp/{connection}/logout', [AdminWhatsappConnectionController::class, 'logout'])->name('whatsapp.logout');
-    Route::get('partidas-denuncias', [AdminPartidaDenunciaController::class, 'index'])
-        ->name('partidas-denuncias.index');
+    Route::get('partidas-reclamacoes', [AdminPartidaReclamacaoController::class, 'index'])
+        ->name('partidas-reclamacoes.index');
     Route::delete('ligas-escudos/bulk-destroy', [AdminLigaEscudoController::class, 'bulkDestroy'])->name('ligas-escudos.bulk-destroy');
     Route::resource('ligas-escudos', AdminLigaEscudoController::class, [
         'parameters' => ['ligas-escudos' => 'liga_escudo'],

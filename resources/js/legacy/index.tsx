@@ -124,6 +124,7 @@ const LEGACY_ALLOWED_VIEWS = new Set<string>([
   'schedule-matches',
   'report-match',
   'confirm-match',
+  'evaluate-match',
   'market',
   'my-club',
   'esquema-tatico',
@@ -692,7 +693,7 @@ const MCOBottomNav = ({
         const isClubSubView = ['my-club', 'esquema-tatico', 'squad', 'achievements', 'patrocinios', 'finance', 'trophies'].includes(activeView);
         const active = activeView === item.id || 
                        (item.id === 'my-club' && isClubSubView) ||
-                       (item.id === 'match-center' && (activeView === 'report-match' || activeView === 'confirm-match' || activeView === 'schedule-matches')) || 
+                       (item.id === 'match-center' && (activeView === 'report-match' || activeView === 'confirm-match' || activeView === 'evaluate-match' || activeView === 'schedule-matches')) || 
                        (item.id === 'hub-global' && (activeView === 'tournaments' || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
         return (
           <button key={item.id} onClick={() => onViewChange(item.id)} className={`relative flex flex-col items-center p-3 transition-all ${active ? 'text-[#FFD700]' : 'text-white/20'}`}>
@@ -2451,6 +2452,7 @@ const MatchCenterView = ({
   onOpenSchedule,
   onOpenFinalize,
   onOpenConfirm,
+  onOpenEvaluation,
   onOpenProfile,
   careers,
   currentCareer,
@@ -2461,6 +2463,7 @@ const MatchCenterView = ({
   onOpenSchedule: (partida?: any) => void,
   onOpenFinalize: (partida: any) => void,
   onOpenConfirm: (partida: any) => void,
+  onOpenEvaluation: (partida: any) => void,
   onOpenProfile: (name: string) => void,
   careers: any[],
   currentCareer: any,
@@ -2523,6 +2526,14 @@ const MatchCenterView = ({
   const pendingSummaries = useMemo(
     () => partidas.filter((partida) => partida?.estado === 'placar_registrado' && Number(partida?.placar_registrado_por) !== Number(clube?.user_id)),
     [partidas, clube?.user_id],
+  );
+  const pendingEvaluations = useMemo(
+    () =>
+      partidas.filter((partida) =>
+        ['placar_registrado', 'placar_confirmado', 'em_reclamacao', 'finalizada'].includes(String(partida?.estado || ''))
+        && !partida?.avaliacao,
+      ),
+    [partidas],
   );
   const recentResults = useMemo(
     () => partidas.filter((partida) => ['finalizada', 'placar_confirmado', 'wo', 'cancelada'].includes(String(partida?.estado || ''))).slice(0, 6),
@@ -2674,10 +2685,43 @@ const MatchCenterView = ({
 
             <LegacyReveal delayMs={160}>
               <section className="space-y-4">
+                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">AVALIAÇÕES PENDENTES</h4>
+                {pendingEvaluations.length > 0 ? pendingEvaluations.map((match, idx) => (
+                  <LegacyReveal key={`evaluation-${match.id}`} delayMs={180 + (idx * 22)}>
+                    <button
+                      type="button"
+                      onClick={() => onOpenEvaluation(match)}
+                      className="w-full text-left bg-[#1E1E1E] p-4 flex justify-between items-center border-r-[3px] border-[#22C55E] cursor-pointer active:scale-[0.99] transition-transform"
+                      style={{ clipPath: AGGRESSIVE_CLIP }}
+                    >
+                      <div>
+                        <p className="text-[11px] font-black italic text-white uppercase truncate">
+                          VS {match?.is_mandante ? match?.visitante : match?.mandante}
+                        </p>
+                        <p className="text-[8px] font-bold text-[#22C55E] uppercase italic tracking-widest">AVALIAÇÃO DO ADVERSÁRIO</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[8px] font-black text-white/30 uppercase italic">
+                          {LEGACY_MATCH_STATUS_LABELS[String(match?.estado || '')] || 'PARTIDA'}
+                        </p>
+                        <p className="text-xs font-black italic text-white">AVALIAR</p>
+                      </div>
+                    </button>
+                  </LegacyReveal>
+                )) : (
+                  <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[9px] text-white/40 font-black uppercase italic">Nenhuma avaliação pendente.</p>
+                  </div>
+                )}
+              </section>
+            </LegacyReveal>
+
+            <LegacyReveal delayMs={200}>
+              <section className="space-y-4">
                 <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">RESULTADOS RECENTES</h4>
                 <div className="space-y-2">
                   {recentResults.length > 0 ? recentResults.map((partida, idx) => (
-                    <LegacyReveal key={partida.id} delayMs={180 + (idx * 18)}>
+                    <LegacyReveal key={partida.id} delayMs={220 + (idx * 18)}>
                       <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
                         <div className="flex-1 min-w-0">
                           <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
@@ -2967,9 +3011,11 @@ const ReportMatchView = ({
           <MCOButton onClick={handleAnalyze} disabled={loading || saving || !canAnalyze || !mandanteImage || !visitanteImage}>
             {loading ? 'ANALISANDO...' : 'ANALISAR IMAGENS'}
           </MCOButton>
-          <MCOButton variant="outline" onClick={handleConfirm} disabled={loading || saving || !hasPreview || !canAnalyze}>
-            {saving ? 'SALVANDO...' : 'CONFIRMAR DADOS'}
-          </MCOButton>
+          {hasPreview && (
+            <MCOButton variant="outline" onClick={handleConfirm} disabled={loading || saving || !canAnalyze}>
+              {saving ? 'SALVANDO...' : 'CONFIRMAR DADOS'}
+            </MCOButton>
+          )}
         </div>
 
         {!canAnalyze && (
@@ -3251,6 +3297,129 @@ const ConfirmResultView = ({ onBack, match, onCompleted, onNotify }: any) => {
         <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest text-center px-4 leading-relaxed">
           * AO CONFIRMAR, VOCÊ CONCORDA QUE O PLACAR ACIMA É VERÍDICO E QUE O JOGO OCORREU DENTRO DAS REGRAS.
         </p>
+      </div>
+    </div>
+  );
+};
+
+const EvaluateMatchView = ({ onBack, match, onCompleted, onNotify }: any) => {
+  const [scoreValue, setScoreValue] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const opponentName = match?.is_mandante ? match?.visitante : match?.mandante;
+  const alreadyEvaluated = Number.isFinite(Number(match?.avaliacao?.nota));
+
+  useEffect(() => {
+    setScoreValue(0);
+    setSubmitting(false);
+    setError('');
+    setSuccess('');
+  }, [match?.id]);
+
+  const handleSubmit = async () => {
+    if (!match?.id) return;
+    if (alreadyEvaluated) {
+      setError('Você já avaliou este adversário.');
+      return;
+    }
+    if (scoreValue < 1) {
+      setError('Selecione uma nota de 1 a 5.');
+      return;
+    }
+
+    setSubmitting(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const payload = await jsonRequest(`/api/partidas/${match.id}/avaliacoes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          nota: Number(scoreValue),
+        }),
+      });
+
+      const message = String(payload?.message || 'Avaliação registrada com sucesso.');
+      setSuccess(message);
+      if (typeof onNotify === 'function') {
+        onNotify(message, 'success');
+      }
+      if (typeof onCompleted === 'function') {
+        onCompleted();
+      } else {
+        onBack();
+      }
+    } catch (currentError: any) {
+      setError(currentError?.message || 'Não foi possível registrar a avaliação.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!match) return null;
+
+  return (
+    <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
+      <header className="mb-8">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">AVALIAR ADVERSÁRIO</h2>
+        <p className="text-[10px] text-[#22C55E] font-bold tracking-[0.35em] uppercase italic">FAIR PLAY DA PARTIDA</p>
+      </header>
+
+      <div className="space-y-6">
+        <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#22C55E]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[9px] font-black italic uppercase tracking-[0.2em] text-[#22C55E] mb-3">
+            ADVERSÁRIO
+          </p>
+          <p className="text-2xl font-black italic font-heading text-white uppercase">
+            {String(opponentName || 'ADVERSÁRIO')}
+          </p>
+          <p className="text-[8px] text-white/40 font-black uppercase italic mt-3">
+            {LEGACY_MATCH_STATUS_LABELS[String(match?.estado || '')] || String(match?.estado || '').toUpperCase()}
+          </p>
+        </div>
+
+        {alreadyEvaluated ? (
+          <div className="bg-[#1E1E1E] p-5 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
+              Avaliação já registrada: nota {Number(match?.avaliacao?.nota).toFixed(1)}.
+            </p>
+          </div>
+        ) : (
+          <div className="bg-[#1E1E1E] p-6 border border-[#22C55E]/35" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <p className="text-[10px] font-black italic uppercase text-white/60 mb-4">Escolha uma nota de 1 a 5</p>
+            <div className="flex justify-center gap-3">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  type="button"
+                  onClick={() => setScoreValue(star)}
+                  className={`text-3xl transition-all ${scoreValue >= star ? 'text-[#FFD700]' : 'text-white/10'}`}
+                  disabled={submitting}
+                >
+                  <i className={`fas fa-star ${scoreValue >= star ? 'drop-shadow-[0_0_8px_#FFD700]' : ''}`}></i>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!!error && <p className="text-[9px] font-black uppercase italic text-[#B22222]">{error}</p>}
+        {!!success && <p className="text-[9px] font-black uppercase italic text-[#16A34A]">{success}</p>}
+
+        <div className="space-y-3">
+          <MCOButton
+            onClick={handleSubmit}
+            className="w-full py-6 text-lg"
+            disabled={submitting || alreadyEvaluated || scoreValue < 1}
+          >
+            {submitting ? 'ENVIANDO...' : 'ENVIAR AVALIAÇÃO'}
+          </MCOButton>
+        </div>
       </div>
     </div>
   );
@@ -9157,6 +9326,7 @@ const App = () => {
   const scrollByViewRef = useRef<Record<string, number>>({});
   const [marketQuickAuctionStatusFilter, setMarketQuickAuctionStatusFilter] = useState<string | null>(null);
   const [selectedPendingMatch, setSelectedPendingMatch] = useState<any>(null);
+  const [selectedEvaluationMatch, setSelectedEvaluationMatch] = useState<any>(null);
   const [selectedScheduleMatch, setSelectedScheduleMatch] = useState<any>(null);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
   const [matchCenterReloadToken, setMatchCenterReloadToken] = useState(0);
@@ -9482,6 +9652,11 @@ const App = () => {
     setView('confirm-match');
   };
 
+  const handleOpenEvaluation = (match: any) => {
+    setSelectedEvaluationMatch(match);
+    setView('evaluate-match');
+  };
+
   const handleOpenClubProfile = async (clubRef?: any) => {
     setView('public-club-profile');
     setClubProfileLoading(true);
@@ -9598,10 +9773,11 @@ const App = () => {
           setView('hub-global');
         }
       }} />;
-      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
+      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenEvaluation={handleOpenEvaluation} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
       case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedPendingMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedPendingMatch} />;
+      case 'evaluate-match': return <EvaluateMatchView onBack={() => { setView('match-center'); setSelectedEvaluationMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedEvaluationMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedEvaluationMatch} />;
       case 'market': return <MarketView onBack={() => setView('hub-global')} userStats={userStats} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} initialSubMode={marketSubMode} onSubModeChange={setMarketSubMode} onNotify={pushLegacyToast} quickAuctionStatusFilter={marketQuickAuctionStatusFilter} onQuickAuctionStatusFilterHandled={() => setMarketQuickAuctionStatusFilter(null)} />;
       case 'my-club': return <MyClubView onBack={() => setView('hub-global')} onOpenSubView={(id: string) => setView(id)} currentCareer={currentCareer} />;
       case 'esquema-tatico': return <EsquemaTaticoView onBack={() => setView('my-club')} currentCareer={currentCareer} />;

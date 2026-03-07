@@ -361,8 +361,10 @@ export default function LigaPartidas() {
         setModalError('');
 
         try {
-            await window.axios.post(`/api/partidas/${modal.partida.id}/denunciar`, {
+            await window.axios.post(`/api/partidas/${modal.partida.id}/reclamacoes`, {
+                motivo: 'outro',
                 descricao: denunciaForm.descricao,
+                imagem: null,
             });
 
             closeModal();

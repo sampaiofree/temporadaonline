@@ -76,8 +76,4 @@ class Partida extends Model
         return $this->hasMany(PartidaAvaliacao::class);
     }
 
-    public function denuncias(): HasMany
-    {
-        return $this->hasMany(PartidaDenuncia::class);
-    }
 }

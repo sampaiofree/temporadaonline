@@ -207,8 +207,7 @@ class UserController extends Controller
             return true;
         }
 
-        return DB::table('partida_denuncias')->where('user_id', $userId)->exists()
-            || DB::table('reclamacoes_partida')->where('user_id', $userId)->exists()
+        return DB::table('reclamacoes_partida')->where('user_id', $userId)->exists()
             || DB::table('player_favorites')->where('user_id', $userId)->exists()
             || DB::table('partida_alteracoes')->where('user_id', $userId)->exists()
             || DB::table('partida_eventos')->where('user_id', $userId)->exists()
