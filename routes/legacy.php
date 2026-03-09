@@ -55,6 +55,8 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('season_stats.data');
         Route::get('/finance-data', [LegacyController::class, 'financeData'])
             ->name('finance.data');
+        Route::get('/finance-statement-data', [LegacyController::class, 'financeStatementData'])
+            ->name('finance.statement.data');
         Route::get('/inbox-data', [LegacyController::class, 'inboxData'])
             ->name('inbox.data');
         Route::get('/public-club-profile-data', [LegacyController::class, 'publicClubProfileData'])

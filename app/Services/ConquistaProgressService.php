@@ -36,6 +36,8 @@ class ConquistaProgressService
             'compra_mercado' => 0,
             'negociacoes_enviadas' => 0,
             'negociacoes_recebidas' => 0,
+            'partidas_sem_levar_gol' => 0,
+            'vitorias_por_3_gols_ou_mais_de_diferenca' => 0,
         ];
     }
 
@@ -80,6 +82,8 @@ class ConquistaProgressService
         $wins = 0;
         $goalsAgainst = 0;
         $matchesPlayed = 0;
+        $cleanSheetMatches = 0;
+        $winsByThreeOrMoreGoals = 0;
 
         foreach ($matches as $match) {
             $mandanteId = (int) $match->mandante_id;
@@ -90,16 +94,28 @@ class ConquistaProgressService
             if (isset($clubIdMap[$mandanteId])) {
                 $matchesPlayed++;
                 $goalsAgainst += $visitanteGoals;
+                if ($visitanteGoals === 0) {
+                    $cleanSheetMatches++;
+                }
                 if ($mandanteGoals > $visitanteGoals) {
                     $wins++;
+                    if (($mandanteGoals - $visitanteGoals) >= 3) {
+                        $winsByThreeOrMoreGoals++;
+                    }
                 }
             }
 
             if (isset($clubIdMap[$visitanteId])) {
                 $matchesPlayed++;
                 $goalsAgainst += $mandanteGoals;
+                if ($mandanteGoals === 0) {
+                    $cleanSheetMatches++;
+                }
                 if ($visitanteGoals > $mandanteGoals) {
                     $wins++;
+                    if (($visitanteGoals - $mandanteGoals) >= 3) {
+                        $winsByThreeOrMoreGoals++;
+                    }
                 }
             }
         }
@@ -187,6 +203,8 @@ class ConquistaProgressService
         $progress['compra_mercado'] = (int) $comprasMercado;
         $progress['negociacoes_enviadas'] = (int) $negociacoesEnviadas;
         $progress['negociacoes_recebidas'] = (int) $negociacoesRecebidas;
+        $progress['partidas_sem_levar_gol'] = (int) $cleanSheetMatches;
+        $progress['vitorias_por_3_gols_ou_mais_de_diferenca'] = (int) $winsByThreeOrMoreGoals;
 
         return $progress;
     }

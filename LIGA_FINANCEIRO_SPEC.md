@@ -11,6 +11,21 @@ Implementar sistema de **elenco único por liga**, com:
 * histórico de transferências
 * regras anti-brecha
 
+## Atualização recente (extrato Legacy)
+
+O Legacy Finance passou a utilizar um **ledger financeiro dedicado** para extrato com saldo por lançamento.
+
+Documento detalhado:
+
+- `LEGACY_FINANCE_EXTRATO_LEDGER.md`
+
+Resumo da atualização:
+
+- `legacy?view=finance` mostra apenas 3 movimentos recentes;
+- botão "Ver todas movimentações" abre extrato full-screen paginado;
+- cada linha mostra entrada/saída e saldo após;
+- transição de histórico antigo via `snapshot_abertura`.
+
 ---
 
 ## Entidades existentes
@@ -325,4 +340,3 @@ Sempre:
 4. venda credita vendedor corretamente
 5. multa move jogador mesmo se vendedor “não quiser”
 6. salário cobra só 1x por rodada
-

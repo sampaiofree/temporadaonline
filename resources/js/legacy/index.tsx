@@ -27,6 +27,7 @@ const LEGACY_ACHIEVEMENTS_DATA_URL = String(LEGACY_CONFIG?.achievementsDataUrl |
 const LEGACY_PATROCINIOS_DATA_URL = String(LEGACY_CONFIG?.patrociniosDataUrl || '/legacy/patrocinios-data');
 const LEGACY_SEASON_STATS_DATA_URL = String(LEGACY_CONFIG?.seasonStatsDataUrl || '/legacy/season-stats-data');
 const LEGACY_FINANCE_DATA_URL = String(LEGACY_CONFIG?.financeDataUrl || '/legacy/finance-data');
+const LEGACY_FINANCE_STATEMENT_DATA_URL = String(LEGACY_CONFIG?.financeStatementDataUrl || '/legacy/finance-statement-data');
 const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inbox-data');
 const LEGACY_PUBLIC_CLUB_PROFILE_DATA_URL = String(LEGACY_CONFIG?.publicClubProfileDataUrl || '/legacy/public-club-profile-data');
 const LEGACY_ESQUEMA_TATICO_DATA_URL = String(LEGACY_CONFIG?.esquemaTaticoDataUrl || '/legacy/esquema-tatico-data');
@@ -4332,6 +4333,8 @@ const AchievementsView = ({
     if (groupType === 'gols') return amount === 1 ? 'gol' : 'gols';
     if (groupType === 'assistencias') return amount === 1 ? 'assistencia' : 'assistencias';
     if (groupType === 'quantidade_jogos') return amount === 1 ? 'jogo' : 'jogos';
+    if (groupType === 'partidas_sem_levar_gol') return amount === 1 ? 'partida' : 'partidas';
+    if (groupType === 'vitorias_por_3_gols_ou_mais_de_diferenca') return amount === 1 ? 'partida' : 'partidas';
 
     return amount === 1 ? 'registro' : 'registros';
   };
@@ -4961,6 +4964,15 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
   const [clubData, setClubData] = useState<any>(null);
   const [financeData, setFinanceData] = useState<any>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [statementOpen, setStatementOpen] = useState(false);
+  const [statementLoading, setStatementLoading] = useState(false);
+  const [statementLoadingMore, setStatementLoadingMore] = useState(false);
+  const [statementError, setStatementError] = useState('');
+  const [statementItems, setStatementItems] = useState<any[]>([]);
+  const [statementPage, setStatementPage] = useState(1);
+  const [statementHasMore, setStatementHasMore] = useState(false);
+  const [statementTotal, setStatementTotal] = useState(0);
+  const [statementLedgerActivatedAt, setStatementLedgerActivatedAt] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -4969,6 +4981,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
       if (!currentCareer?.id) {
         setClubData(null);
         setFinanceData(null);
+        setStatementLedgerActivatedAt('');
         setError('Selecione uma confederação para visualizar o financeiro.');
         return;
       }
@@ -4984,6 +4997,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
 
         setClubData(payload?.clube ?? null);
         setFinanceData(payload?.financeiro ?? null);
+        setStatementLedgerActivatedAt(String(payload?.statement?.ledger_activated_at || ''));
         setOnboardingUrl(
           String(
             payload?.onboarding_url ||
@@ -4994,6 +5008,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
         if (cancelled) return;
         setClubData(null);
         setFinanceData(null);
+        setStatementLedgerActivatedAt('');
         setError(currentError?.message || 'Não foi possível carregar os dados financeiros.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -5007,7 +5022,144 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
     };
   }, [currentCareer?.id]);
 
+  const loadStatementPage = useCallback(
+    async (targetPage: number, append: boolean) => {
+      if (!currentCareer?.id) return;
+
+      if (append) {
+        setStatementLoadingMore(true);
+      } else {
+        setStatementLoading(true);
+        setStatementError('');
+      }
+
+      try {
+        const endpoint = new URL(LEGACY_FINANCE_STATEMENT_DATA_URL, window.location.origin);
+        endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+        endpoint.searchParams.set('page', String(targetPage));
+        endpoint.searchParams.set('per_page', '20');
+        const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
+
+        const statement = payload?.statement ?? {};
+        const items = Array.isArray(statement?.items) ? statement.items : [];
+        const pagination = statement?.pagination ?? {};
+
+        setStatementItems((current) => (append ? [...current, ...items] : items));
+        setStatementPage(Number(pagination?.page ?? targetPage));
+        setStatementHasMore(Boolean(pagination?.has_more));
+        setStatementTotal(Number(pagination?.total ?? items.length));
+        const activatedAt = String(statement?.ledger_activated_at || '');
+        if (activatedAt !== '') {
+          setStatementLedgerActivatedAt(activatedAt);
+        }
+        if (!append) {
+          setStatementError('');
+        }
+      } catch (currentError: any) {
+        if (!append) {
+          setStatementItems([]);
+        }
+        setStatementError(currentError?.message || 'Não foi possível carregar o extrato.');
+      } finally {
+        if (append) {
+          setStatementLoadingMore(false);
+        } else {
+          setStatementLoading(false);
+        }
+      }
+    },
+    [currentCareer?.id],
+  );
+
+  const handleOpenStatement = () => {
+    setStatementOpen(true);
+    setStatementItems([]);
+    setStatementPage(1);
+    setStatementHasMore(false);
+    setStatementTotal(0);
+    setStatementError('');
+    void loadStatementPage(1, false);
+  };
+
+  const handleLoadMoreStatement = () => {
+    if (!statementHasMore || statementLoadingMore || statementLoading) return;
+    void loadStatementPage(statementPage + 1, true);
+  };
+
   const toMValue = (value: any) => Math.max(0, Math.round(Number(value ?? 0) / 1_000_000));
+  const formatMPrecise = (value: any) => {
+    const numeric = Number(value ?? 0);
+    if (!Number.isFinite(numeric)) return '0,00';
+
+    return (Math.abs(numeric) / 1_000_000).toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+  const formatSignedMValue = (value: any, sign = '') => `${sign}M$ ${formatMPrecise(value)}M`;
+  const formatSaldoAfter = (value: any) => {
+    const numeric = Number(value ?? 0);
+    const prefix = numeric < 0 ? '-' : '';
+    return `${prefix}M$ ${formatMPrecise(numeric)}M`;
+  };
+  const normalizeFinanceLabel = (value: any) => {
+    const text = String(value || '').trim();
+    if (!text) return '';
+
+    return text
+      .replace(/PatrocÃƒÆ’Ã‚Â­nio/g, 'Patrocínio')
+      .replace(/PatrocÃ­nio/g, 'Patrocínio')
+      .replace(/Patrocinio/g, 'Patrocínio')
+      .replace(/patrocinio/g, 'patrocínio');
+  };
+  const formatFinanceDate = (value: any) => {
+    if (!value) return '--';
+
+    const date = new Date(String(value));
+    if (Number.isNaN(date.getTime())) return '--';
+
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+  const resolveFinanceOperationMeta = (movement: any) => {
+    const operation = String(movement?.operacao || '').toLowerCase();
+
+    if (operation === 'debit') {
+      return {
+        badge: 'SAÍDA',
+        badgeClasses: 'bg-[#B22222]/20 text-[#FFB4B4] border-[#B22222]/50',
+        amountClasses: 'text-[#FFB4B4]',
+        sign: '-',
+        icon: 'fa-arrow-up',
+        borderClasses: 'border-[#B22222]/45',
+      };
+    }
+
+    if (operation === 'snapshot_abertura') {
+      return {
+        badge: 'SALDO INICIAL',
+        badgeClasses: 'bg-white/10 text-white/70 border-white/20',
+        amountClasses: 'text-white/75',
+        sign: '',
+        icon: 'fa-flag',
+        borderClasses: 'border-white/20',
+      };
+    }
+
+    return {
+      badge: 'ENTRADA',
+      badgeClasses: 'bg-[#22C55E]/20 text-[#A7F3D0] border-[#22C55E]/45',
+      amountClasses: 'text-[#A7F3D0]',
+      sign: '+',
+      icon: 'fa-arrow-down',
+      borderClasses: 'border-[#22C55E]/45',
+    };
+  };
   const hasClub = Boolean(clubData?.id);
   const totalBalance = toMValue(financeData?.saldo ?? 0);
   const salaryCost = toMValue(financeData?.salarioPorRodada ?? 0);
@@ -5016,6 +5168,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
   const patrocinioResgatados = Array.isArray(financeData?.patrocinios) ? financeData.patrocinios : [];
   const ganhosPartidas = Array.isArray(financeData?.ganhosPartidas?.details) ? financeData.ganhosPartidas.details : [];
   const movimentos = Array.isArray(financeData?.movimentos) ? financeData.movimentos : [];
+  const statementActivationLabel = statementLedgerActivatedAt ? formatFinanceDate(statementLedgerActivatedAt) : '';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -5076,7 +5229,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
               {patrocinioResgatados.length > 0 ? patrocinioResgatados.map((item: any) => (
                 <div key={String(item.id)} className="bg-[#181818] p-5 flex justify-between items-center border-r-[2px] border-[#FFD700]/30" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
                   <div>
-                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{item.observacao || 'Patrocínio'}</p>
+                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{normalizeFinanceLabel(item.observacao) || 'Patrocínio'}</p>
                     <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest">{String(item.created_at || '').slice(0, 10)}</p>
                   </div>
                   <p className="text-xl font-black italic font-heading text-[#FFD700]">M$ {toMValue(item.valor)}M</p>
@@ -5115,20 +5268,133 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
               MOVIMENTAÇÕES RECENTES
             </h4>
             <div className="space-y-3">
-              {movimentos.length > 0 ? movimentos.map((movement: any) => (
-                <div key={String(movement.id)} className="bg-[#181818] p-5 flex justify-between items-center border-r-[2px] border-white/10" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                  <div>
-                    <p className="text-[10px] font-black italic text-white uppercase tracking-tighter">{movement.observacao || movement.tipo || 'Movimento'}</p>
-                    <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest">{String(movement.created_at || '').slice(0, 10)}</p>
+              {movimentos.length > 0 ? movimentos.map((movement: any) => {
+                const meta = resolveFinanceOperationMeta(movement);
+                const title = normalizeFinanceLabel(movement?.descricao) || 'Movimento financeiro';
+
+                return (
+                  <div key={String(movement.id)} className={`bg-[#181818] p-5 border-r-[2px] ${meta.borderClasses}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <i className={`fas ${meta.icon} text-[10px] text-white/45`}></i>
+                          <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{title}</p>
+                        </div>
+                        <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest mt-1">{formatFinanceDate(movement?.created_at)}</p>
+                        <p className="text-[8px] font-black italic uppercase tracking-wider text-white/55 mt-2">
+                          SALDO APÓS: <span className="text-white">{formatSaldoAfter(movement?.saldo_depois)}</span>
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`inline-flex items-center px-2 py-1 border text-[7px] font-black uppercase italic ${meta.badgeClasses}`}>
+                          {meta.badge}
+                        </span>
+                        <p className={`text-sm font-black italic font-heading mt-2 ${meta.amountClasses}`}>
+                          {formatSignedMValue(movement?.valor, meta.sign)}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-lg font-black italic font-heading text-white">
-                    M$ {toMValue(movement.valor)}M
-                  </p>
-                </div>
-              )) : (
+                );
+              }) : (
                 <p className="text-[10px] font-black italic uppercase text-white/40">Sem movimentações recentes.</p>
               )}
             </div>
+
+            <MCOButton className="w-full" onClick={handleOpenStatement} disabled={statementLoading || statementLoadingMore}>
+              {statementLoading ? 'CARREGANDO EXTRATO...' : 'VER TODAS MOVIMENTAÇÕES'}
+            </MCOButton>
+          </div>
+        </div>
+      )}
+
+      {statementOpen && (
+        <div className="fixed inset-0 z-[125] bg-[#121212] overflow-y-auto">
+          <div className="sticky top-0 z-10 bg-[#121212]/95 backdrop-blur-sm border-b border-white/10 px-6 pt-8 pb-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[9px] font-black uppercase italic tracking-[0.25em] text-[#FFD700]">EXTRATO FINANCEIRO</p>
+                <h3 className="text-2xl font-black italic uppercase text-white leading-tight mt-2 truncate">
+                  {clubData?.nome || 'CLUBE'}
+                </h3>
+                <p className="text-[8px] font-black uppercase italic text-white/45 mt-1">
+                  {statementTotal} LANÇAMENTO{statementTotal === 1 ? '' : 'S'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatementOpen(false)}
+                disabled={statementLoadingMore}
+                className={`w-10 h-10 flex items-center justify-center border ${
+                  statementLoadingMore ? 'bg-white/10 text-white/20 border-white/10' : 'bg-[#1E1E1E] text-[#FFD700] border-[#FFD700]/30'
+                }`}
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <i className="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-6 pb-32 space-y-4">
+            <div className="bg-[#1E1E1E] border border-[#FFD700]/30 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[9px] font-black uppercase italic text-[#FFD700]">
+                {statementActivationLabel
+                  ? `Detalhamento completo disponível a partir de ${statementActivationLabel}.`
+                  : 'Detalhamento completo disponível a partir da ativação do novo extrato financeiro.'}
+              </p>
+            </div>
+
+            {statementLoading ? (
+              <div className="text-center py-20 text-white/45 text-[10px] font-black italic uppercase tracking-[0.2em]">
+                CARREGANDO EXTRATO...
+              </div>
+            ) : statementError ? (
+              <div className="bg-[#B22222]/20 border border-[#B22222] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white">{statementError}</p>
+              </div>
+            ) : statementItems.length === 0 ? (
+              <div className="bg-[#1E1E1E] border border-white/10 p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Nenhuma movimentação registrada.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {statementItems.map((movement: any) => {
+                  const meta = resolveFinanceOperationMeta(movement);
+                  const title = normalizeFinanceLabel(movement?.descricao) || 'Movimento financeiro';
+
+                  return (
+                    <div key={String(movement.id)} className={`bg-[#181818] p-5 border-r-[2px] ${meta.borderClasses}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <i className={`fas ${meta.icon} text-[10px] text-white/45`}></i>
+                            <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{title}</p>
+                          </div>
+                          <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest mt-1">{formatFinanceDate(movement?.created_at)}</p>
+                          <p className="text-[8px] font-black italic uppercase tracking-wider text-white/55 mt-2">
+                            SALDO APÓS: <span className="text-white">{formatSaldoAfter(movement?.saldo_depois)}</span>
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`inline-flex items-center px-2 py-1 border text-[7px] font-black uppercase italic ${meta.badgeClasses}`}>
+                            {meta.badge}
+                          </span>
+                          <p className={`text-sm font-black italic font-heading mt-2 ${meta.amountClasses}`}>
+                            {formatSignedMValue(movement?.valor, meta.sign)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {statementHasMore && (
+                  <MCOButton className="w-full" onClick={handleLoadMoreStatement} disabled={statementLoadingMore}>
+                    {statementLoadingMore ? 'CARREGANDO...' : 'CARREGAR MAIS'}
+                  </MCOButton>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -7062,6 +7328,12 @@ const isLegacyGoalkeeperPosition = (positions: string | null | undefined) => {
 const mapLegacyMarketPlayer = (player: any) => {
   const valueEur = Number(player?.value_eur ?? 0);
   const wageEur = Number(player?.wage_eur ?? 0);
+  const entryValueEur = Number(player?.entry_value_eur ?? valueEur);
+  const multaMultiplicador = Number(player?.multa_multiplicador ?? 1);
+  const multaValueEur = Math.max(
+    0,
+    Math.round(Math.max(0, entryValueEur) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)),
+  );
   const valueM = toLegacyMoneyInMillions(valueEur);
   const salaryM = toLegacyMoneyInMillions(wageEur);
   const clubStatus = String(player?.club_status || 'livre');
@@ -7121,6 +7393,9 @@ const mapLegacyMarketPlayer = (player: any) => {
     marketValue: valueM,
     value_eur: valueEur,
     wage_eur: wageEur,
+    entry_value_eur: entryValueEur,
+    multa_multiplicador: multaMultiplicador,
+    multa_value_eur: multaValueEur,
     auction: {
       enabled: auctionEnabled,
       status: String(auctionRaw?.status || ''),
@@ -7458,6 +7733,8 @@ const MarketView = ({
   const [proposalUnreadCount, setProposalUnreadCount] = useState(0);
   const [marketReceivedProposals, setMarketReceivedProposals] = useState<any[]>([]);
   const [marketSentProposals, setMarketSentProposals] = useState<any[]>([]);
+  const [primaryActionPlayer, setPrimaryActionPlayer] = useState<any>(null);
+  const [primaryActionType, setPrimaryActionType] = useState<'multa' | 'comprar' | null>(null);
   const [marketProposalsLoading, setMarketProposalsLoading] = useState(false);
   const [marketProposalsError, setMarketProposalsError] = useState('');
   const [marketProposalBusyIds, setMarketProposalBusyIds] = useState<number[]>([]);
@@ -7859,6 +8136,22 @@ const MarketView = ({
   }, [subMode]);
 
   useEffect(() => {
+    if (subMode === 'list' || subMode === 'watchlist') {
+      return;
+    }
+
+    setPrimaryActionPlayer(null);
+    setPrimaryActionType(null);
+  }, [subMode]);
+
+  useEffect(() => {
+    if (marketMode === 'auction' || marketClosed) {
+      setPrimaryActionPlayer(null);
+      setPrimaryActionType(null);
+    }
+  }, [marketMode, marketClosed]);
+
+  useEffect(() => {
     const canDescribePlayerModal =
       selectedPlayer
       && (subMode === 'list' || subMode === 'watchlist' || subMode === 'proposals');
@@ -8251,7 +8544,12 @@ const MarketView = ({
     }
   };
 
-  const handlePrimaryAction = async (player: any) => {
+  const closePrimaryActionModal = () => {
+    setPrimaryActionPlayer(null);
+    setPrimaryActionType(null);
+  };
+
+  const handlePrimaryAction = (player: any) => {
     const playerId = Number(player?.id ?? 0);
     if (playerId <= 0 || player?.club_status === 'meu') return;
 
@@ -8286,17 +8584,38 @@ const MarketView = ({
       return;
     }
 
-    const endpoint = player?.club_status === 'outro' && player?.can_multa ? 'multa' : 'comprar';
+    const endpoint: 'multa' | 'comprar' = player?.club_status === 'outro' && player?.can_multa ? 'multa' : 'comprar';
+    setPrimaryActionPlayer(player);
+    setPrimaryActionType(endpoint);
+  };
+
+  const submitPrimaryAction = async () => {
+    const playerId = Number(primaryActionPlayer?.id ?? 0);
+    if (playerId <= 0 || !primaryActionType || !marketLigaId || !marketClubId) {
+      return;
+    }
+
+    if (marketMode === 'auction') {
+      notifyMarket('Mercado em modo leilao. Use o botao de lance.', 'warning');
+      return;
+    }
+
+    if (marketClosed) {
+      notifyMarket('Mercado fechado para esta confederação.', 'warning');
+      return;
+    }
+
     setBusyFlag(setMarketActionBusyIds as any, playerId, true);
 
     try {
-      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/${endpoint}`, {
+      const response = await jsonRequest(`/api/ligas/${marketLigaId}/clubes/${marketClubId}/${primaryActionType}`, {
         method: 'POST',
         body: JSON.stringify({ elencopadrao_id: playerId }),
       });
 
       notifyMarket(response?.message || 'Ação concluída com sucesso.', 'success');
       setMarketReloadToken((prev) => prev + 1);
+      closePrimaryActionModal();
     } catch (error: any) {
       notifyMarket(error?.message || 'Não foi possível concluir a ação.', 'error');
     } finally {
@@ -8978,12 +9297,16 @@ const MarketView = ({
                   className="grid grid-cols-[70px_1fr_80px_116px] gap-2 px-2 py-3 bg-[#1E1E1E] items-center border-r-[3px] border-[#FFD700] min-h-[70px]"
                   style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                 >
-                <div className="flex justify-center">
+                <button
+                  type="button"
+                  className="flex justify-center bg-transparent border-0 p-0 cursor-pointer active:opacity-50"
+                  onClick={() => setSelectedPlayer(player)}
+                >
                   <LegacyMarketPlayerThumb
                     player={player}
                     useReducedTemplate={subMode === 'list' || subMode === 'watchlist'}
                   />
-                </div>
+                </button>
                 <div className="overflow-hidden cursor-pointer active:opacity-50 px-1" onClick={() => setSelectedPlayer(player)}>
                   <p className="text-[11px] font-black italic uppercase text-white truncate leading-tight">{player.name}</p>
                   <p className="text-[7px] font-bold uppercase italic text-white/20 truncate mt-0.5">{player.club}</p>
@@ -9087,6 +9410,71 @@ const MarketView = ({
           </LegacyReveal>
         )}
       </div>
+      {primaryActionPlayer && primaryActionType && (() => {
+        const playerId = Number(primaryActionPlayer?.id ?? 0);
+        const isBusy = marketActionBusyIds.includes(playerId);
+        const playerName = String(primaryActionPlayer?.name || 'ATLETA');
+        const wageEur = Math.max(0, Number(primaryActionPlayer?.wage_eur ?? 0) || 0);
+        const marketValueEur = Math.max(0, Number(primaryActionPlayer?.value_eur ?? 0) || 0);
+        const multaMultiplicador = Number(primaryActionPlayer?.multa_multiplicador ?? 1);
+        const entryValueEur = Math.max(0, Number(primaryActionPlayer?.entry_value_eur ?? marketValueEur) || 0);
+        const multaEur = Math.max(0, Math.round(entryValueEur * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)));
+        const actionValueEur = primaryActionType === 'multa' ? multaEur : marketValueEur;
+        const modalTitle = primaryActionType === 'multa' ? 'PAGAMENTO DE MULTA' : 'CONFIRMAR COMPRA';
+        const actionValueLabel = primaryActionType === 'multa' ? 'VALOR DA MULTA' : 'VALOR DE MERCADO';
+        const actionButtonLabel = isBusy
+          ? 'OPERANDO...'
+          : primaryActionType === 'multa'
+            ? 'PAGAR MULTA'
+            : 'CONFIRMAR COMPRA';
+
+        return (
+          <div className="fixed inset-0 z-[111] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+            <div className="absolute inset-0" onClick={() => !isBusy && closePrimaryActionModal()}></div>
+            <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">{modalTitle}</p>
+              <h4 className="text-lg font-black italic uppercase text-white leading-tight">{playerName}</h4>
+              <div className="mt-4 space-y-2 bg-[#121212]/70 border border-white/10 p-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black italic uppercase text-white/55">{actionValueLabel}</p>
+                  <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
+                    M$ {toLegacyMoneyCompact(actionValueEur)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black italic uppercase text-white/55">SALARIO</p>
+                  <p className="text-[10px] font-black italic uppercase text-white">
+                    M$ {toLegacyMoneyCompact(wageEur)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  className={`text-[8px] font-black italic uppercase py-3 ${
+                    isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                  }`}
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && void submitPrimaryAction()}
+                  disabled={isBusy}
+                >
+                  {actionButtonLabel}
+                </button>
+                <button
+                  type="button"
+                  className="text-[8px] font-black italic uppercase py-3 bg-white/10 text-white/50"
+                  style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
+                  onClick={() => !isBusy && closePrimaryActionModal()}
+                  disabled={isBusy}
+                >
+                  FECHAR
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       {auctionBidPlayer && (() => {
         const hasBid = Boolean(auctionBidPlayer?.auction?.hasBid);
         const currentBid = Number(

@@ -51,6 +51,16 @@ class Partida extends Model
         return $this->belongsTo(LigaClube::class, 'visitante_id');
     }
 
+    public function woParaUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'wo_para_user_id');
+    }
+
+    public function placarRegistradoPorUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'placar_registrado_por');
+    }
+
     public function alteracoes(): HasMany
     {
         return $this->hasMany(PartidaAlteracao::class);

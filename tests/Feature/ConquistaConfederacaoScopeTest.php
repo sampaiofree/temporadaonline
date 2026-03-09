@@ -56,8 +56,8 @@ class ConquistaConfederacaoScopeTest extends TestCase
             'mandante_id' => $clubeA->id,
             'visitante_id' => $adversarioA->id,
             'estado' => 'placar_confirmado',
-            'placar_mandante' => 3,
-            'placar_visitante' => 1,
+            'placar_mandante' => 4,
+            'placar_visitante' => 0,
             'placar_registrado_por' => $user->id,
             'placar_registrado_em' => now(),
         ]);
@@ -349,7 +349,7 @@ class ConquistaConfederacaoScopeTest extends TestCase
         $this->assertSame(3, (int) $progress['assistencias']);
         $this->assertSame(2, (int) $progress['quantidade_jogos']);
         $this->assertSame(1, (int) $progress['n_vitorias']);
-        $this->assertSame(3, (int) $progress['n_gols_sofridos']);
+        $this->assertSame(2, (int) $progress['n_gols_sofridos']);
         $this->assertSame(1, (int) $progress['n_hat_trick']);
         $this->assertSame(50, (int) $progress['skill_rating']);
         $this->assertSame(4.0, (float) $progress['score']);
@@ -361,6 +361,8 @@ class ConquistaConfederacaoScopeTest extends TestCase
         $this->assertSame(2, (int) $progress['compra_mercado']);
         $this->assertSame(2, (int) $progress['negociacoes_enviadas']);
         $this->assertSame(2, (int) $progress['negociacoes_recebidas']);
+        $this->assertSame(1, (int) $progress['partidas_sem_levar_gol']);
+        $this->assertSame(1, (int) $progress['vitorias_por_3_gols_ou_mais_de_diferenca']);
     }
 
     public function test_claims_are_unique_by_user_and_confederacao(): void

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Liga;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaClubeFinanceiroMovimento;
 use Illuminate\Support\Facades\DB;
 
 class LeagueFinanceService
@@ -15,7 +16,7 @@ class LeagueFinanceService
                 ->select(['id', 'saldo_inicial'])
                 ->findOrFail($ligaId);
 
-            return LigaClubeFinanceiro::query()->firstOrCreate(
+            $wallet = LigaClubeFinanceiro::query()->firstOrCreate(
                 [
                     'liga_id' => $ligaId,
                     'clube_id' => $clubeId,
@@ -24,6 +25,25 @@ class LeagueFinanceService
                     'saldo' => (int) $liga->saldo_inicial,
                 ],
             );
+
+            if ($wallet->wasRecentlyCreated) {
+                $saldoInicial = (int) $wallet->saldo;
+
+                $this->appendMovimento(
+                    ligaId: $ligaId,
+                    clubeId: $clubeId,
+                    operacao: LigaClubeFinanceiroMovimento::OPERATION_SNAPSHOT_OPENING,
+                    descricao: 'Saldo inicial do clube',
+                    valor: $saldoInicial,
+                    saldoAntes: 0,
+                    saldoDepois: $saldoInicial,
+                    metadata: [
+                        'source' => 'wallet_creation',
+                    ],
+                );
+            }
+
+            return $wallet;
         }, 3);
     }
 
@@ -40,7 +60,7 @@ class LeagueFinanceService
             throw new \InvalidArgumentException('Amount deve ser >= 0.');
         }
 
-        return DB::transaction(function () use ($ligaId, $clubeId, $amount): int {
+        return DB::transaction(function () use ($ligaId, $clubeId, $amount, $reason): int {
             $wallet = LigaClubeFinanceiro::query()
                 ->where('liga_id', $ligaId)
                 ->where('clube_id', $clubeId)
@@ -52,10 +72,26 @@ class LeagueFinanceService
                 $wallet->refresh();
             }
 
-            $wallet->saldo = (int) $wallet->saldo + $amount;
+            if ($amount === 0) {
+                return (int) $wallet->saldo;
+            }
+
+            $saldoAntes = (int) $wallet->saldo;
+            $saldoDepois = $saldoAntes + $amount;
+            $wallet->saldo = $saldoDepois;
             $wallet->save();
 
-            return (int) $wallet->saldo;
+            $this->appendMovimento(
+                ligaId: $ligaId,
+                clubeId: $clubeId,
+                operacao: LigaClubeFinanceiroMovimento::OPERATION_CREDIT,
+                descricao: $reason !== '' ? $reason : 'Crédito financeiro',
+                valor: $amount,
+                saldoAntes: $saldoAntes,
+                saldoDepois: $saldoDepois,
+            );
+
+            return $saldoDepois;
         }, 3);
     }
 
@@ -65,7 +101,7 @@ class LeagueFinanceService
             throw new \InvalidArgumentException('Amount deve ser >= 0.');
         }
 
-        return DB::transaction(function () use ($ligaId, $clubeId, $amount, $allowNegative): int {
+        return DB::transaction(function () use ($ligaId, $clubeId, $amount, $reason, $allowNegative): int {
             $wallet = LigaClubeFinanceiro::query()
                 ->where('liga_id', $ligaId)
                 ->where('clube_id', $clubeId)
@@ -78,6 +114,11 @@ class LeagueFinanceService
             }
 
             $saldoAtual = (int) $wallet->saldo;
+
+            if ($amount === 0) {
+                return $saldoAtual;
+            }
+
             $novoSaldo = $saldoAtual - $amount;
 
             if (! $allowNegative && $novoSaldo < 0) {
@@ -87,7 +128,42 @@ class LeagueFinanceService
             $wallet->saldo = $novoSaldo;
             $wallet->save();
 
+            $this->appendMovimento(
+                ligaId: $ligaId,
+                clubeId: $clubeId,
+                operacao: LigaClubeFinanceiroMovimento::OPERATION_DEBIT,
+                descricao: $reason !== '' ? $reason : 'Débito financeiro',
+                valor: $amount,
+                saldoAntes: $saldoAtual,
+                saldoDepois: $novoSaldo,
+            );
+
             return (int) $wallet->saldo;
         }, 3);
+    }
+
+    /**
+     * @param array<string, mixed> $metadata
+     */
+    private function appendMovimento(
+        int $ligaId,
+        int $clubeId,
+        string $operacao,
+        string $descricao,
+        int $valor,
+        int $saldoAntes,
+        int $saldoDepois,
+        array $metadata = [],
+    ): void {
+        LigaClubeFinanceiroMovimento::query()->create([
+            'liga_id' => $ligaId,
+            'clube_id' => $clubeId,
+            'operacao' => $operacao,
+            'descricao' => trim($descricao) !== '' ? trim($descricao) : null,
+            'valor' => $valor,
+            'saldo_antes' => $saldoAntes,
+            'saldo_depois' => $saldoDepois,
+            'metadata' => $metadata !== [] ? $metadata : null,
+        ]);
     }
 }

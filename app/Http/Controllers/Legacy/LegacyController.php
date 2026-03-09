@@ -12,6 +12,7 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeConquista;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\LigaClubeFinanceiroMovimento;
 use App\Models\LigaClubePatrocinio;
 use App\Models\LigaPeriodo;
 use App\Models\LigaProposta;
@@ -86,6 +87,7 @@ class LegacyController extends Controller
                 'patrociniosDataUrl' => route('legacy.patrocinios.data'),
                 'seasonStatsDataUrl' => route('legacy.season_stats.data'),
                 'financeDataUrl' => route('legacy.finance.data'),
+                'financeStatementDataUrl' => route('legacy.finance.statement.data'),
                 'inboxDataUrl' => route('legacy.inbox.data'),
                 'publicClubProfileDataUrl' => route('legacy.public_club_profile.data'),
                 'esquemaTaticoDataUrl' => route('legacy.esquema_tatico.data'),
@@ -3190,13 +3192,18 @@ class LegacyController extends Controller
         }
 
         $scopeConfederacaoId = $liga->confederacao_id;
-        $userClubQuery = $user->clubesLiga()->with('liga:id,nome');
+        $userClubsQuery = $user->clubesLiga()->with('liga:id,nome');
 
-        $userClubQuery->where('liga_id', $liga->id);
+        if ($scopeConfederacaoId) {
+            $userClubsQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $userClubsQuery->where('liga_id', $liga->id);
+        }
 
-        $clube = $userClubQuery->first();
+        $userClubs = $userClubsQuery
+            ->get(['id', 'user_id', 'liga_id', 'confederacao_id', 'nome']);
 
-        if (! $clube) {
+        if ($userClubs->isEmpty()) {
             return response()->json([
                 'liga' => [
                     'id' => $liga->id,
@@ -3214,11 +3221,40 @@ class LegacyController extends Controller
             ]);
         }
 
-        $completedStates = ['placar_confirmado', 'finalizada', 'wo'];
+        $clubePrincipal = $userClubs
+            ->first(fn (LigaClube $club): bool => (int) $club->liga_id === (int) $liga->id)
+            ?? $userClubs->first();
+
+        $clubIds = $userClubs
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $leagueIds = $userClubs
+            ->pluck('liga_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        $leagueNamesById = $userClubs
+            ->mapWithKeys(function (LigaClube $club) use ($liga): array {
+                $leagueId = (int) ($club->liga_id ?? 0);
+                if ($leagueId <= 0) {
+                    return [];
+                }
+
+                return [$leagueId => (string) ($club->liga?->nome ?: $liga->nome)];
+            });
+
+        $statesWithScore = ['placar_registrado', 'placar_confirmado', 'finalizada', 'wo'];
 
         $clubMatches = Partida::query()
             ->select([
                 'id',
+                'liga_id',
                 'mandante_id',
                 'visitante_id',
                 'placar_mandante',
@@ -3228,13 +3264,13 @@ class LegacyController extends Controller
                 'created_at',
                 'updated_at',
             ])
-            ->where('liga_id', $liga->id)
-            ->whereIn('estado', $completedStates)
+            ->whereIn('liga_id', $leagueIds)
+            ->whereIn('estado', $statesWithScore)
             ->whereNotNull('placar_mandante')
             ->whereNotNull('placar_visitante')
-            ->where(function ($query) use ($clube): void {
-                $query->where('mandante_id', $clube->id)
-                    ->orWhere('visitante_id', $clube->id);
+            ->where(function ($query) use ($clubIds): void {
+                $query->whereIn('mandante_id', $clubIds)
+                    ->orWhereIn('visitante_id', $clubIds);
             })
             ->orderByDesc('placar_registrado_em')
             ->orderByDesc('scheduled_at')
@@ -3244,6 +3280,7 @@ class LegacyController extends Controller
         $leagueMatches = Partida::query()
             ->select([
                 'id',
+                'liga_id',
                 'mandante_id',
                 'visitante_id',
                 'placar_mandante',
@@ -3253,8 +3290,8 @@ class LegacyController extends Controller
                 'created_at',
                 'updated_at',
             ])
-            ->where('liga_id', $liga->id)
-            ->whereIn('estado', $completedStates)
+            ->whereIn('liga_id', $leagueIds)
+            ->whereIn('estado', $statesWithScore)
             ->whereNotNull('placar_mandante')
             ->whereNotNull('placar_visitante')
             ->orderByDesc('placar_registrado_em')
@@ -3262,24 +3299,25 @@ class LegacyController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $summary = $this->buildLegacySeasonSummary($clubMatches, (int) $clube->id);
+        $summary = $this->buildLegacySeasonSummaryForClubSet($clubMatches, $clubIds);
 
-        $desempenhoTotals = PartidaDesempenho::query()
-            ->selectRaw('COUNT(*) as total_entries, COALESCE(SUM(gols), 0) as total_gols, COALESCE(SUM(assistencias), 0) as total_assistencias')
-            ->where('liga_clube_id', $clube->id)
-            ->whereIn('partida_id', $clubMatches->pluck('id'))
-            ->first();
+        $clubMatchIds = $clubMatches
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->values();
 
-        $hasDesempenho = ((int) ($desempenhoTotals?->total_entries ?? 0)) > 0;
-        $totalGoalsByDesempenho = (int) ($desempenhoTotals?->total_gols ?? 0);
-        $totalAssists = (int) ($desempenhoTotals?->total_assistencias ?? 0);
+        $totalAssists = (int) (PartidaDesempenho::query()
+            ->whereIn('liga_clube_id', $clubIds)
+            ->whereIn('partida_id', $clubMatchIds)
+            ->sum('assistencias') ?? 0);
         $matchesPlayed = (int) ($summary['matches_played'] ?? 0);
         $avaliacoes = PartidaAvaliacao::query()
-            ->where('avaliado_user_id', $clube->user_id)
-            ->whereIn('partida_id', $clubMatches->pluck('id'))
+            ->where('avaliado_user_id', $user->id)
+            ->whereIn('partida_id', $clubMatchIds)
             ->avg('nota');
 
-        $summary['goals'] = $hasDesempenho ? $totalGoalsByDesempenho : (int) ($summary['goals_for'] ?? 0);
+        $summary['goals'] = (int) ($summary['goals_for'] ?? 0);
         $summary['assists'] = $totalAssists;
         $summary['goals_per_match'] = $matchesPlayed > 0
             ? round(((float) $summary['goals']) / $matchesPlayed, 1)
@@ -3294,12 +3332,20 @@ class LegacyController extends Controller
             ? (float) max(1, min(5, round((float) $avaliacoes, 1)))
             : 5.0;
 
-        $leagueClubIds = LigaClube::query()
-            ->where('liga_id', $liga->id)
+        $leagueMatchesByLiga = $leagueMatches
+            ->groupBy(fn (Partida $partida): int => (int) $partida->liga_id);
+
+        $leagueClubIdsByLiga = LigaClube::query()
+            ->whereIn('liga_id', $leagueIds)
             ->orderBy('id')
-            ->pluck('id')
-            ->map(fn ($id) => (int) $id)
-            ->values();
+            ->get(['id', 'liga_id'])
+            ->groupBy(fn (LigaClube $club): int => (int) $club->liga_id)
+            ->map(function (Collection $clubs): Collection {
+                return $clubs->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn (int $id): bool => $id > 0)
+                    ->values();
+            });
 
         $history = [];
         $temporadas = $scopeConfederacaoId
@@ -3325,16 +3371,38 @@ class LegacyController extends Controller
                 continue;
             }
 
-            $seasonLeagueMatches = $leagueMatches
-                ->filter(fn (Partida $partida) => $this->isLegacyPartidaInsideRange($partida, $start, $end))
+            $seasonSummary = $this->buildLegacySeasonSummaryForClubSet($seasonClubMatches, $clubIds);
+            $seasonLeagueIds = $seasonClubMatches
+                ->pluck('liga_id')
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
                 ->values();
 
-            $seasonSummary = $this->buildLegacySeasonSummary($seasonClubMatches, (int) $clube->id);
-            $position = $this->resolveLegacyClubPositionFromMatches($seasonLeagueMatches, $leagueClubIds, (int) $clube->id);
+            $position = null;
+            $seasonLeagueName = 'MULTIPLAS LIGAS';
+
+            if ($seasonLeagueIds->count() === 1) {
+                $seasonLeagueId = (int) $seasonLeagueIds->first();
+                $seasonLeagueName = (string) ($leagueNamesById->get($seasonLeagueId) ?: $liga->nome);
+                $seasonLeaguePool = $leagueMatchesByLiga->get($seasonLeagueId, collect());
+                $seasonLeagueMatches = $seasonLeaguePool
+                    ->filter(fn (Partida $partida) => $this->isLegacyPartidaInsideRange($partida, $start, $end))
+                    ->values();
+                $seasonLeagueClubIds = $leagueClubIdsByLiga->get($seasonLeagueId, collect());
+
+                if ($seasonLeagueMatches->isNotEmpty() && $seasonLeagueClubIds->isNotEmpty()) {
+                    $position = $this->resolveLegacyClubPositionForClubSet(
+                        $seasonLeagueMatches,
+                        $seasonLeagueClubIds,
+                        $clubIds,
+                    );
+                }
+            }
 
             $history[] = [
                 'season' => (string) ($temporada->name ?: 'TEMPORADA'),
-                'league' => (string) $liga->nome,
+                'league' => $seasonLeagueName,
                 'pos' => $position,
                 'wins' => (int) ($seasonSummary['wins'] ?? 0),
                 'draws' => (int) ($seasonSummary['draws'] ?? 0),
@@ -3346,11 +3414,34 @@ class LegacyController extends Controller
         }
 
         if (empty($history) && $clubMatches->isNotEmpty()) {
-            $overallPosition = $this->resolveLegacyClubPositionFromMatches($leagueMatches, $leagueClubIds, (int) $clube->id);
+            $overallLeagueIds = $clubMatches
+                ->pluck('liga_id')
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn (int $id): bool => $id > 0)
+                ->unique()
+                ->values();
+
+            $overallPosition = null;
+            $overallLeagueName = 'MULTIPLAS LIGAS';
+
+            if ($overallLeagueIds->count() === 1) {
+                $overallLeagueId = (int) $overallLeagueIds->first();
+                $overallLeagueName = (string) ($leagueNamesById->get($overallLeagueId) ?: $liga->nome);
+                $overallLeagueMatches = $leagueMatchesByLiga->get($overallLeagueId, collect())->values();
+                $overallLeagueClubIds = $leagueClubIdsByLiga->get($overallLeagueId, collect());
+
+                if ($overallLeagueMatches->isNotEmpty() && $overallLeagueClubIds->isNotEmpty()) {
+                    $overallPosition = $this->resolveLegacyClubPositionForClubSet(
+                        $overallLeagueMatches,
+                        $overallLeagueClubIds,
+                        $clubIds,
+                    );
+                }
+            }
 
             $history[] = [
                 'season' => 'GERAL',
-                'league' => (string) $liga->nome,
+                'league' => $overallLeagueName,
                 'pos' => $overallPosition,
                 'wins' => (int) ($summary['wins'] ?? 0),
                 'draws' => (int) ($summary['draws'] ?? 0),
@@ -3369,10 +3460,10 @@ class LegacyController extends Controller
                 'confederacao_nome' => $liga->confederacao?->nome,
             ],
             'clube' => [
-                'id' => $clube->id,
-                'nome' => $clube->nome,
-                'liga_id' => $clube->liga_id,
-                'liga_nome' => $clube->liga?->nome,
+                'id' => (int) $clubePrincipal->id,
+                'nome' => (string) $clubePrincipal->nome,
+                'liga_id' => (int) $clubePrincipal->liga_id,
+                'liga_nome' => (string) ($clubePrincipal->liga?->nome ?: $leagueNamesById->get((int) $clubePrincipal->liga_id, $liga->nome)),
             ],
             'summary' => $summary,
             'history' => array_values($history),
@@ -3508,119 +3599,18 @@ class LegacyController extends Controller
             ->values()
             ->all();
 
-        $movimentosTransferenciasQuery = LigaTransferencia::query()
-            ->where(function ($query) use ($userClub): void {
-                $query->where('clube_origem_id', $userClub->id)
-                    ->orWhere('clube_destino_id', $userClub->id);
-            })
-            ->with(['elencopadrao:id,short_name,long_name'])
-            ->latest()
-            ->limit(10);
-
-        if ($scopeConfederacaoId) {
-            $movimentosTransferenciasQuery->where('confederacao_id', $scopeConfederacaoId);
-        } else {
-            $movimentosTransferenciasQuery->where(function ($query) use ($liga): void {
-                $query->where('liga_origem_id', $liga->id)
-                    ->orWhere('liga_destino_id', $liga->id);
-            });
-        }
-
-        $movimentosTransferencias = $movimentosTransferenciasQuery
-            ->get([
-                'id',
-                'tipo',
-                'valor',
-                'observacao',
-                'created_at',
-                'clube_origem_id',
-                'clube_destino_id',
-                'elencopadrao_id',
-            ])
-            ->map(function (LigaTransferencia $movimento) {
-                $player = $movimento->elencopadrao;
-                $jogadorNome = $player?->short_name ?: $player?->long_name;
-
-                return [
-                    'id' => $movimento->id,
-                    'tipo' => $movimento->tipo,
-                    'valor' => (int) $movimento->valor,
-                    'observacao' => $movimento->observacao,
-                    'created_at' => $movimento->created_at,
-                    'clube_origem_id' => $movimento->clube_origem_id,
-                    'clube_destino_id' => $movimento->clube_destino_id,
-                    'elencopadrao_id' => $movimento->elencopadrao_id,
-                    'jogador_nome' => $jogadorNome,
-                ];
-            })
-            ->values()
-            ->all();
-
-        $movimentosPartida = PartidaFolhaPagamento::query()
+        $movimentos = LigaClubeFinanceiroMovimento::query()
             ->where('liga_id', $liga->id)
             ->where('clube_id', $userClub->id)
-            ->latest()
-            ->limit(10)
-            ->get(['id', 'partida_id', 'tipo', 'total_wage', 'multa_wo', 'created_at'])
-            ->flatMap(function (PartidaFolhaPagamento $pagamento) use ($userClub) {
-                $items = [];
-                $tipo = (string) ($pagamento->tipo ?: PartidaFolhaPagamento::TYPE_LEGACY_SALARY_DEBIT);
-
-                if (in_array($tipo, [
-                    PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD,
-                    PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD,
-                    PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD,
-                ], true)) {
-                    $items[] = [
-                        'id' => 'partida-ganho-'.$pagamento->id,
-                        'tipo' => $tipo,
-                        'valor' => (int) $pagamento->total_wage,
-                        'observacao' => match ($tipo) {
-                            PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => "Ganho por vitória da partida #{$pagamento->partida_id}",
-                            PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => "Ganho por empate da partida #{$pagamento->partida_id}",
-                            PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => "Ganho por derrota da partida #{$pagamento->partida_id}",
-                            default => "Ganho da partida #{$pagamento->partida_id}",
-                        },
-                        'created_at' => $pagamento->created_at,
-                        'clube_origem_id' => null,
-                        'clube_destino_id' => $userClub->id,
-                    ];
-
-                    return $items;
-                }
-
-                $items[] = [
-                    'id' => 'partida-salario-'.$pagamento->id,
-                    'tipo' => PartidaFolhaPagamento::TYPE_LEGACY_SALARY_DEBIT,
-                    'valor' => (int) $pagamento->total_wage,
-                    'observacao' => "Débito salarial legado da partida #{$pagamento->partida_id}",
-                    'created_at' => $pagamento->created_at,
-                    'clube_origem_id' => $userClub->id,
-                    'clube_destino_id' => null,
-                ];
-
-                if ((int) $pagamento->multa_wo > 0) {
-                    $items[] = [
-                        'id' => 'partida-multa-'.$pagamento->id,
-                        'tipo' => 'multa_wo',
-                        'valor' => (int) $pagamento->multa_wo,
-                        'observacao' => "Multa W.O. partida #{$pagamento->partida_id}",
-                        'created_at' => $pagamento->created_at,
-                        'clube_origem_id' => $userClub->id,
-                        'clube_destino_id' => null,
-                    ];
-                }
-
-                return $items;
-            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit(3)
+            ->get()
+            ->map(fn (LigaClubeFinanceiroMovimento $movimento): array => $this->formatFinanceLedgerMovement($movimento))
             ->values()
             ->all();
 
-        $movimentos = collect(array_merge($movimentosTransferencias, $movimentosPartida))
-            ->sortByDesc('created_at')
-            ->take(5)
-            ->values()
-            ->all();
+        $ledgerActivatedAt = $this->resolveFinanceLedgerActivationDate($liga->id, (int) $userClub->id);
 
         $patrocinioResgatados = LigaClubePatrocinio::query()
             ->with('patrocinio')
@@ -3637,7 +3627,7 @@ class LegacyController extends Controller
                     'tipo' => 'patrocinio',
                     'patrocinio_id' => $registro->patrocinio_id,
                     'valor' => (int) ($patrocinio->valor ?? 0),
-                    'observacao' => $patrocinio ? "PatrocÃƒÆ’Ã‚Â­nio {$patrocinio->nome}" : 'PatrocÃƒÆ’Ã‚Â­nio resgatado',
+                    'observacao' => $patrocinio ? "Patrocínio {$patrocinio->nome}" : 'Patrocínio resgatado',
                     'created_at' => $registro->claimed_at,
                 ];
             })
@@ -3665,6 +3655,120 @@ class LegacyController extends Controller
                     'total' => $ganhosPartidasTotal,
                     'details' => $ganhosPartidasDetalhes,
                 ],
+            ],
+            'statement' => [
+                'ledger_activated_at' => $ledgerActivatedAt?->toIso8601String(),
+            ],
+            'onboarding_url' => route('legacy.onboarding_clube', [
+                'stage' => 'confederacao',
+                'confederacao_id' => $scopeConfederacaoId,
+            ]),
+        ]);
+    }
+
+    public function financeStatementData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+                'liga' => null,
+                'clube' => null,
+                'statement' => [
+                    'items' => [],
+                    'pagination' => [
+                        'page' => 1,
+                        'per_page' => 20,
+                        'total' => 0,
+                        'has_more' => false,
+                    ],
+                    'ledger_activated_at' => null,
+                ],
+                'onboarding_url' => route('legacy.onboarding_clube'),
+            ], 404);
+        }
+
+        $scopeConfederacaoId = $liga->confederacao_id;
+        $userClubQuery = $user->clubesLiga()->where('liga_id', $liga->id);
+        if ($scopeConfederacaoId) {
+            $userClubQuery->where('confederacao_id', $scopeConfederacaoId);
+        }
+
+        $userClub = $userClubQuery->first();
+
+        if (! $userClub) {
+            return response()->json([
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'confederacao_id' => $liga->confederacao_id,
+                    'confederacao_nome' => $liga->confederacao?->nome,
+                ],
+                'clube' => null,
+                'statement' => [
+                    'items' => [],
+                    'pagination' => [
+                        'page' => 1,
+                        'per_page' => 20,
+                        'total' => 0,
+                        'has_more' => false,
+                    ],
+                    'ledger_activated_at' => null,
+                ],
+                'onboarding_url' => route('legacy.onboarding_clube', [
+                    'stage' => 'confederacao',
+                    'confederacao_id' => $scopeConfederacaoId,
+                ]),
+            ]);
+        }
+
+        $perPage = max(1, min(50, (int) $request->query('per_page', 20)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $movimentosPaginator = LigaClubeFinanceiroMovimento::query()
+            ->where('liga_id', $liga->id)
+            ->where('clube_id', $userClub->id)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $items = $movimentosPaginator->getCollection()
+            ->map(fn (LigaClubeFinanceiroMovimento $movimento): array => $this->formatFinanceLedgerMovement($movimento))
+            ->values()
+            ->all();
+
+        $ledgerActivatedAt = $this->resolveFinanceLedgerActivationDate($liga->id, (int) $userClub->id);
+
+        return response()->json([
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'confederacao_id' => $liga->confederacao_id,
+                'confederacao_nome' => $liga->confederacao?->nome,
+            ],
+            'clube' => [
+                'id' => $userClub->id,
+                'nome' => $userClub->nome,
+            ],
+            'statement' => [
+                'items' => $items,
+                'pagination' => [
+                    'page' => $movimentosPaginator->currentPage(),
+                    'per_page' => $movimentosPaginator->perPage(),
+                    'total' => $movimentosPaginator->total(),
+                    'has_more' => $movimentosPaginator->hasMorePages(),
+                ],
+                'ledger_activated_at' => $ledgerActivatedAt?->toIso8601String(),
             ],
             'onboarding_url' => route('legacy.onboarding_clube', [
                 'stage' => 'confederacao',
@@ -4291,6 +4395,38 @@ class LegacyController extends Controller
      */
     private function buildLegacySeasonSummary(Collection $matches, int $clubId): array
     {
+        return $this->buildLegacySeasonSummaryForClubSet($matches, collect([$clubId]));
+    }
+
+    /**
+     * @param Collection<int, Partida> $matches
+     * @param Collection<int, int> $clubIds
+     * @return array<string, int|float>
+     */
+    private function buildLegacySeasonSummaryForClubSet(Collection $matches, Collection $clubIds): array
+    {
+        $normalizedClubIds = $clubIds
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($normalizedClubIds->isEmpty()) {
+            return [
+                'matches_played' => 0,
+                'wins' => 0,
+                'draws' => 0,
+                'losses' => 0,
+                'points' => 0,
+                'goals_for' => 0,
+                'goals_against' => 0,
+                'goal_balance' => 0,
+                'clean_sheets' => 0,
+                'aproveitamento' => 0.0,
+            ];
+        }
+
+        $clubIdMap = array_fill_keys($normalizedClubIds->all(), true);
         $wins = 0;
         $draws = 0;
         $losses = 0;
@@ -4299,8 +4435,10 @@ class LegacyController extends Controller
         $cleanSheets = 0;
 
         foreach ($matches as $match) {
-            $isMandante = (int) $match->mandante_id === $clubId;
-            $isVisitante = (int) $match->visitante_id === $clubId;
+            $mandanteId = (int) $match->mandante_id;
+            $visitanteId = (int) $match->visitante_id;
+            $isMandante = isset($clubIdMap[$mandanteId]);
+            $isVisitante = isset($clubIdMap[$visitanteId]);
 
             if (! $isMandante && ! $isVisitante) {
                 continue;
@@ -4308,22 +4446,40 @@ class LegacyController extends Controller
 
             $mandanteGoals = (int) ($match->placar_mandante ?? 0);
             $visitanteGoals = (int) ($match->placar_visitante ?? 0);
-            $clubGoals = $isMandante ? $mandanteGoals : $visitanteGoals;
-            $opponentGoals = $isMandante ? $visitanteGoals : $mandanteGoals;
+            $clubPerspectives = [];
 
-            $goalsFor += $clubGoals;
-            $goalsAgainst += $opponentGoals;
-
-            if ($opponentGoals === 0) {
-                $cleanSheets++;
+            if ($isMandante) {
+                $clubPerspectives[] = [
+                    'club_goals' => $mandanteGoals,
+                    'opponent_goals' => $visitanteGoals,
+                ];
             }
 
-            if ($clubGoals > $opponentGoals) {
-                $wins++;
-            } elseif ($clubGoals < $opponentGoals) {
-                $losses++;
-            } else {
-                $draws++;
+            if ($isVisitante) {
+                $clubPerspectives[] = [
+                    'club_goals' => $visitanteGoals,
+                    'opponent_goals' => $mandanteGoals,
+                ];
+            }
+
+            foreach ($clubPerspectives as $perspective) {
+                $clubGoals = (int) $perspective['club_goals'];
+                $opponentGoals = (int) $perspective['opponent_goals'];
+
+                $goalsFor += $clubGoals;
+                $goalsAgainst += $opponentGoals;
+
+                if ($opponentGoals === 0) {
+                    $cleanSheets++;
+                }
+
+                if ($clubGoals > $opponentGoals) {
+                    $wins++;
+                } elseif ($clubGoals < $opponentGoals) {
+                    $losses++;
+                } else {
+                    $draws++;
+                }
             }
         }
 
@@ -4345,6 +4501,39 @@ class LegacyController extends Controller
             'clean_sheets' => $cleanSheets,
             'aproveitamento' => $aproveitamento,
         ];
+    }
+
+    /**
+     * @param Collection<int, Partida> $matches
+     * @param Collection<int, int> $leagueClubIds
+     * @param Collection<int, int> $clubIds
+     */
+    private function resolveLegacyClubPositionForClubSet(Collection $matches, Collection $leagueClubIds, Collection $clubIds): ?int
+    {
+        $normalizedClubIds = $clubIds
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn (int $id): bool => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($normalizedClubIds->isEmpty()) {
+            return null;
+        }
+
+        $bestPosition = null;
+
+        foreach ($normalizedClubIds as $clubId) {
+            $position = $this->resolveLegacyClubPositionFromMatches($matches, $leagueClubIds, (int) $clubId);
+            if ($position === null) {
+                continue;
+            }
+
+            if ($bestPosition === null || $position < $bestPosition) {
+                $bestPosition = $position;
+            }
+        }
+
+        return $bestPosition;
     }
 
     /**
@@ -4483,6 +4672,49 @@ class LegacyController extends Controller
             'skill_rating' => 0,
             'score' => 5.0,
         ];
+    }
+
+    private function formatFinanceLedgerMovement(LigaClubeFinanceiroMovimento $movimento): array
+    {
+        return [
+            'id' => (int) $movimento->id,
+            'operacao' => (string) $movimento->operacao,
+            'descricao' => (string) ($movimento->descricao ?? ''),
+            'valor' => (int) $movimento->valor,
+            'saldo_depois' => (int) $movimento->saldo_depois,
+            'created_at' => $movimento->created_at?->toIso8601String(),
+            'metadata' => is_array($movimento->metadata) ? $movimento->metadata : null,
+        ];
+    }
+
+    private function resolveFinanceLedgerActivationDate(int $ligaId, int $clubeId): ?\Illuminate\Support\Carbon
+    {
+        $snapshotDate = LigaClubeFinanceiroMovimento::query()
+            ->where('liga_id', $ligaId)
+            ->where('clube_id', $clubeId)
+            ->where('operacao', LigaClubeFinanceiroMovimento::OPERATION_SNAPSHOT_OPENING)
+            ->orderBy('created_at')
+            ->value('created_at');
+
+        if ($snapshotDate) {
+            return $snapshotDate instanceof \Illuminate\Support\Carbon
+                ? $snapshotDate
+                : \Illuminate\Support\Carbon::parse((string) $snapshotDate);
+        }
+
+        $firstDate = LigaClubeFinanceiroMovimento::query()
+            ->where('liga_id', $ligaId)
+            ->where('clube_id', $clubeId)
+            ->orderBy('created_at')
+            ->value('created_at');
+
+        if (! $firstDate) {
+            return null;
+        }
+
+        return $firstDate instanceof \Illuminate\Support\Carbon
+            ? $firstDate
+            : \Illuminate\Support\Carbon::parse((string) $firstDate);
     }
 
     /**

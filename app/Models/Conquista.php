@@ -23,6 +23,8 @@ class Conquista extends Model
         'compra_mercado' => 'Compra de jogadores no mercado',
         'negociacoes_enviadas' => 'Negociacoes enviadas',
         'negociacoes_recebidas' => 'Negociacoes recebidas',
+        'partidas_sem_levar_gol' => 'Partidas sem levar gol',
+        'vitorias_por_3_gols_ou_mais_de_diferenca' => 'Vitorias por 3 ou mais gols de diferenca',
     ];
 
     protected $fillable = [

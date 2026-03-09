@@ -1,12 +1,45 @@
 @php
     use Illuminate\Support\Str;
+
+    $filters = array_merge([
+        'partida_id' => '',
+    ], $filters ?? []);
 @endphp
 
 <x-app-layout title="Reclamacoes de partidas">
     <x-slot name="header">
-        <div>
-            <h2 class="text-2xl font-bold text-slate-800">Reclamacoes de partidas</h2>
-            <p class="text-sm text-slate-500">Acompanhe os relatos enviados pelos usuarios.</p>
+        <div class="space-y-4">
+            <div>
+                <h2 class="text-2xl font-bold text-slate-800">Reclamacoes de partidas</h2>
+                <p class="text-sm text-slate-500">Acompanhe os relatos enviados pelos usuarios.</p>
+            </div>
+
+            <form method="GET" action="{{ route('admin.partidas-reclamacoes.index') }}" class="flex flex-wrap items-end gap-3">
+                <div>
+                    <label for="partida_id" class="block text-xs font-semibold uppercase tracking-wide text-slate-500">ID da partida</label>
+                    <input
+                        id="partida_id"
+                        type="number"
+                        min="1"
+                        name="partida_id"
+                        value="{{ $filters['partida_id'] }}"
+                        placeholder="Ex: 123"
+                        class="mt-1 h-10 w-44 rounded-xl border border-slate-200 bg-white px-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    >
+                </div>
+                <button
+                    type="submit"
+                    class="inline-flex h-10 items-center rounded-xl bg-slate-900 px-4 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-slate-800"
+                >
+                    Filtrar
+                </button>
+                <a
+                    href="{{ route('admin.partidas-reclamacoes.index') }}"
+                    class="inline-flex h-10 items-center rounded-xl border border-slate-200 px-4 text-xs font-semibold uppercase tracking-wide text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                    Limpar
+                </a>
+            </form>
         </div>
     </x-slot>
 
@@ -32,6 +65,7 @@
                             <th class="px-4 py-3 font-semibold">Status</th>
                             <th class="px-4 py-3 font-semibold">Texto</th>
                             <th class="px-4 py-3 font-semibold">Data</th>
+                            <th class="px-4 py-3 font-semibold">Acoes</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
@@ -67,10 +101,28 @@
                                 <td class="px-4 py-4 align-top text-slate-600">
                                     {{ $reclamacao->created_at?->format('d/m/Y H:i') }}
                                 </td>
+                                <td class="px-4 py-4 align-top text-slate-600">
+                                    <div class="flex flex-wrap gap-2">
+                                        @if($partida)
+                                            <a
+                                                href="{{ route('admin.partidas.edit', $partida) }}"
+                                                class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                            >
+                                                Editar partida
+                                            </a>
+                                        @endif
+                                        <a
+                                            href="{{ route('admin.partidas-reclamacoes.index', ['partida_id' => $partida?->id]) }}"
+                                            class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:text-slate-900"
+                                        >
+                                            Filtrar partida
+                                        </a>
+                                    </div>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-500">
+                                <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-500">
                                     Nenhuma reclamacao registrada ate o momento.
                                 </td>
                             </tr>
