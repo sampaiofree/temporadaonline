@@ -1984,11 +1984,13 @@ const ScheduleMatchesView = ({
   currentCareer,
   initialPartida,
   onNotify,
+  onOpenFinalize,
 }: {
   onBack: () => void,
   currentCareer: any,
   initialPartida?: any,
   onNotify?: (message: string, variant?: LegacyToastVariant) => void,
+  onOpenFinalize: (partida: any) => void,
 }) => {
   const initialTab: 'pending' | 'scheduled' =
     String(initialPartida?.estado || '') === 'confirmacao_necessaria' ? 'pending' : 'scheduled';
@@ -2268,16 +2270,54 @@ const ScheduleMatchesView = ({
               const homeLogo = String(partida?.mandante_logo || '').trim();
               const awayLogo = String(partida?.visitante_logo || '').trim();
 
+              if (isPending) {
+                return (
+                  <button
+                    key={partida.id}
+                    type="button"
+                    onClick={() => openScheduleModal(partida)}
+                    className="w-full text-left p-4 border transition-all active:scale-[0.995] bg-[#1E1E1E] text-white border-[#B22222]/60"
+                    style={{ clipPath: AGGRESSIVE_CLIP }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <div className="w-7 h-7 bg-[#121212] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                            {homeLogo ? (
+                              <img src={homeLogo} alt={homeName} className="w-full h-full object-cover" />
+                            ) : (
+                              <i className="fas fa-shield text-[11px] text-[#FFD700]/25"></i>
+                            )}
+                          </div>
+                          <span className="text-[8px] font-black uppercase italic text-white/35 tracking-[0.2em]">VS</span>
+                          <div className="w-7 h-7 bg-[#121212] border border-white/15 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                            {awayLogo ? (
+                              <img src={awayLogo} alt={awayName} className="w-full h-full object-cover" />
+                            ) : (
+                              <i className="fas fa-shield text-[11px] text-white/25"></i>
+                            )}
+                          </div>
+                        </div>
+                        <p className="text-[11px] font-black italic uppercase truncate">VS {opponent}</p>
+                        <p className="text-[8px] font-bold uppercase italic tracking-widest mt-1 text-white/45">
+                          {LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}
+                        </p>
+                        <p className="text-[8px] font-black uppercase italic text-white/35 mt-2">
+                          {formatLegacyMatchDate(partida?.scheduled_at)}
+                        </p>
+                      </div>
+                      <span className="text-[7px] font-black uppercase italic px-2 py-1 border bg-[#B22222]/25 text-[#FFB4B4] border-[#B22222]/60">
+                        ACAO NECESSARIA
+                      </span>
+                    </div>
+                  </button>
+                );
+              }
+
               return (
-                <button
+                <div
                   key={partida.id}
-                  type="button"
-                  onClick={() => openScheduleModal(partida)}
-                  className={`w-full text-left p-4 border transition-all active:scale-[0.995] ${
-                    isPending
-                      ? 'bg-[#1E1E1E] text-white border-[#B22222]/60'
-                      : 'bg-[#1E1E1E] text-white border-[#22C55E]/45'
-                  }`}
+                  className="w-full text-left p-4 border bg-[#1E1E1E] text-white border-[#22C55E]/45"
                   style={{ clipPath: AGGRESSIVE_CLIP }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -2307,15 +2347,30 @@ const ScheduleMatchesView = ({
                         {formatLegacyMatchDate(partida?.scheduled_at)}
                       </p>
                     </div>
-                    <span className={`text-[7px] font-black uppercase italic px-2 py-1 border ${
-                      isPending
-                        ? 'bg-[#B22222]/25 text-[#FFB4B4] border-[#B22222]/60'
-                        : 'bg-[#22C55E]/20 text-[#A7F3D0] border-[#22C55E]/45'
-                    }`}>
-                      {isPending ? 'ACAO NECESSARIA' : 'REAGENDAR'}
+                    <span className="text-[7px] font-black uppercase italic px-2 py-1 border bg-[#22C55E]/20 text-[#A7F3D0] border-[#22C55E]/45">
+                      PRONTA PARA ACAO
                     </span>
                   </div>
-                </button>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => openScheduleModal(partida)}
+                      className="w-full px-3 py-2 text-[9px] font-black italic uppercase tracking-[0.15em] border border-white/15 bg-[#121212] text-white/85"
+                      style={{ clipPath: AGGRESSIVE_CLIP }}
+                    >
+                      REAGENDAR
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onOpenFinalize(partida)}
+                      className="w-full px-3 py-2 text-[9px] font-black italic uppercase tracking-[0.15em] border border-[#FFD700]/40 bg-[#FFD700] text-[#121212]"
+                      style={{ clipPath: AGGRESSIVE_CLIP }}
+                    >
+                      FINALIZAR PARTIDA
+                    </button>
+                  </div>
+                </div>
               );
             })}
           </section>
@@ -2806,7 +2861,7 @@ const ReportMatchView = ({
   );
 
   const resolvedPlacar = manualDirty ? manualPlacar : placarCalculado;
-  const canAnalyze = String(partida?.estado || '') === 'confirmada';
+  const canAnalyze = ['confirmada', 'agendada'].includes(String(partida?.estado || ''));
 
   useEffect(() => {
     if (!hasPreview || manualDirty) return;
@@ -3020,7 +3075,7 @@ const ReportMatchView = ({
 
         {!canAnalyze && (
           <p className="text-[8px] font-black uppercase italic text-white/40">
-            Esta partida precisa estar em estado CONFIRMADA para finalizar.
+            Esta partida precisa estar em estado CONFIRMADA ou AGENDADA para finalizar.
           </p>
         )}
       </section>
@@ -9790,7 +9845,7 @@ const App = () => {
         }
       }} />;
       case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenEvaluation={handleOpenEvaluation} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
-      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} />;
+      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} onOpenFinalize={(match) => { setSelectedReportMatch(match ?? null); setView('report-match'); }} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedPendingMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedPendingMatch} />;
       case 'evaluate-match': return <EvaluateMatchView onBack={() => { setView('match-center'); setSelectedEvaluationMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedEvaluationMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedEvaluationMatch} />;

@@ -161,7 +161,7 @@ class PartidaDesempenhoController extends Controller
             abort(403, 'Esta partida já foi registrada.');
         }
 
-        if (! in_array($partida->estado, ['confirmada'], true)) {
+        if (! in_array($partida->estado, ['confirmada', 'agendada'], true)) {
             abort(403, 'Partida não está disponível para finalização.');
         }
     }
