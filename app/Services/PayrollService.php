@@ -69,6 +69,12 @@ class PayrollService
                 $totalWage,
                 "Cobrança de salário da rodada {$rodadaNumero}",
                 allowNegative: true,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_ROUND_PAYROLL_LEGACY,
+                    'round' => $rodadaNumero,
+                    'action_value' => $totalWage,
+                    'total_value' => $totalWage,
+                ],
             );
 
             return [
@@ -81,4 +87,3 @@ class PayrollService
         }, 3);
     }
 }
-

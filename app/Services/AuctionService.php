@@ -137,11 +137,19 @@ class AuctionService
                 balanceDelta: -$newValue,
             );
 
+            $playerName = $this->resolvePlayerName($player);
             $this->finance->debit(
                 (int) $lockedLiga->id,
                 (int) $lockedClube->id,
                 $newValue,
-                'Lance em leilão',
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_AUCTION_BID,
+                    'auction_item_id' => (int) $item->id,
+                    'player_id' => (int) $player->id,
+                    'player_name' => $playerName,
+                    'action_value' => $newValue,
+                    'total_value' => $newValue,
+                ],
             );
 
             if ($previousLeaderId && $previousValue > 0) {
@@ -151,7 +159,14 @@ class AuctionService
                         (int) $previousLeader->liga_id,
                         (int) $previousLeader->id,
                         $previousValue,
-                        'Estorno de lance superado',
+                        metadata: [
+                            'event_key' => LeagueFinanceService::EVENT_AUCTION_REFUND_OUTBID,
+                            'auction_item_id' => (int) $item->id,
+                            'player_id' => (int) $player->id,
+                            'player_name' => $playerName,
+                            'action_value' => $previousValue,
+                            'total_value' => $previousValue,
+                        ],
                     );
                 }
             }
@@ -393,6 +408,9 @@ class AuctionService
     {
         $leaderClubId = (int) ($item->clube_lider_id ?? 0);
         $currentValue = (int) ($item->valor_atual ?? 0);
+        $playerName = $this->resolvePlayerName(
+            Elencopadrao::query()->find((int) $item->elencopadrao_id)
+        );
 
         if ($leaderClubId > 0 && $currentValue > 0) {
             $leaderClub = LigaClube::query()->lockForUpdate()->find($leaderClubId);
@@ -401,7 +419,15 @@ class AuctionService
                     (int) $leaderClub->liga_id,
                     (int) $leaderClub->id,
                     $currentValue,
-                    'Estorno de leilão cancelado',
+                    metadata: [
+                        'event_key' => LeagueFinanceService::EVENT_AUCTION_REFUND_CANCELLED,
+                        'auction_item_id' => (int) $item->id,
+                        'player_id' => (int) $item->elencopadrao_id,
+                        'player_name' => $playerName,
+                        'action_value' => $currentValue,
+                        'total_value' => $currentValue,
+                        'cancel_reason' => $reason,
+                    ],
                 );
             }
         }
@@ -442,5 +468,20 @@ class AuctionService
         }
 
         return $query->exists();
+    }
+
+    private function resolvePlayerName(?Elencopadrao $player): string
+    {
+        $name = trim((string) ($player?->short_name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $name = trim((string) ($player?->long_name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        return 'Jogador';
     }
 }

@@ -33,6 +33,10 @@ class PartidaPayrollService
 
         $rewardsByClub = $this->resolveRewardsByClub($partida, $clubIds);
         $now = now();
+        $partida->loadMissing([
+            'mandante:id,nome',
+            'visitante:id,nome',
+        ]);
 
         foreach ($clubIds as $clubId) {
             $reward = $rewardsByClub[$clubId] ?? null;
@@ -63,18 +67,22 @@ class PartidaPayrollService
                     return;
                 }
 
-                $reason = match ($tipo) {
-                    PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => "Ganho de vitória da partida {$partida->id}",
-                    PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => "Ganho de empate da partida {$partida->id}",
-                    PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => "Ganho de derrota da partida {$partida->id}",
-                    default => "Ganho da partida {$partida->id}",
-                };
+                $opponentClubName = $this->resolveOpponentClubName($partida, (int) $clubId);
+                $resultKey = $this->resolveResultKeyFromTipo($tipo);
 
                 $this->finance->credit(
                     $partida->liga_id,
                     $clubId,
                     $valor,
-                    $reason,
+                    metadata: [
+                        'event_key' => LeagueFinanceService::EVENT_MATCH_REWARD,
+                        'match_id' => (int) $partida->id,
+                        'match_state' => (string) $partida->estado,
+                        'match_result' => $resultKey,
+                        'opponent_club_name' => $opponentClubName,
+                        'action_value' => $valor,
+                        'total_value' => $valor,
+                    ],
                 );
             }, 3);
         }
@@ -195,5 +203,28 @@ class PartidaPayrollService
         }
 
         return null;
+    }
+
+    private function resolveOpponentClubName(Partida $partida, int $clubId): string
+    {
+        if ((int) $partida->mandante_id === $clubId) {
+            return trim((string) ($partida->visitante?->nome ?? 'Adversario'));
+        }
+
+        if ((int) $partida->visitante_id === $clubId) {
+            return trim((string) ($partida->mandante?->nome ?? 'Adversario'));
+        }
+
+        return 'Adversario';
+    }
+
+    private function resolveResultKeyFromTipo(string $tipo): string
+    {
+        return match ($tipo) {
+            PartidaFolhaPagamento::TYPE_MATCH_WIN_REWARD => 'vitoria',
+            PartidaFolhaPagamento::TYPE_MATCH_DRAW_REWARD => 'empate',
+            PartidaFolhaPagamento::TYPE_MATCH_LOSS_REWARD => 'derrota',
+            default => 'partida',
+        };
     }
 }

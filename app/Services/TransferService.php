@@ -67,7 +67,22 @@ class TransferService
                 balanceDelta: -$price,
             );
 
-            $this->finance->debit($ligaId, $compradorClubeId, $price, 'Compra de jogador livre');
+            $playerName = $this->resolvePlayerName($player);
+            $salary = (int) ($player->wage_eur ?? 0);
+
+            $this->finance->debit(
+                $ligaId,
+                $compradorClubeId,
+                $price,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_MARKET_BUY_FREE,
+                    'player_id' => (int) $player->id,
+                    'player_name' => $playerName,
+                    'salary_value' => $salary,
+                    'action_value' => $price,
+                    'total_value' => $price + $salary,
+                ],
+            );
 
             try {
                 $entry = LigaClubeElenco::create([
@@ -136,7 +151,23 @@ class TransferService
                 ->find($clubeOrigemId);
 
             if ($credit > 0) {
-                $this->finance->credit($ligaId, $clubeOrigemId, $credit, 'Venda ao mercado');
+                $playerName = $this->resolvePlayerName($model->elencopadrao);
+
+                $this->finance->credit(
+                    $ligaId,
+                    $clubeOrigemId,
+                    $credit,
+                    metadata: [
+                        'event_key' => LeagueFinanceService::EVENT_MARKET_SELL_RELEASE,
+                        'player_id' => $elencopadraoId,
+                        'player_name' => $playerName,
+                        'base_value' => $baseValue,
+                        'tax_percent' => $taxPercent,
+                        'tax_value' => $taxValue,
+                        'action_value' => $credit,
+                        'total_value' => $credit,
+                    ],
+                );
             }
 
             $confederacaoId = (int) ($model->confederacao_id ?? $club?->confederacao_id ?? 0);
@@ -215,8 +246,41 @@ class TransferService
                 balanceDelta: -$price,
             );
 
-            $this->finance->debit($liga->id, $compradorClubeId, $price, 'Compra de jogador');
-            $this->finance->credit($ligaVendedor->id, $vendedorClubeId, $price, 'Venda de jogador');
+            $entry->loadMissing('elencopadrao:id,short_name,long_name');
+            $playerName = $this->resolvePlayerName($entry->elencopadrao);
+
+            $this->finance->debit(
+                $liga->id,
+                $compradorClubeId,
+                $price,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_TRANSFER_BUY,
+                    'player_id' => $elencopadraoId,
+                    'player_name' => $playerName,
+                    'from_club_id' => (int) $vendedor->id,
+                    'from_club_name' => (string) $vendedor->nome,
+                    'to_club_id' => (int) $comprador->id,
+                    'to_club_name' => (string) $comprador->nome,
+                    'action_value' => $price,
+                    'total_value' => $price,
+                ],
+            );
+            $this->finance->credit(
+                $ligaVendedor->id,
+                $vendedorClubeId,
+                $price,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_TRANSFER_SELL,
+                    'player_id' => $elencopadraoId,
+                    'player_name' => $playerName,
+                    'from_club_id' => (int) $vendedor->id,
+                    'from_club_name' => (string) $vendedor->nome,
+                    'to_club_id' => (int) $comprador->id,
+                    'to_club_name' => (string) $comprador->nome,
+                    'action_value' => $price,
+                    'total_value' => $price,
+                ],
+            );
 
             $entry->liga_clube_id = $compradorClubeId;
             $entry->liga_id = $liga->id;
@@ -271,7 +335,7 @@ class TransferService
 
             $this->assertSameScope($liga, $ligaOrigem);
 
-            $entry->loadMissing('elencopadrao:id,value_eur');
+            $entry->loadMissing('elencopadrao:id,value_eur,short_name,long_name');
             $entryValueEur = (int) ($entry->value_eur ?? 0);
             $originalValueEur = (int) ($entry->elencopadrao?->value_eur ?? 0);
             $multaMultiplicador = $ligaOrigem->multa_multiplicador !== null
@@ -284,6 +348,11 @@ class TransferService
                 $multaMultiplicador,
             );
 
+            $clubeOrigem = (int) $clubeOrigemId === (int) $comprador->id
+                ? $comprador
+                : LigaClube::query()->lockForUpdate()->find($clubeOrigemId);
+            $playerName = $this->resolvePlayerName($entry->elencopadrao);
+
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $multa);
             $this->salaryReserveGuard->assertReserveDoesNotExceedBalance(
@@ -294,8 +363,38 @@ class TransferService
                 balanceDelta: -$multa,
             );
 
-            $this->finance->debit($liga->id, $compradorClubeId, $multa, 'Pagamento de multa');
-            $this->finance->credit($ligaOrigem->id, $clubeOrigemId, $multa, 'Recebimento de multa');
+            $this->finance->debit(
+                $liga->id,
+                $compradorClubeId,
+                $multa,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_RELEASE_CLAUSE_PAID,
+                    'player_id' => (int) $entry->elencopadrao_id,
+                    'player_name' => $playerName,
+                    'from_club_id' => $clubeOrigemId,
+                    'from_club_name' => (string) ($clubeOrigem?->nome ?? 'Clube origem'),
+                    'to_club_id' => (int) $comprador->id,
+                    'to_club_name' => (string) $comprador->nome,
+                    'action_value' => $multa,
+                    'total_value' => $multa,
+                ],
+            );
+            $this->finance->credit(
+                $ligaOrigem->id,
+                $clubeOrigemId,
+                $multa,
+                metadata: [
+                    'event_key' => LeagueFinanceService::EVENT_RELEASE_CLAUSE_RECEIVED,
+                    'player_id' => (int) $entry->elencopadrao_id,
+                    'player_name' => $playerName,
+                    'from_club_id' => $clubeOrigemId,
+                    'from_club_name' => (string) ($clubeOrigem?->nome ?? 'Clube origem'),
+                    'to_club_id' => (int) $comprador->id,
+                    'to_club_name' => (string) $comprador->nome,
+                    'action_value' => $multa,
+                    'total_value' => $multa,
+                ],
+            );
 
             $entry->liga_clube_id = $compradorClubeId;
             $entry->liga_id = $liga->id;
@@ -358,6 +457,9 @@ class TransferService
                 throw new \DomainException('Os jogadores informados nao pertencem aos clubes selecionados.');
             }
 
+            $entryA->loadMissing('elencopadrao:id,short_name,long_name');
+            $entryB->loadMissing('elencopadrao:id,short_name,long_name');
+
             $balanceDeltaA = $ajusteValor === 0
                 ? 0
                 : ($ajusteValor > 0 ? -$ajusteValor : abs($ajusteValor));
@@ -383,13 +485,65 @@ class TransferService
             if ($ajusteValor !== 0) {
                 if ($ajusteValor > 0) {
                     $this->assertClubCanSpend($liga, $clubeAId, $ajusteValor);
-                    $this->finance->debit($liga->id, $clubeAId, $ajusteValor, 'Ajuste de troca');
-                    $this->finance->credit($ligaB->id, $clubeBId, $ajusteValor, 'Ajuste de troca');
+                    $this->finance->debit(
+                        $liga->id,
+                        $clubeAId,
+                        $ajusteValor,
+                        metadata: [
+                            'event_key' => LeagueFinanceService::EVENT_TRADE_ADJUSTMENT_PAID,
+                            'counter_club_id' => (int) $clubeB->id,
+                            'counter_club_name' => (string) $clubeB->nome,
+                            'player_name' => $this->resolvePlayerName($entryA->elencopadrao),
+                            'counter_player_name' => $this->resolvePlayerName($entryB->elencopadrao),
+                            'action_value' => $ajusteValor,
+                            'total_value' => $ajusteValor,
+                        ],
+                    );
+                    $this->finance->credit(
+                        $ligaB->id,
+                        $clubeBId,
+                        $ajusteValor,
+                        metadata: [
+                            'event_key' => LeagueFinanceService::EVENT_TRADE_ADJUSTMENT_RECEIVED,
+                            'counter_club_id' => (int) $clubeA->id,
+                            'counter_club_name' => (string) $clubeA->nome,
+                            'player_name' => $this->resolvePlayerName($entryB->elencopadrao),
+                            'counter_player_name' => $this->resolvePlayerName($entryA->elencopadrao),
+                            'action_value' => $ajusteValor,
+                            'total_value' => $ajusteValor,
+                        ],
+                    );
                 } else {
                     $valor = abs($ajusteValor);
                     $this->assertClubCanSpend($ligaB, $clubeBId, $valor);
-                    $this->finance->debit($ligaB->id, $clubeBId, $valor, 'Ajuste de troca');
-                    $this->finance->credit($liga->id, $clubeAId, $valor, 'Ajuste de troca');
+                    $this->finance->debit(
+                        $ligaB->id,
+                        $clubeBId,
+                        $valor,
+                        metadata: [
+                            'event_key' => LeagueFinanceService::EVENT_TRADE_ADJUSTMENT_PAID,
+                            'counter_club_id' => (int) $clubeA->id,
+                            'counter_club_name' => (string) $clubeA->nome,
+                            'player_name' => $this->resolvePlayerName($entryB->elencopadrao),
+                            'counter_player_name' => $this->resolvePlayerName($entryA->elencopadrao),
+                            'action_value' => $valor,
+                            'total_value' => $valor,
+                        ],
+                    );
+                    $this->finance->credit(
+                        $liga->id,
+                        $clubeAId,
+                        $valor,
+                        metadata: [
+                            'event_key' => LeagueFinanceService::EVENT_TRADE_ADJUSTMENT_RECEIVED,
+                            'counter_club_id' => (int) $clubeB->id,
+                            'counter_club_name' => (string) $clubeB->nome,
+                            'player_name' => $this->resolvePlayerName($entryA->elencopadrao),
+                            'counter_player_name' => $this->resolvePlayerName($entryB->elencopadrao),
+                            'action_value' => $valor,
+                            'total_value' => $valor,
+                        ],
+                    );
                 }
             }
 
@@ -519,9 +673,43 @@ class TransferService
             );
 
             if ($valor > 0) {
+                $targetEntry->loadMissing('elencopadrao:id,short_name,long_name');
+                $playerName = $this->resolvePlayerName($targetEntry->elencopadrao);
                 $this->assertClubCanSpend($ligaDestino, $clubeDestino->id, $valor);
-                $this->finance->debit($ligaDestino->id, $clubeDestino->id, $valor, 'Proposta aceita');
-                $this->finance->credit($ligaOrigem->id, $clubeOrigem->id, $valor, 'Proposta aceita');
+                $this->finance->debit(
+                    $ligaDestino->id,
+                    $clubeDestino->id,
+                    $valor,
+                    metadata: [
+                        'event_key' => LeagueFinanceService::EVENT_PROPOSAL_PAID,
+                        'proposal_id' => (int) $proposal->id,
+                        'player_id' => (int) $proposal->elencopadrao_id,
+                        'player_name' => $playerName,
+                        'from_club_id' => (int) $clubeOrigem->id,
+                        'from_club_name' => (string) $clubeOrigem->nome,
+                        'to_club_id' => (int) $clubeDestino->id,
+                        'to_club_name' => (string) $clubeDestino->nome,
+                        'action_value' => $valor,
+                        'total_value' => $valor,
+                    ],
+                );
+                $this->finance->credit(
+                    $ligaOrigem->id,
+                    $clubeOrigem->id,
+                    $valor,
+                    metadata: [
+                        'event_key' => LeagueFinanceService::EVENT_PROPOSAL_RECEIVED,
+                        'proposal_id' => (int) $proposal->id,
+                        'player_id' => (int) $proposal->elencopadrao_id,
+                        'player_name' => $playerName,
+                        'from_club_id' => (int) $clubeOrigem->id,
+                        'from_club_name' => (string) $clubeOrigem->nome,
+                        'to_club_id' => (int) $clubeDestino->id,
+                        'to_club_name' => (string) $clubeDestino->nome,
+                        'action_value' => $valor,
+                        'total_value' => $valor,
+                    ],
+                );
             }
 
             $targetEntry->liga_clube_id = $clubeDestino->id;
@@ -674,5 +862,20 @@ class TransferService
             || str_contains($message, 'Duplicate entry')
             || str_contains($message, 'unique constraint')
             || str_contains($message, 'violates unique constraint');
+    }
+
+    private function resolvePlayerName(?Elencopadrao $player): string
+    {
+        $name = trim((string) ($player?->short_name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        $name = trim((string) ($player?->long_name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        return 'Jogador';
     }
 }

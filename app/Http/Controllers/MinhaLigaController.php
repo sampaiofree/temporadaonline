@@ -612,7 +612,18 @@ class MinhaLigaController extends Controller
         }
 
         $finance = app(LeagueFinanceService::class);
-        $novoSaldo = $finance->credit($liga->id, $userClub->id, (int) $patrocinio->valor);
+        $novoSaldo = $finance->credit(
+            $liga->id,
+            $userClub->id,
+            (int) $patrocinio->valor,
+            metadata: [
+                'event_key' => LeagueFinanceService::EVENT_SPONSORSHIP_CLAIM,
+                'sponsorship_id' => (int) $patrocinio->id,
+                'sponsorship_name' => (string) $patrocinio->nome,
+                'action_value' => (int) $patrocinio->valor,
+                'total_value' => (int) $patrocinio->valor,
+            ],
+        );
 
         $record = $existing ?? new LigaClubePatrocinio();
         $record->fill([
