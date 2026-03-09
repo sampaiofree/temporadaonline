@@ -7328,12 +7328,22 @@ const isLegacyGoalkeeperPosition = (positions: string | null | undefined) => {
 const mapLegacyMarketPlayer = (player: any) => {
   const valueEur = Number(player?.value_eur ?? 0);
   const wageEur = Number(player?.wage_eur ?? 0);
-  const entryValueEur = Number(player?.entry_value_eur ?? valueEur);
+  const entryValueRaw = player?.entry_value_eur;
+  const entryValueEur = entryValueRaw === null || entryValueRaw === undefined
+    ? null
+    : Number(entryValueRaw);
   const multaMultiplicador = Number(player?.multa_multiplicador ?? 1);
-  const multaValueEur = Math.max(
-    0,
-    Math.round(Math.max(0, entryValueEur) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)),
-  );
+  const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
+  const multaValueEur = Number.isFinite(multaValueFromPayload)
+    ? Math.max(0, multaValueFromPayload)
+    : Number.isFinite(entryValueEur)
+      ? Math.max(
+          0,
+          Math.round(
+            Math.max(0, Number(entryValueEur)) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1),
+          ),
+        )
+      : 0;
   const valueM = toLegacyMoneyInMillions(valueEur);
   const salaryM = toLegacyMoneyInMillions(wageEur);
   const clubStatus = String(player?.club_status || 'livre');
@@ -7717,6 +7727,8 @@ const MarketView = ({
   const [marketRadarIds, setMarketRadarIds] = useState<number[]>([]);
   const [marketLigaId, setMarketLigaId] = useState<number | null>(null);
   const [marketClubId, setMarketClubId] = useState<number | null>(null);
+  const [marketClubSaldoEur, setMarketClubSaldoEur] = useState(0);
+  const [marketClubSalaryReserveEur, setMarketClubSalaryReserveEur] = useState(0);
   const [marketReloadToken, setMarketReloadToken] = useState(0);
   const [marketActionBusyIds, setMarketActionBusyIds] = useState<number[]>([]);
   const [radarBusyIds, setRadarBusyIds] = useState<number[]>([]);
@@ -7906,6 +7918,8 @@ const MarketView = ({
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setMarketClubSaldoEur(0);
+        setMarketClubSalaryReserveEur(0);
         setAuctionBidPlayer(null);
         setProposalPlayer(null);
         setProposalValue('');
@@ -7983,6 +7997,8 @@ const MarketView = ({
           : [];
         const ligaId = Number(payload?.liga?.id ?? 0);
         const clubeId = Number(payload?.clube?.id ?? 0);
+        const clubeSaldo = Number(payload?.clube?.saldo ?? 0);
+        const clubeSalaryPerRound = Number(payload?.clube?.salary_per_round ?? 0);
         const currentPage = Math.max(1, Number(paginationRaw?.current_page ?? marketPage) || 1);
         const lastPage = Math.max(1, Number(paginationRaw?.last_page ?? 1) || 1);
         const total = Math.max(0, Number(paginationRaw?.total ?? players.length) || 0);
@@ -7999,6 +8015,8 @@ const MarketView = ({
         setMarketRadarIds(radarIds);
         setMarketLigaId(ligaId > 0 ? ligaId : null);
         setMarketClubId(clubeId > 0 ? clubeId : null);
+        setMarketClubSaldoEur(Number.isFinite(clubeSaldo) ? clubeSaldo : 0);
+        setMarketClubSalaryReserveEur(Number.isFinite(clubeSalaryPerRound) ? Math.max(0, clubeSalaryPerRound) : 0);
         setProposalUnreadCount(proposalCount);
         setMarketPagination({
           currentPage,
@@ -8023,6 +8041,8 @@ const MarketView = ({
         setMarketRadarIds([]);
         setMarketLigaId(null);
         setMarketClubId(null);
+        setMarketClubSaldoEur(0);
+        setMarketClubSalaryReserveEur(0);
         setAuctionBidPlayer(null);
         setProposalPlayer(null);
         setProposalValue('');
@@ -8549,6 +8569,42 @@ const MarketView = ({
     setPrimaryActionType(null);
   };
 
+  const resolvePrimaryActionFinancials = useCallback((player: any, actionType: 'multa' | 'comprar' | null) => {
+    const wageEur = Math.max(0, Number(player?.wage_eur ?? 0) || 0);
+    const marketValueEur = Math.max(0, Number(player?.value_eur ?? 0) || 0);
+    const multaMultiplicador = Number(player?.multa_multiplicador ?? 1);
+    const entryValueRaw = Number(player?.entry_value_eur ?? NaN);
+    const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
+    const multaFallback = Number.isFinite(entryValueRaw)
+      ? Math.max(
+          0,
+          Math.round(Math.max(0, entryValueRaw) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)),
+        )
+      : 0;
+    const multaEur = Number.isFinite(multaValueFromPayload)
+      ? Math.max(0, multaValueFromPayload)
+      : multaFallback;
+    const actionValueEur = actionType === 'multa' ? multaEur : marketValueEur;
+    const saldoEur = Number.isFinite(marketClubSaldoEur) ? marketClubSaldoEur : 0;
+    const salaryReserveEur = Number.isFinite(marketClubSalaryReserveEur)
+      ? Math.max(0, marketClubSalaryReserveEur)
+      : 0;
+    const investmentPowerEur = Math.max(0, saldoEur - salaryReserveEur);
+    const requiredPowerEur = Math.max(0, actionValueEur + wageEur);
+
+    return {
+      wageEur,
+      marketValueEur,
+      multaEur,
+      actionValueEur,
+      saldoEur,
+      salaryReserveEur,
+      investmentPowerEur,
+      requiredPowerEur,
+      hasSufficientPower: investmentPowerEur >= requiredPowerEur,
+    };
+  }, [marketClubSaldoEur, marketClubSalaryReserveEur]);
+
   const handlePrimaryAction = (player: any) => {
     const playerId = Number(player?.id ?? 0);
     if (playerId <= 0 || player?.club_status === 'meu') return;
@@ -8602,6 +8658,12 @@ const MarketView = ({
 
     if (marketClosed) {
       notifyMarket('Mercado fechado para esta confederação.', 'warning');
+      return;
+    }
+
+    const financials = resolvePrimaryActionFinancials(primaryActionPlayer, primaryActionType);
+    if (!financials.hasSufficientPower) {
+      notifyMarket('Poder de investimento insuficiente para esta operacao.', 'warning');
       return;
     }
 
@@ -9414,12 +9476,8 @@ const MarketView = ({
         const playerId = Number(primaryActionPlayer?.id ?? 0);
         const isBusy = marketActionBusyIds.includes(playerId);
         const playerName = String(primaryActionPlayer?.name || 'ATLETA');
-        const wageEur = Math.max(0, Number(primaryActionPlayer?.wage_eur ?? 0) || 0);
-        const marketValueEur = Math.max(0, Number(primaryActionPlayer?.value_eur ?? 0) || 0);
-        const multaMultiplicador = Number(primaryActionPlayer?.multa_multiplicador ?? 1);
-        const entryValueEur = Math.max(0, Number(primaryActionPlayer?.entry_value_eur ?? marketValueEur) || 0);
-        const multaEur = Math.max(0, Math.round(entryValueEur * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)));
-        const actionValueEur = primaryActionType === 'multa' ? multaEur : marketValueEur;
+        const financials = resolvePrimaryActionFinancials(primaryActionPlayer, primaryActionType);
+        const hasSufficientPower = financials.hasSufficientPower;
         const modalTitle = primaryActionType === 'multa' ? 'PAGAMENTO DE MULTA' : 'CONFIRMAR COMPRA';
         const actionValueLabel = primaryActionType === 'multa' ? 'VALOR DA MULTA' : 'VALOR DE MERCADO';
         const actionButtonLabel = isBusy
@@ -9438,26 +9496,57 @@ const MarketView = ({
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[8px] font-black italic uppercase text-white/55">{actionValueLabel}</p>
                   <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
-                    M$ {toLegacyMoneyCompact(actionValueEur)}
+                    M$ {toLegacyMoneyCompact(financials.actionValueEur)}
                   </p>
                 </div>
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-[8px] font-black italic uppercase text-white/55">SALARIO</p>
                   <p className="text-[10px] font-black italic uppercase text-white">
-                    M$ {toLegacyMoneyCompact(wageEur)}
+                    M$ {toLegacyMoneyCompact(financials.wageEur)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black italic uppercase text-white/55">SALDO EM CAIXA</p>
+                  <p className="text-[10px] font-black italic uppercase text-white">
+                    M$ {toLegacyMoneyCompact(financials.saldoEur)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black italic uppercase text-white/55">RESERVA SALARIAL</p>
+                  <p className="text-[10px] font-black italic uppercase text-white">
+                    M$ {toLegacyMoneyCompact(financials.salaryReserveEur)}
+                  </p>
+                </div>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-[8px] font-black italic uppercase text-[#22C55E]">PODER DE INVESTIMENTO</p>
+                  <p className="text-[10px] font-black italic uppercase text-[#A7F3D0]">
+                    M$ {toLegacyMoneyCompact(financials.investmentPowerEur)}
                   </p>
                 </div>
               </div>
+
+              {!hasSufficientPower && (
+                <div className="mt-3 bg-[#B22222]/15 border border-[#B22222]/50 p-2" style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}>
+                  <p className="text-[8px] font-black italic uppercase text-[#FFB4B4]">
+                    Poder de investimento insuficiente para esta operacao.
+                  </p>
+                  <p className="text-[7px] font-black italic uppercase text-white/50 mt-1">
+                    Necessario: M$ {toLegacyMoneyCompact(financials.requiredPowerEur)}
+                  </p>
+                </div>
+              )}
 
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button
                   type="button"
                   className={`text-[8px] font-black italic uppercase py-3 ${
-                    isBusy ? 'bg-white/10 text-white/30' : 'bg-[#FFD700] text-[#121212]'
+                    isBusy || !hasSufficientPower
+                      ? 'bg-white/10 text-white/30 cursor-not-allowed'
+                      : 'bg-[#FFD700] text-[#121212]'
                   }`}
                   style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}
-                  onClick={() => !isBusy && void submitPrimaryAction()}
-                  disabled={isBusy}
+                  onClick={() => !isBusy && hasSufficientPower && void submitPrimaryAction()}
+                  disabled={isBusy || !hasSufficientPower}
                 >
                   {actionButtonLabel}
                 </button>

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Elencopadrao;
+use App\Models\Confederacao;
 use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
@@ -10,6 +11,7 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaFolhaPagamento;
+use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
 use App\Models\Plataforma;
 use App\Models\User;
@@ -242,15 +244,47 @@ class LigaFinanceiroTest extends TestCase
 
     public function test_multa_move_jogador_mesmo_sem_consentimento(): void
     {
-        $liga = $this->createLiga([
-            'saldo_inicial' => 5000,
-            'multa_multiplicador' => 2.00,
+        $plataforma = Plataforma::create(['nome' => 'PlayStation 5', 'slug' => 'ps5']);
+        $jogo = Jogo::create(['nome' => 'FC26', 'slug' => 'fc26']);
+        $geracao = Geracao::create(['nome' => 'Nova', 'slug' => 'nova']);
+        $confederacao = Confederacao::create([
+            'nome' => 'Confederacao Teste Multa',
+            'descricao' => 'Confederacao de teste',
+            'timezone' => 'America/Sao_Paulo',
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
         ]);
 
-        $jogo = Jogo::findOrFail($liga->jogo_id);
+        $liga = Liga::create([
+            'nome' => 'Liga Teste',
+            'descricao' => 'Liga de teste.',
+            'regras' => 'Regras de teste.',
+            'imagem' => null,
+            'tipo' => 'publica',
+            'status' => 'ativa',
+            'max_times' => 20,
+            'max_jogadores_por_clube' => 18,
+            'saldo_inicial' => 5000,
+            'multa_multiplicador' => 2.00,
+            'cobranca_salario' => 'rodada',
+            'venda_min_percent' => 100,
+            'bloquear_compra_saldo_negativo' => true,
+            'confederacao_id' => $confederacao->id,
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
+        ]);
+
+        LigaPeriodo::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => now()->subDays(2)->format('Y-m-d H:i:s'),
+            'fim' => now()->addDays(2)->format('Y-m-d H:i:s'),
+        ]);
+
         $player = $this->createElenco($jogo, [
             'long_name' => 'Multa',
-            'value_eur' => 1000,
+            'value_eur' => 700,
             'wage_eur' => 20,
         ]);
 
@@ -261,17 +295,20 @@ class LigaFinanceiroTest extends TestCase
 
         $clubeOwner = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $owner->id,
             'nome' => 'Clube Dono',
         ]);
 
         $clubeBuyer = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $buyer->id,
             'nome' => 'Clube Comprador',
         ]);
 
         $entry = LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
             'liga_id' => $liga->id,
             'liga_clube_id' => $clubeOwner->id,
             'elencopadrao_id' => $player->id,
@@ -306,6 +343,7 @@ class LigaFinanceiroTest extends TestCase
         $this->assertTrue(LigaTransferencia::where('liga_id', $liga->id)
             ->where('elencopadrao_id', $player->id)
             ->where('tipo', 'multa')
+            ->where('valor', $multa)
             ->exists());
     }
 

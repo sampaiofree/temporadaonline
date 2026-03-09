@@ -496,6 +496,12 @@ class LegacyController extends Controller
                         $canMulta = $clubStatus === 'outro';
                     }
 
+                    $entryValueEur = $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null;
+                    $multaMultiplicador = $row->multa_multiplicador !== null ? (float) $row->multa_multiplicador : null;
+                    $multaValueEur = ($canMulta && $entryValueEur !== null && $multaMultiplicador !== null)
+                        ? (int) round(max(0, $entryValueEur) * max(0.0, $multaMultiplicador))
+                        : null;
+
                     return [
                         'elencopadrao_id' => (int) $row->elencopadrao_id,
                         'short_name' => $row->short_name,
@@ -544,12 +550,13 @@ class LegacyController extends Controller
                         'club_status' => $clubStatus,
                         'club_name' => $row->club_name,
                         'liga_nome' => $row->liga_nome,
-                        'multa_multiplicador' => $row->multa_multiplicador !== null ? (float) $row->multa_multiplicador : null,
+                        'multa_multiplicador' => $multaMultiplicador,
                         'club_id' => $entryClubId,
                         'is_free_agent' => $clubStatus === 'livre',
                         'can_buy' => $canBuy,
                         'can_multa' => $canMulta,
-                        'entry_value_eur' => $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null,
+                        'entry_value_eur' => $entryValueEur,
+                        'multa_value_eur' => $multaValueEur,
                         'player_face_url' => $row->player_face_url,
                     ];
                 })
@@ -709,6 +716,14 @@ class LegacyController extends Controller
                     $canMulta = $clubStatus === 'outro';
                 }
 
+                $entryValueEur = $entry?->value_eur !== null ? (int) $entry->value_eur : null;
+                $multaMultiplicador = $clubLiga?->multa_multiplicador !== null
+                    ? (float) $clubLiga->multa_multiplicador
+                    : null;
+                $multaValueEur = ($canMulta && $entryValueEur !== null && $multaMultiplicador !== null)
+                    ? (int) round(max(0, $entryValueEur) * max(0.0, $multaMultiplicador))
+                    : null;
+
                 return [
                     'elencopadrao_id' => $player->id,
                     'short_name' => $player->short_name,
@@ -757,14 +772,13 @@ class LegacyController extends Controller
                     'club_status' => $clubStatus,
                     'club_name' => $club?->nome,
                     'liga_nome' => $clubLiga?->nome,
-                    'multa_multiplicador' => $clubLiga?->multa_multiplicador !== null
-                        ? (float) $clubLiga->multa_multiplicador
-                        : null,
+                    'multa_multiplicador' => $multaMultiplicador,
                     'club_id' => $club?->id,
                     'is_free_agent' => $clubStatus === 'livre',
                     'can_buy' => $canBuy,
                     'can_multa' => $canMulta,
-                    'entry_value_eur' => $entry?->value_eur,
+                    'entry_value_eur' => $entryValueEur,
+                    'multa_value_eur' => $multaValueEur,
                     'player_face_url' => $player->player_face_url,
                 ];
             })
