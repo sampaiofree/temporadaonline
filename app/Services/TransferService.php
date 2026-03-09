@@ -270,7 +270,7 @@ class TransferService
 
             $this->assertSameScope($liga, $ligaOrigem);
 
-            $multa = (int) round(((int) $entry->value_eur) * (float) $ligaOrigem->multa_multiplicador);
+            $multa = max(0, (int) ($entry->value_eur ?? 0));
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $multa);

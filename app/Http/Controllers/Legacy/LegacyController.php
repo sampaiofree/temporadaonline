@@ -498,8 +498,8 @@ class LegacyController extends Controller
 
                     $entryValueEur = $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null;
                     $multaMultiplicador = $row->multa_multiplicador !== null ? (float) $row->multa_multiplicador : null;
-                    $multaValueEur = ($canMulta && $entryValueEur !== null && $multaMultiplicador !== null)
-                        ? (int) round(max(0, $entryValueEur) * max(0.0, $multaMultiplicador))
+                    $multaValueEur = ($canMulta && $entryValueEur !== null)
+                        ? max(0, $entryValueEur)
                         : null;
 
                     return [
@@ -720,8 +720,8 @@ class LegacyController extends Controller
                 $multaMultiplicador = $clubLiga?->multa_multiplicador !== null
                     ? (float) $clubLiga->multa_multiplicador
                     : null;
-                $multaValueEur = ($canMulta && $entryValueEur !== null && $multaMultiplicador !== null)
-                    ? (int) round(max(0, $entryValueEur) * max(0.0, $multaMultiplicador))
+                $multaValueEur = ($canMulta && $entryValueEur !== null)
+                    ? max(0, $entryValueEur)
                     : null;
 
                 return [

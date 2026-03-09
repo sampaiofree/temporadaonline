@@ -327,7 +327,7 @@ class LigaFinanceiroTest extends TestCase
         $entry->refresh();
         $this->assertSame($clubeBuyer->id, (int) $entry->liga_clube_id);
 
-        $multa = (int) round(1000 * 2.00);
+        $multa = 1000;
 
         $ownerWallet = LigaClubeFinanceiro::where('liga_id', $liga->id)
             ->where('clube_id', $clubeOwner->id)

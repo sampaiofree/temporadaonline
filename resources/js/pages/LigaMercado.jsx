@@ -31,12 +31,6 @@ const formatShortMoney = (value) => {
     return String(Math.round(n));
 };
 
-const resolveMultaMultiplicador = (player, liga) => {
-    const raw = player?.multa_multiplicador ?? liga?.multa_multiplicador ?? 2;
-    const value = Number(raw);
-    return Number.isFinite(value) && value > 0 ? value : 2;
-};
-
 const countFormatter = new Intl.NumberFormat('pt-BR');
 
 const formatCount = (value) => countFormatter.format(value ?? 0);
@@ -792,8 +786,7 @@ export default function LigaMercado() {
             return baseValue;
         }
 
-        const multiplier = resolveMultaMultiplicador(modalPlayer, liga);
-        return Math.round(baseValue * multiplier);
+        return Math.round(baseValue);
     };
 
     const handleModalConfirm = async () => {
@@ -1729,4 +1722,3 @@ export default function LigaMercado() {
         </main>
     );
 }
-

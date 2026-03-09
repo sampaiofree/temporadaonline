@@ -7332,17 +7332,11 @@ const mapLegacyMarketPlayer = (player: any) => {
   const entryValueEur = entryValueRaw === null || entryValueRaw === undefined
     ? null
     : Number(entryValueRaw);
-  const multaMultiplicador = Number(player?.multa_multiplicador ?? 1);
   const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
   const multaValueEur = Number.isFinite(multaValueFromPayload)
     ? Math.max(0, multaValueFromPayload)
     : Number.isFinite(entryValueEur)
-      ? Math.max(
-          0,
-          Math.round(
-            Math.max(0, Number(entryValueEur)) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1),
-          ),
-        )
+      ? Math.max(0, Number(entryValueEur))
       : 0;
   const valueM = toLegacyMoneyInMillions(valueEur);
   const salaryM = toLegacyMoneyInMillions(wageEur);
@@ -7404,7 +7398,7 @@ const mapLegacyMarketPlayer = (player: any) => {
     value_eur: valueEur,
     wage_eur: wageEur,
     entry_value_eur: entryValueEur,
-    multa_multiplicador: multaMultiplicador,
+    multa_multiplicador: Number(player?.multa_multiplicador ?? 1),
     multa_value_eur: multaValueEur,
     auction: {
       enabled: auctionEnabled,
@@ -8572,14 +8566,10 @@ const MarketView = ({
   const resolvePrimaryActionFinancials = useCallback((player: any, actionType: 'multa' | 'comprar' | null) => {
     const wageEur = Math.max(0, Number(player?.wage_eur ?? 0) || 0);
     const marketValueEur = Math.max(0, Number(player?.value_eur ?? 0) || 0);
-    const multaMultiplicador = Number(player?.multa_multiplicador ?? 1);
     const entryValueRaw = Number(player?.entry_value_eur ?? NaN);
     const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
     const multaFallback = Number.isFinite(entryValueRaw)
-      ? Math.max(
-          0,
-          Math.round(Math.max(0, entryValueRaw) * (Number.isFinite(multaMultiplicador) ? multaMultiplicador : 1)),
-        )
+      ? Math.max(0, entryValueRaw)
       : 0;
     const multaEur = Number.isFinite(multaValueFromPayload)
       ? Math.max(0, multaValueFromPayload)
@@ -9480,6 +9470,9 @@ const MarketView = ({
         const hasSufficientPower = financials.hasSufficientPower;
         const modalTitle = primaryActionType === 'multa' ? 'PAGAMENTO DE MULTA' : 'CONFIRMAR COMPRA';
         const actionValueLabel = primaryActionType === 'multa' ? 'VALOR DA MULTA' : 'VALOR DE MERCADO';
+        const isListSubMode = subMode === 'list';
+        const powerBalanceEur = financials.investmentPowerEur - financials.requiredPowerEur;
+        const hasPowerSurplus = powerBalanceEur >= 0;
         const actionButtonLabel = isBusy
           ? 'OPERANDO...'
           : primaryActionType === 'multa'
@@ -9492,38 +9485,110 @@ const MarketView = ({
             <div className="relative w-full max-w-sm bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-2">{modalTitle}</p>
               <h4 className="text-lg font-black italic uppercase text-white leading-tight">{playerName}</h4>
-              <div className="mt-4 space-y-2 bg-[#121212]/70 border border-white/10 p-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[8px] font-black italic uppercase text-white/55">{actionValueLabel}</p>
-                  <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
-                    M$ {toLegacyMoneyCompact(financials.actionValueEur)}
-                  </p>
+              {isListSubMode ? (
+                <div className="mt-4 space-y-3">
+                  <div
+                    className="space-y-2 bg-[#121212]/70 border border-white/10 p-3"
+                    style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                  >
+                    <p className="text-[7px] font-black italic uppercase text-white/35 tracking-[0.16em]">
+                      VALORES DO JOGADOR
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/55">{actionValueLabel}</p>
+                      <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
+                        M$ {toLegacyMoneyCompact(financials.actionValueEur)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/55">SALARIO</p>
+                      <p className="text-[10px] font-black italic uppercase text-white">
+                        M$ {toLegacyMoneyCompact(financials.wageEur)}
+                      </p>
+                    </div>
+                    <div className="pt-2 mt-1 border-t border-white/10 flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/80">TOTAL NECESSARIO</p>
+                      <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
+                        M$ {toLegacyMoneyCompact(financials.requiredPowerEur)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className={`space-y-2 border p-3 ${
+                      hasPowerSurplus
+                        ? 'bg-[#0F1B14]/70 border-[#22C55E]/30'
+                        : 'bg-[#2A1313]/60 border-[#B22222]/45'
+                    }`}
+                    style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                  >
+                    <p className="text-[7px] font-black italic uppercase text-white/45 tracking-[0.16em]">
+                      FINANCEIRO DO CLUBE
+                    </p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/55">SALDO EM CAIXA</p>
+                      <p className="text-[10px] font-black italic uppercase text-white">
+                        M$ {toLegacyMoneyCompact(financials.saldoEur)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/55">RESERVA SALARIAL</p>
+                      <p className="text-[10px] font-black italic uppercase text-white">
+                        M$ {toLegacyMoneyCompact(financials.salaryReserveEur)}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-[#22C55E]">PODER DE INVESTIMENTO</p>
+                      <p className="text-[10px] font-black italic uppercase text-[#A7F3D0]">
+                        M$ {toLegacyMoneyCompact(financials.investmentPowerEur)}
+                      </p>
+                    </div>
+                    <div className="pt-2 mt-1 border-t border-white/10 flex items-center justify-between gap-2">
+                      <p className="text-[8px] font-black italic uppercase text-white/75">RESULTADO DA OPERACAO</p>
+                      <p
+                        className={`text-[10px] font-black italic uppercase ${
+                          hasPowerSurplus ? 'text-[#22C55E]' : 'text-[#FFB4B4]'
+                        }`}
+                      >
+                        {hasPowerSurplus ? 'SOBRA' : 'FALTA'} M$ {toLegacyMoneyCompact(Math.abs(powerBalanceEur))}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[8px] font-black italic uppercase text-white/55">SALARIO</p>
-                  <p className="text-[10px] font-black italic uppercase text-white">
-                    M$ {toLegacyMoneyCompact(financials.wageEur)}
-                  </p>
+              ) : (
+                <div className="mt-4 space-y-2 bg-[#121212]/70 border border-white/10 p-3" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-black italic uppercase text-white/55">{actionValueLabel}</p>
+                    <p className="text-[10px] font-black italic uppercase text-[#FFD700]">
+                      M$ {toLegacyMoneyCompact(financials.actionValueEur)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-black italic uppercase text-white/55">SALARIO</p>
+                    <p className="text-[10px] font-black italic uppercase text-white">
+                      M$ {toLegacyMoneyCompact(financials.wageEur)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-black italic uppercase text-white/55">SALDO EM CAIXA</p>
+                    <p className="text-[10px] font-black italic uppercase text-white">
+                      M$ {toLegacyMoneyCompact(financials.saldoEur)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-black italic uppercase text-white/55">RESERVA SALARIAL</p>
+                    <p className="text-[10px] font-black italic uppercase text-white">
+                      M$ {toLegacyMoneyCompact(financials.salaryReserveEur)}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[8px] font-black italic uppercase text-[#22C55E]">PODER DE INVESTIMENTO</p>
+                    <p className="text-[10px] font-black italic uppercase text-[#A7F3D0]">
+                      M$ {toLegacyMoneyCompact(financials.investmentPowerEur)}
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[8px] font-black italic uppercase text-white/55">SALDO EM CAIXA</p>
-                  <p className="text-[10px] font-black italic uppercase text-white">
-                    M$ {toLegacyMoneyCompact(financials.saldoEur)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[8px] font-black italic uppercase text-white/55">RESERVA SALARIAL</p>
-                  <p className="text-[10px] font-black italic uppercase text-white">
-                    M$ {toLegacyMoneyCompact(financials.salaryReserveEur)}
-                  </p>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[8px] font-black italic uppercase text-[#22C55E]">PODER DE INVESTIMENTO</p>
-                  <p className="text-[10px] font-black italic uppercase text-[#A7F3D0]">
-                    M$ {toLegacyMoneyCompact(financials.investmentPowerEur)}
-                  </p>
-                </div>
-              </div>
+              )}
 
               {!hasSufficientPower && (
                 <div className="mt-3 bg-[#B22222]/15 border border-[#B22222]/50 p-2" style={{ clipPath: "polygon(3px 0, 100% 0, 100% 100%, 0 100%, 0 3px)" }}>

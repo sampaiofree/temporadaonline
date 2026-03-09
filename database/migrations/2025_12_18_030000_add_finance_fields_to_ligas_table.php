@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::table('ligas', function (Blueprint $table): void {
             $table->unsignedSmallInteger('max_jogadores_por_clube')->default(18);
             $table->bigInteger('saldo_inicial')->default(0);
-            $table->decimal('multa_multiplicador', 4, 2)->default(2.00);
+            $table->decimal('multa_multiplicador', 4, 2)->default(1.50);
             $table->enum('cobranca_salario', ['rodada'])->default('rodada');
             $table->unsignedSmallInteger('venda_min_percent')->default(100);
             $table->boolean('bloquear_compra_saldo_negativo')->default(true);
@@ -32,4 +32,3 @@ return new class extends Migration
         });
     }
 };
-
