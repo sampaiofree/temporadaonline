@@ -17,6 +17,7 @@ class TransferService
     public function __construct(
         private readonly LeagueFinanceService $finance,
         private readonly SalaryReserveGuardService $salaryReserveGuard,
+        private readonly ReleaseClauseValueService $releaseClauseValueService,
     )
     {
     }
@@ -270,7 +271,18 @@ class TransferService
 
             $this->assertSameScope($liga, $ligaOrigem);
 
-            $multa = max(0, (int) ($entry->value_eur ?? 0));
+            $entry->loadMissing('elencopadrao:id,value_eur');
+            $entryValueEur = (int) ($entry->value_eur ?? 0);
+            $originalValueEur = (int) ($entry->elencopadrao?->value_eur ?? 0);
+            $multaMultiplicador = $ligaOrigem->multa_multiplicador !== null
+                ? (float) $ligaOrigem->multa_multiplicador
+                : ($liga->multa_multiplicador !== null ? (float) $liga->multa_multiplicador : 1.0);
+
+            $multa = $this->releaseClauseValueService->resolve(
+                $entryValueEur,
+                $originalValueEur,
+                $multaMultiplicador,
+            );
 
             $this->assertRosterLimit($liga, $compradorClubeId);
             $this->assertClubCanSpend($liga, $compradorClubeId, $multa);

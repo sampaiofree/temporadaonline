@@ -347,6 +347,111 @@ class LigaFinanceiroTest extends TestCase
             ->exists());
     }
 
+    public function test_multa_aplica_multiplicador_quando_entry_igual_ao_valor_original(): void
+    {
+        $plataforma = Plataforma::create(['nome' => 'PlayStation 5', 'slug' => 'ps5']);
+        $jogo = Jogo::create(['nome' => 'FC26', 'slug' => 'fc26']);
+        $geracao = Geracao::create(['nome' => 'Nova', 'slug' => 'nova']);
+        $confederacao = Confederacao::create([
+            'nome' => 'Confederacao Teste Multa Multiplicador',
+            'descricao' => 'Confederacao de teste',
+            'timezone' => 'America/Sao_Paulo',
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
+        ]);
+
+        $liga = Liga::create([
+            'nome' => 'Liga Teste',
+            'descricao' => 'Liga de teste.',
+            'regras' => 'Regras de teste.',
+            'imagem' => null,
+            'tipo' => 'publica',
+            'status' => 'ativa',
+            'max_times' => 20,
+            'max_jogadores_por_clube' => 18,
+            'saldo_inicial' => 5000,
+            'multa_multiplicador' => 1.50,
+            'cobranca_salario' => 'rodada',
+            'venda_min_percent' => 100,
+            'bloquear_compra_saldo_negativo' => true,
+            'confederacao_id' => $confederacao->id,
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
+        ]);
+
+        LigaPeriodo::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => now()->subDays(2)->format('Y-m-d H:i:s'),
+            'fim' => now()->addDays(2)->format('Y-m-d H:i:s'),
+        ]);
+
+        $player = $this->createElenco($jogo, [
+            'long_name' => 'Multa Multiplicada',
+            'value_eur' => 700,
+            'wage_eur' => 20,
+        ]);
+
+        $owner = User::factory()->create();
+        $buyer = User::factory()->create();
+        $owner->ligas()->attach($liga->id);
+        $buyer->ligas()->attach($liga->id);
+
+        $clubeOwner = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
+            'user_id' => $owner->id,
+            'nome' => 'Clube Dono',
+        ]);
+
+        $clubeBuyer = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
+            'user_id' => $buyer->id,
+            'nome' => 'Clube Comprador',
+        ]);
+
+        $entry = LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $clubeOwner->id,
+            'elencopadrao_id' => $player->id,
+            'value_eur' => 700,
+            'wage_eur' => 20,
+            'ativo' => true,
+        ]);
+
+        $this
+            ->actingAs($buyer)
+            ->postJson("/api/ligas/{$liga->id}/clubes/{$clubeBuyer->id}/multa", [
+                'elencopadrao_id' => $player->id,
+            ])
+            ->assertOk();
+
+        $entry->refresh();
+        $this->assertSame($clubeBuyer->id, (int) $entry->liga_clube_id);
+
+        $multa = 1050;
+
+        $ownerWallet = LigaClubeFinanceiro::where('liga_id', $liga->id)
+            ->where('clube_id', $clubeOwner->id)
+            ->firstOrFail();
+
+        $buyerWallet = LigaClubeFinanceiro::where('liga_id', $liga->id)
+            ->where('clube_id', $clubeBuyer->id)
+            ->firstOrFail();
+
+        $this->assertSame(5000 + $multa, (int) $ownerWallet->saldo);
+        $this->assertSame(5000 - $multa, (int) $buyerWallet->saldo);
+
+        $this->assertTrue(LigaTransferencia::where('liga_id', $liga->id)
+            ->where('elencopadrao_id', $player->id)
+            ->where('tipo', 'multa')
+            ->where('valor', $multa)
+            ->exists());
+    }
+
     public function test_salario_cobra_so_uma_vez_por_rodada(): void
     {
         $liga = $this->createLiga(['saldo_inicial' => 1000]);

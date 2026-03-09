@@ -10,6 +10,7 @@ use App\Models\LigaProposta;
 use App\Models\PlayerFavorite;
 use App\Services\AuctionService;
 use App\Services\MarketWindowService;
+use App\Services\ReleaseClauseValueService;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -83,6 +84,8 @@ class LigaMercadoController extends Controller
         $auctionService = app(AuctionService::class);
         /** @var MarketWindowService $marketWindowService */
         $marketWindowService = app(MarketWindowService::class);
+        /** @var ReleaseClauseValueService $releaseClauseValueService */
+        $releaseClauseValueService = app(ReleaseClauseValueService::class);
 
         if ($liga->confederacao_id) {
             $auctionService->finalizeExpiredAuctions((int) $liga->confederacao_id);
@@ -139,7 +142,7 @@ class LigaMercadoController extends Controller
             ->where('jogo_id', $marketJogoId)
             ->orderByDesc('overall')
             ->get()
-            ->map(function (Elencopadrao $player) use ($elencos, $userClub) {
+            ->map(function (Elencopadrao $player) use ($elencos, $userClub, $releaseClauseValueService) {
                 $entry = $elencos->get($player->id);
                 $club = $entry?->ligaClube;
                 $clubLiga = $club?->liga;
@@ -154,6 +157,18 @@ class LigaMercadoController extends Controller
                     $canMulta = $clubStatus === 'outro';
                 }
 
+                $entryValueEur = $entry?->value_eur !== null ? (int) $entry->value_eur : null;
+                $multaMultiplicador = $clubLiga?->multa_multiplicador !== null
+                    ? (float) $clubLiga->multa_multiplicador
+                    : null;
+                $multaValueEur = ($canMulta && $entryValueEur !== null)
+                    ? $releaseClauseValueService->resolve(
+                        $entryValueEur,
+                        (int) ($player->value_eur ?? 0),
+                        $multaMultiplicador,
+                    )
+                    : null;
+
                 return [
                     'elencopadrao_id' => $player->id,
                     'short_name' => $player->short_name,
@@ -165,14 +180,13 @@ class LigaMercadoController extends Controller
                     'club_status' => $clubStatus,
                     'club_name' => $club?->nome,
                     'liga_nome' => $clubLiga?->nome,
-                    'multa_multiplicador' => $clubLiga?->multa_multiplicador !== null
-                        ? (float) $clubLiga->multa_multiplicador
-                        : null,
+                    'multa_multiplicador' => $multaMultiplicador,
                     'club_id' => $club?->id,
                     'is_free_agent' => $clubStatus === 'livre',
                     'can_buy' => $canBuy,
                     'can_multa' => $canMulta,
-                    'entry_value_eur' => $entry?->value_eur,
+                    'entry_value_eur' => $entryValueEur,
+                    'multa_value_eur' => $multaValueEur,
                     'player_face_url' => $player->player_face_url,
                 ];
             })

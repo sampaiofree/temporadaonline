@@ -30,6 +30,7 @@ use App\Services\AuctionService;
 use App\Services\ConquistaProgressService;
 use App\Services\LeagueFinanceService;
 use App\Services\MarketWindowService;
+use App\Services\ReleaseClauseValueService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -44,6 +45,7 @@ class LegacyController extends Controller
 
     public function __construct(
         private readonly ConquistaProgressService $conquistaProgressService,
+        private readonly ReleaseClauseValueService $releaseClauseValueService,
     ) {
     }
 
@@ -177,6 +179,8 @@ class LegacyController extends Controller
                 'liga' => [
                     'id' => $liga->id,
                     'nome' => $liga->nome,
+                    'imagem' => $liga->imagem,
+                    'imagem_url' => $this->resolveEscudoUrl($liga->imagem),
                     'confederacao_id' => $liga->confederacao_id,
                     'confederacao_nome' => $liga->confederacao?->nome,
                 ],
@@ -499,7 +503,11 @@ class LegacyController extends Controller
                     $entryValueEur = $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null;
                     $multaMultiplicador = $row->multa_multiplicador !== null ? (float) $row->multa_multiplicador : null;
                     $multaValueEur = ($canMulta && $entryValueEur !== null)
-                        ? max(0, $entryValueEur)
+                        ? $this->releaseClauseValueService->resolve(
+                            $entryValueEur,
+                            (int) ($row->value_eur ?? 0),
+                            $multaMultiplicador,
+                        )
                         : null;
 
                     return [
@@ -721,7 +729,11 @@ class LegacyController extends Controller
                     ? (float) $clubLiga->multa_multiplicador
                     : null;
                 $multaValueEur = ($canMulta && $entryValueEur !== null)
-                    ? max(0, $entryValueEur)
+                    ? $this->releaseClauseValueService->resolve(
+                        $entryValueEur,
+                        (int) ($player->value_eur ?? 0),
+                        $multaMultiplicador,
+                    )
                     : null;
 
                 return [
@@ -2227,6 +2239,8 @@ class LegacyController extends Controller
             'liga' => [
                 'id' => $liga->id,
                 'nome' => $liga->nome,
+                'imagem' => $liga->imagem,
+                'imagem_url' => $this->resolveEscudoUrl($liga->imagem),
                 'confederacao_id' => $liga->confederacao_id,
                 'confederacao_nome' => $liga->confederacao?->nome,
             ],
@@ -3975,11 +3989,13 @@ class LegacyController extends Controller
             ->get([
                 'conquistas.id',
                 'conquistas.nome',
+                'conquistas.imagem',
                 'liga_clube_conquistas.claimed_at',
             ])
             ->map(fn ($row) => [
                 'id' => (int) $row->id,
                 'nome' => (string) $row->nome,
+                'imagem_url' => $this->resolveEscudoUrl($row->imagem),
                 'claimed_at' => $row->claimed_at,
             ])
             ->values()
@@ -4760,6 +4776,7 @@ class LegacyController extends Controller
         return $query->first([
             'ligas.id',
             'ligas.nome',
+            'ligas.imagem',
             'ligas.saldo_inicial',
             'ligas.multa_multiplicador',
             'ligas.jogo_id',

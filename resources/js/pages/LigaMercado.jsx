@@ -31,6 +31,33 @@ const formatShortMoney = (value) => {
     return String(Math.round(n));
 };
 
+const toPositiveInteger = (value) => {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return null;
+
+    return Math.max(0, Math.round(numericValue));
+};
+
+const resolvePlayerMultaValue = (player) => {
+    const payloadValue = toPositiveInteger(player?.multa_value_eur);
+    if (payloadValue !== null) {
+        return payloadValue;
+    }
+
+    const entryValue = toPositiveInteger(player?.entry_value_eur);
+    if (entryValue === null) return 0;
+
+    const originalValue = toPositiveInteger(player?.value_eur) ?? 0;
+    const rawMultiplier = Number(player?.multa_multiplicador ?? NaN);
+    const multiplier = Number.isFinite(rawMultiplier) && rawMultiplier > 0 ? rawMultiplier : 1;
+
+    if (entryValue === originalValue) {
+        return Math.max(0, Math.round(entryValue * multiplier));
+    }
+
+    return entryValue;
+};
+
 const countFormatter = new Intl.NumberFormat('pt-BR');
 
 const formatCount = (value) => countFormatter.format(value ?? 0);
@@ -776,11 +803,11 @@ export default function LigaMercado() {
             return hasBid ? currentBid + increment : baseValue;
         }
 
-        const baseValue = Number(
-            (modalMode === MODAL_MODES.MULTA ? modalPlayer.entry_value_eur : null) ??
-                modalPlayer.value_eur ??
-                0,
-        );
+        if (modalMode === MODAL_MODES.MULTA) {
+            return resolvePlayerMultaValue(modalPlayer);
+        }
+
+        const baseValue = Number(modalPlayer.value_eur ?? 0);
 
         if (modalMode === MODAL_MODES.BUY) {
             return baseValue;

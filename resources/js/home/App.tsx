@@ -101,6 +101,22 @@ const TikTokIcon = () => (
   </svg>
 );
 
+const GooglePlayIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M4.5 3.6L13.8 12L4.5 20.4C4.2 20.1 4 19.7 4 19.2V4.8C4 4.3 4.2 3.9 4.5 3.6Z" fill="#34A853"/>
+    <path d="M14.9 13L18.2 16L8 21.8L14.9 13Z" fill="#FBBC05"/>
+    <path d="M18.2 8L14.9 11L8 2.2L18.2 8Z" fill="#EA4335"/>
+    <path d="M20 9L16.1 11.2L14.9 12L16.1 12.8L20 15C20.6 14.7 21 14.1 21 13.5V10.5C21 9.9 20.6 9.3 20 9Z" fill="#4285F4"/>
+  </svg>
+);
+
+const AppleStoreIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M16.9 12.7c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.7-1.7-3.3-1.7-1.4-.1-2.8.9-3.5.9s-1.8-.9-3-.8c-1.5 0-3 .9-3.8 2.2-1.6 2.8-.4 6.9 1.1 9 .8 1 1.8 2.1 3.1 2.1 1.2-.1 1.7-.8 3.2-.8s2 .8 3.2.8c1.3 0 2.2-1.2 3-2.2.9-1.1 1.3-2.2 1.3-2.2s-2.5-1-2.6-3.9Z"/>
+    <path d="M14.6 6.1c.7-.8 1.2-1.9 1.1-3.1-1 .1-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.8-1.4Z"/>
+  </svg>
+);
+
 const AGGRESSIVE_CLIP = "polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px)";
 const SHIELD_CLIP = "polygon(0 0, 100% 0, 100% 85%, 50% 100%, 0 85%)";
 const SLANTED_PATTERN = "repeating-linear-gradient(45deg, rgba(246,207,1,0.05) 0, rgba(246,207,1,0.05) 1px, transparent 0, transparent 10px)";
@@ -257,9 +273,7 @@ export default function App() {
           LEGACY<span className="text-legacy-accent">XI</span>
         </div>
         <a 
-          href="/register" 
-          target="_blank" 
-          rel="noopener noreferrer"
+          href="#download-app"
           className="bg-legacy-accent text-legacy-bg font-display font-black text-xs sm:text-sm px-4 sm:px-6 py-2 sm:py-3 uppercase italic tracking-tighter hover:scale-105 transition-transform active:scale-95 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
         >
           Criar Conta
@@ -340,6 +354,59 @@ export default function App() {
 
         </div>
       </main>
+
+      {/* Download App Section */}
+      <section id="download-app" className="relative bg-legacy-card py-20 md:py-24 border-y border-white/5">
+        <TextureOverlay />
+        <div className="relative z-10 max-w-7xl mx-auto px-6">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <div className="space-y-4">
+              <h2 className="font-display font-black text-3xl md:text-5xl text-white uppercase italic tracking-tighter">
+                BAIXE O APP E ENTRE NO <span className="text-legacy-accent">LEGACY XI</span>
+              </h2>
+              <p className="text-gray-300 text-base md:text-lg leading-relaxed">
+                Escolha sua loja e comece agora no ambiente oficial do Legacy XI.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <a
+                href="https://play.google.com/store/apps/details?id=legaxi.online"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-legacy-bg border border-legacy-accent/70 px-5 py-4 flex items-center justify-between gap-4 hover:border-legacy-accent transition-colors"
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <div className="flex items-center gap-3">
+                  <GooglePlayIcon />
+                  <div className="text-left">
+                    <p className="text-[9px] uppercase font-black tracking-[0.18em] text-gray-400">Google Play</p>
+                    <p className="text-sm font-display font-black italic uppercase text-white tracking-tight">Baixar App</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-legacy-accent group-hover:translate-x-1 transition-transform" />
+              </a>
+
+              <a
+                href="https://apps.apple.com/us/app/legaxi/id6759859568"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group bg-legacy-bg border border-legacy-accent/70 px-5 py-4 flex items-center justify-between gap-4 hover:border-legacy-accent transition-colors"
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+              >
+                <div className="flex items-center gap-3">
+                  <AppleStoreIcon />
+                  <div className="text-left">
+                    <p className="text-[9px] uppercase font-black tracking-[0.18em] text-gray-400">App Store</p>
+                    <p className="text-sm font-display font-black italic uppercase text-white tracking-tight">Baixar App</p>
+                  </div>
+                </div>
+                <ChevronRight className="w-4 h-4 text-legacy-accent group-hover:translate-x-1 transition-transform" />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* Block 2: Features/Ecosystem Section */}
       <section className="relative bg-legacy-card py-24 md:py-32 border-y border-white/5">

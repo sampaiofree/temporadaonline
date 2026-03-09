@@ -1611,9 +1611,13 @@ const PublicClubProfileView = ({
   error?: string,
 }) => {
   const [activeTab, setActiveTab] = useState<'status' | 'elenco'>('status');
+  const [trophyImageErrorById, setTrophyImageErrorById] = useState<Record<string, boolean>>({});
+  const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<any>(null);
 
   useEffect(() => {
     setActiveTab('status');
+    setTrophyImageErrorById({});
+    setSelectedProfilePlayer(null);
   }, [clubData?.id]);
 
   const profile = {
@@ -1636,6 +1640,92 @@ const PublicClubProfileView = ({
   };
 
   const toMValue = (value: any) => Math.round(Number(value ?? 0) / 1_000_000);
+  const normalizePublicClubProfileThumbPlayer = (player: any) => {
+    const rawName = String(player?.nome ?? player?.name ?? 'ATLETA').trim();
+    const rawPos = String(player?.pos ?? player?.player_positions ?? '--')
+      .split(',')[0]
+      ?.trim();
+
+    return {
+      name: rawName || 'ATLETA',
+      photo: String(player?.foto || player?.player_face_url || player?.photo || '').trim(),
+      ovr: Number(player?.ovr ?? player?.overall ?? 0) || 0,
+      pos: rawPos || '--',
+    };
+  };
+
+  const mapPublicClubProfilePlayerToLegacyCard = (player: any) => {
+    const thumbPlayer = normalizePublicClubProfileThumbPlayer(player);
+    const ovr = Math.max(0, Number(thumbPlayer.ovr ?? 0) || 0);
+    const pace = toLegacyStatValue(player?.pace, ovr || 60);
+    const shooting = toLegacyStatValue(player?.shooting, ovr || 60);
+    const passing = toLegacyStatValue(player?.passing, ovr || 60);
+    const dribbling = toLegacyStatValue(player?.dribbling, ovr || 60);
+    const defending = toLegacyStatValue(player?.defending, ovr || 60);
+    const physical = toLegacyStatValue(player?.physic, ovr || 60);
+    const valueEur = Math.max(0, Number(player?.valor ?? player?.value_eur ?? 0) || 0);
+    const wageEur = Math.max(0, Number(player?.salario ?? player?.wage_eur ?? 0) || 0);
+    const playstyles = normalizeLegacyTraits(player?.player_traits);
+
+    return {
+      id: Number(player?.id ?? 0),
+      name: thumbPlayer.name,
+      ovr,
+      pos: thumbPlayer.pos,
+      age: Number(player?.age ?? 0) || undefined,
+      photo: proxyFaceUrl(thumbPlayer.photo),
+      value: toLegacyMoneyInMillions(valueEur),
+      salary: toLegacyMoneyInMillions(wageEur),
+      marketValue: toLegacyMoneyInMillions(valueEur),
+      skillMoves: toLegacyStarRating(player?.skill_moves, 3),
+      weakFoot: toLegacyStarRating(player?.weak_foot, 3),
+      playstyles,
+      playstyleBadges: normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles),
+      stats: {
+        PAC: pace,
+        SHO: shooting,
+        PAS: passing,
+        DRI: dribbling,
+        DEF: defending,
+        PHY: physical,
+      },
+      detailedStats: {
+        PACE: {
+          Aceleracao: toLegacyStatValue(player?.movement_acceleration, pace),
+          Pique: toLegacyStatValue(player?.movement_sprint_speed, pace),
+        },
+        SHOOTING: {
+          Finalizacao: toLegacyStatValue(player?.attacking_finishing, shooting),
+          ForcaChute: toLegacyStatValue(player?.power_shot_power, shooting),
+          ChuteLongo: toLegacyStatValue(player?.power_long_shots, shooting),
+        },
+        PASSING: {
+          PasseCurto: toLegacyStatValue(player?.attacking_short_passing, passing),
+          PasseLongo: toLegacyStatValue(player?.skill_long_passing, passing),
+          Visao: toLegacyStatValue(player?.mentality_vision, passing),
+        },
+        DRIBBLING: {
+          Drible: toLegacyStatValue(player?.skill_dribbling, dribbling),
+          Controle: toLegacyStatValue(player?.skill_ball_control, dribbling),
+          Agilidade: toLegacyStatValue(player?.movement_agility, dribbling),
+          Equilibrio: toLegacyStatValue(player?.movement_balance, dribbling),
+          Reacao: toLegacyStatValue(player?.movement_reactions, dribbling),
+        },
+        DEFENSE: {
+          Marcacao: toLegacyStatValue(player?.defending_marking_awareness, defending),
+          Interceptacao: toLegacyStatValue(player?.mentality_interceptions, defending),
+          Dividida: toLegacyStatValue(player?.defending_standing_tackle, defending),
+          Carrinho: toLegacyStatValue(player?.defending_sliding_tackle, defending),
+        },
+        PHYSICAL: {
+          Forca: toLegacyStatValue(player?.power_strength, physical),
+          Folego: toLegacyStatValue(player?.power_stamina, physical),
+          Salto: toLegacyStatValue(player?.power_jumping, physical),
+          Agressividade: toLegacyStatValue(player?.mentality_aggression, physical),
+        },
+      },
+    };
+  };
 
   const tacticalLayoutPlayers = useMemo(() => {
     const entries = Array.isArray(profile.tacticalLayout?.players) ? profile.tacticalLayout.players : [];
@@ -1673,16 +1763,17 @@ const PublicClubProfileView = ({
         const player = tacticalPlayerLookup.get(entry.id);
         if (!player) return null;
 
-        const name = String(player?.nome ?? 'ATLETA');
+        const thumbPlayer = normalizePublicClubProfileThumbPlayer(player);
+        const name = thumbPlayer.name;
         return {
           id: entry.id,
           x: entry.x,
           y: entry.y,
           name,
-          ovr: Number(player?.ovr ?? 0) || 0,
-          pos: String(player?.pos ?? '--').trim() || '--',
-          photo: String(player?.foto || player?.player_face_url || '').trim(),
-          initials: getLegacyInitials(name),
+          ovr: thumbPlayer.ovr,
+          pos: thumbPlayer.pos,
+          thumbPlayer,
+          sourcePlayer: player,
         };
       })
       .filter((entry): entry is {
@@ -1692,8 +1783,13 @@ const PublicClubProfileView = ({
         name: string;
         ovr: number;
         pos: string;
-        photo: string;
-        initials: string;
+        thumbPlayer: {
+          name: string;
+          photo: string;
+          ovr: number;
+          pos: string;
+        };
+        sourcePlayer: any;
       } => entry !== null),
     [tacticalLayoutPlayers, tacticalPlayerLookup],
   );
@@ -1807,12 +1903,31 @@ const PublicClubProfileView = ({
             <section className="space-y-4">
                <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÉUS</h4>
                <div className="grid grid-cols-2 gap-4">
-                 {profile.wonTrophies.map((trophy: any, index: number) => (
-                   <div key={String(trophy?.id ?? index)} className="bg-[#1E1E1E] p-6 text-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                      <i className="fas fa-trophy text-3xl text-[#FFD700] mb-3"></i>
-                      <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÉU')}</p>
-                   </div>
-                 ))}
+                 {profile.wonTrophies.map((trophy: any, index: number) => {
+                   const trophyId = String(trophy?.id ?? index);
+                   const trophyImageUrl = String(trophy?.imagem_url || trophy?.image_url || '').trim();
+                   const showTrophyImage = trophyImageUrl !== '' && !trophyImageErrorById[trophyId];
+
+                   return (
+                     <div key={trophyId} className="bg-[#1E1E1E] p-6 text-center border-b-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                        <div className="w-16 h-16 mx-auto mb-3 bg-[#121212] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+                          {showTrophyImage ? (
+                            <img
+                              src={trophyImageUrl}
+                              alt={String(trophy?.nome ?? 'Troféu')}
+                              className="w-full h-full object-cover"
+                              onError={() => {
+                                setTrophyImageErrorById((current) => ({ ...current, [trophyId]: true }));
+                              }}
+                            />
+                          ) : (
+                            <i className="fas fa-trophy text-3xl text-[#FFD700]"></i>
+                          )}
+                        </div>
+                        <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÉU')}</p>
+                     </div>
+                   );
+                 })}
                  {profile.wonTrophies.length === 0 && (
                     <div className="col-span-2 py-10 bg-[#1E1E1E] text-center opacity-20" style={{ clipPath: AGGRESSIVE_CLIP }}>
                       <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÇA REGISTRADA</p>
@@ -1878,15 +1993,18 @@ const PublicClubProfileView = ({
                           style={{ left: `${entry.x * 100}%`, top: `${entry.y * 100}%` }}
                           title={entry.name}
                         >
-                          <div className="w-11 h-11 bg-[#121212] border-2 border-[#FFD700] flex items-center justify-center overflow-hidden shadow-[0_0_8px_rgba(255,215,0,0.2)]" style={{ clipPath: SHIELD_CLIP }}>
-                            <LegacyPlayerImage
-                              src={entry.photo}
-                              alt={entry.name}
-                              wrapperClassName="w-full h-full"
-                              imgClassName="w-full h-full object-cover"
-                              fallback={<span className="text-[9px] font-black italic text-[#FFD700]">{entry.initials}</span>}
+                          <button
+                            type="button"
+                            className="bg-transparent border-0 p-0 cursor-pointer active:opacity-75"
+                            onClick={() => setSelectedProfilePlayer(mapPublicClubProfilePlayerToLegacyCard(entry.sourcePlayer))}
+                          >
+                            <LegacyMarketPlayerThumb
+                              player={entry.thumbPlayer}
+                              useReducedTemplate
+                              thumbClassName="w-11 h-11"
+                              showBadges={false}
                             />
-                          </div>
+                          </button>
                           <span className="block mt-1 px-2 py-1 bg-[#1E1E1E]/90 border border-white/10 text-[7px] font-black italic uppercase text-white leading-none whitespace-nowrap text-center" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
                             {entry.ovr || '--'} • {entry.pos}
                           </span>
@@ -1911,19 +2029,22 @@ const PublicClubProfileView = ({
               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONTRATAÇÕES ATIVAS</h4>
               <div className="space-y-3">
                 {profile.players.length > 0 ? profile.players.map((player: any, index: number) => (
-                  <div key={String(player?.id ?? index)} className="bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <button
+                    key={String(player?.id ?? index)}
+                    type="button"
+                    className="w-full text-left bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700] cursor-pointer active:opacity-75"
+                    style={{ clipPath: AGGRESSIVE_CLIP }}
+                    onClick={() => setSelectedProfilePlayer(mapPublicClubProfilePlayerToLegacyCard(player))}
+                  >
                     {(() => {
-                      const playerImageUrl = String(player?.foto || player?.player_face_url || '').trim();
+                      const thumbPlayer = normalizePublicClubProfileThumbPlayer(player);
                       return (
-                        <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700] overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
-                          <LegacyPlayerImage
-                            src={playerImageUrl}
-                            alt={String(player?.nome ?? 'ATLETA')}
-                            wrapperClassName="w-full h-full"
-                            imgClassName="w-full h-full object-cover"
-                            fallback={<i className="fas fa-user text-[#FFD700]/30"></i>}
-                          />
-                        </div>
+                        <LegacyMarketPlayerThumb
+                          player={thumbPlayer}
+                          useReducedTemplate
+                          thumbClassName="w-12 h-12"
+                          showBadges={false}
+                        />
                       );
                     })()}
                     <div className="flex-grow">
@@ -1934,7 +2055,7 @@ const PublicClubProfileView = ({
                       <p className="text-[8px] font-black text-white/20 uppercase italic">VALOR</p>
                       <p className="text-[10px] font-black italic text-white uppercase">M$ {toLegacyMoneyInMillions(player?.valor ?? 0)}M</p>
                     </div>
-                  </div>
+                  </button>
                 )) : (
                   <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
                     <p className="text-[10px] font-black italic uppercase text-white/40">Sem elenco registrado para este clube.</p>
@@ -1945,6 +2066,24 @@ const PublicClubProfileView = ({
           </div>
         )}
       </div>
+      {selectedProfilePlayer && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
+          <div className="absolute inset-0" onClick={() => setSelectedProfilePlayer(null)}></div>
+          <div className="relative w-full max-w-sm flex flex-col items-center">
+            <div className="w-full flex justify-end mb-4">
+              <button
+                onClick={() => setSelectedProfilePlayer(null)}
+                className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]"
+                style={{ clipPath: AGGRESSIVE_CLIP }}
+                type="button"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            <LegacyUTCard player={selectedProfilePlayer} preferAssetTemplate />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -2531,6 +2670,7 @@ const MatchCenterView = ({
   const [error, setError] = useState('');
   const [partidas, setPartidas] = useState<any[]>([]);
   const [clube, setClube] = useState<any>(null);
+  const [isAllResultsModalOpen, setIsAllResultsModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -2571,6 +2711,10 @@ const MatchCenterView = ({
     };
   }, [currentCareer?.id, reloadToken]);
 
+  useEffect(() => {
+    setIsAllResultsModalOpen(false);
+  }, [currentCareer?.id, reloadToken]);
+
   const activeMatch = useMemo(
     () => partidas.find((partida) => isLegacySchedulingAllowed(partida)) || null,
     [partidas],
@@ -2591,9 +2735,44 @@ const MatchCenterView = ({
       ),
     [partidas],
   );
-  const recentResults = useMemo(
-    () => partidas.filter((partida) => ['finalizada', 'placar_confirmado', 'wo', 'cancelada'].includes(String(partida?.estado || ''))).slice(0, 6),
+  const registeredAndConfirmedResults = useMemo(
+    () => partidas
+      .filter((partida) => ['placar_registrado', 'placar_confirmado'].includes(String(partida?.estado || '')))
+      .slice()
+      .sort((a, b) => {
+        const aPrimaryTs = new Date(String(a?.placar_registrado_em || '')).getTime();
+        const bPrimaryTs = new Date(String(b?.placar_registrado_em || '')).getTime();
+        const aPrimary = Number.isFinite(aPrimaryTs) ? aPrimaryTs : 0;
+        const bPrimary = Number.isFinite(bPrimaryTs) ? bPrimaryTs : 0;
+        if (aPrimary !== bPrimary) return bPrimary - aPrimary;
+
+        const aFallbackTs = new Date(String(a?.scheduled_at || '')).getTime();
+        const bFallbackTs = new Date(String(b?.scheduled_at || '')).getTime();
+        const aFallback = Number.isFinite(aFallbackTs) ? aFallbackTs : 0;
+        const bFallback = Number.isFinite(bFallbackTs) ? bFallbackTs : 0;
+        if (aFallback !== bFallback) return bFallback - aFallback;
+
+        return Number(b?.id ?? 0) - Number(a?.id ?? 0);
+      }),
     [partidas],
+  );
+  const recentResults = useMemo(
+    () => registeredAndConfirmedResults.slice(0, 3),
+    [registeredAndConfirmedResults],
+  );
+
+  const renderMatchResultCard = (partida: any) => (
+    <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
+        <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
+      </div>
+      <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+        <span className="text-lg font-black italic font-heading text-white">{partida.placar_mandante ?? '-'}</span>
+        <span className="text-[8px] text-white/10 font-black italic">X</span>
+        <span className="text-lg font-black italic font-heading text-white">{partida.placar_visitante ?? '-'}</span>
+      </div>
+    </div>
   );
 
   return (
@@ -2778,17 +2957,7 @@ const MatchCenterView = ({
                 <div className="space-y-2">
                   {recentResults.length > 0 ? recentResults.map((partida, idx) => (
                     <LegacyReveal key={partida.id} delayMs={220 + (idx * 18)}>
-                      <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
-                          <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
-                        </div>
-                        <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-                          <span className="text-lg font-black italic font-heading text-white">{partida.placar_mandante ?? '-'}</span>
-                          <span className="text-[8px] text-white/10 font-black italic">X</span>
-                          <span className="text-lg font-black italic font-heading text-white">{partida.placar_visitante ?? '-'}</span>
-                        </div>
-                      </div>
+                      {renderMatchResultCard(partida)}
                     </LegacyReveal>
                   )) : (
                     <div className="bg-[#1E1E1E] p-4 border-r-[3px] border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -2796,11 +2965,75 @@ const MatchCenterView = ({
                     </div>
                   )}
                 </div>
+                {registeredAndConfirmedResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setIsAllResultsModalOpen(true)}
+                    className="w-full text-center px-4 py-3 bg-[#1E1E1E] border border-[#FFD700]/40 text-[#FFD700] text-[9px] font-black italic uppercase tracking-[0.15em] active:scale-[0.99] transition-transform"
+                    style={{ clipPath: AGGRESSIVE_CLIP }}
+                  >
+                    TODOS OS RESULTADOS
+                  </button>
+                )}
               </section>
             </LegacyReveal>
           </>
         )}
       </div>
+      {isAllResultsModalOpen && (
+        <div className="fixed inset-0 z-[130]">
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setIsAllResultsModalOpen(false)}
+          ></div>
+          <div
+            className="absolute inset-[2px] bg-[#121212] border border-white/10 overflow-y-auto"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 bg-[#121212]/95 backdrop-blur-sm border-b border-white/10 px-6 pt-8 pb-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[9px] font-black uppercase italic tracking-[0.25em] text-[#FFD700]">
+                    MATCH CENTER
+                  </p>
+                  <h3 className="text-2xl font-black italic uppercase text-white leading-tight mt-2">
+                    TODOS OS RESULTADOS
+                  </h3>
+                  <p className="text-[8px] font-black uppercase italic text-white/45 mt-1">
+                    REGISTRADOS E CONFIRMADOS
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAllResultsModalOpen(false)}
+                  className="w-10 h-10 flex items-center justify-center border bg-[#1E1E1E] text-[#FFD700] border-[#FFD700]/30"
+                  style={{ clipPath: AGGRESSIVE_CLIP }}
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              </div>
+            </div>
+
+            <div className="px-6 py-6 pb-32">
+              {registeredAndConfirmedResults.length > 0 ? (
+                <div className="space-y-2">
+                  {registeredAndConfirmedResults.map((partida) => (
+                    <div key={`all-result-${partida.id}`}>
+                      {renderMatchResultCard(partida)}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="bg-[#1E1E1E] p-5 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <p className="text-[10px] font-black uppercase italic text-white/45">
+                    Sem resultados registrados ou confirmados.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -3575,6 +3808,24 @@ const LegacyMarketPlayerThumb = ({
   );
 };
 
+const resolveLegacyCardDisplayName = (rawName: unknown, maxChars = 18) => {
+  const fullName = String(rawName || '').trim().replace(/\s+/g, ' ');
+  if (!fullName) return 'ATLETA';
+  if (fullName.length <= maxChars) return fullName;
+
+  const words = fullName.split(' ');
+  const firstTwoWords = words.slice(0, 2).join(' ').trim();
+  if (firstTwoWords.length > 0 && firstTwoWords.length <= maxChars) {
+    return firstTwoWords;
+  }
+
+  const fallbackBase = (words[0] || fullName).trim();
+  if (fallbackBase.length <= maxChars) return fallbackBase;
+
+  const safeLength = Math.max(3, maxChars - 3);
+  return `${fallbackBase.slice(0, safeLength)}...`;
+};
+
 const LegacyUTCard = ({
   player,
   preferAssetTemplate = false,
@@ -3585,6 +3836,8 @@ const LegacyUTCard = ({
   const statsEntries = Object.entries(player.stats || {});
   const templateSrc = preferAssetTemplate ? LEGACY_MARKET_CARD_COMPLETO_URL : '';
   const { templateLoaded, shouldUseTemplate } = useLegacyTemplateImage(templateSrc);
+  const playerFullName = String(player?.name || 'ATLETA');
+  const playerDisplayName = resolveLegacyCardDisplayName(playerFullName, 18);
 
   return (
     <div className="relative w-full max-w-[280px] mx-auto aspect-[1/1.5] group select-none">
@@ -3631,7 +3884,13 @@ const LegacyUTCard = ({
           </div>
         </div>
         <div className="relative z-20 bg-gradient-to-r from-transparent via-[#FFD700] to-transparent py-1">
-           <h3 className="font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter whitespace-nowrap overflow-hidden px-2">{player.name}</h3>
+           <h3
+             className="font-black italic uppercase font-heading text-center text-[#121212] tracking-tighter px-2 truncate w-full"
+             title={playerFullName}
+             aria-label={playerFullName}
+           >
+             {playerDisplayName}
+           </h3>
         </div>
         <div className="relative z-20 grid grid-cols-2 gap-x-0 px-5">
           <div className="flex flex-col gap-2 border-r border-[#FFD700]/10 pr-2 px-5">
@@ -6904,6 +7163,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
   const [ligaData, setLigaData] = useState<any>(null);
   const [clubData, setClubData] = useState<any>(null);
   const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+  const [leagueImageFailed, setLeagueImageFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -6929,6 +7189,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
 
         setLigaData(payload?.liga ?? null);
         setClubData(payload?.clube ?? null);
+        setLeagueImageFailed(false);
         setOnboardingUrl(
           String(
             payload?.onboarding_url ||
@@ -6953,6 +7214,8 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
   }, [currentCareer?.id]);
 
   const hasLeague = Boolean(ligaData?.id && clubData?.id);
+  const leagueImageUrl = String(ligaData?.imagem_url || '').trim();
+  const showLeagueImage = leagueImageUrl !== '' && !leagueImageFailed;
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -6994,7 +7257,21 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
             <MCOCard onClick={onSelectTournament} accentColor="#FFD700" active={true} className="p-8">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-6">
-                  <i className="fas fa-shield-halved text-4xl" style={{ color: '#FFD700' }}></i>
+                  <div
+                    className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]"
+                    style={{ clipPath: SHIELD_CLIP }}
+                  >
+                    {showLeagueImage ? (
+                      <img
+                        src={leagueImageUrl}
+                        alt={String(ligaData?.nome ? `Escudo da liga ${ligaData.nome}` : 'Escudo da liga')}
+                        className="w-full h-full object-cover"
+                        onError={() => setLeagueImageFailed(true)}
+                      />
+                    ) : (
+                      <i className="fas fa-shield-halved text-3xl" style={{ color: '#FFD700' }}></i>
+                    )}
+                  </div>
                   <div>
                     <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
                     <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
@@ -7325,6 +7602,35 @@ const isLegacyGoalkeeperPosition = (positions: string | null | undefined) => {
   return (LEGACY_POSITION_ALIAS[primaryCode] || primaryCode) === 'GOL';
 };
 
+const toLegacyPositiveInteger = (value: unknown): number | null => {
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) return null;
+
+  return Math.max(0, Math.round(numericValue));
+};
+
+const resolveLegacyMultaValueEur = (player: any): number => {
+  const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
+  if (Number.isFinite(multaValueFromPayload)) {
+    return Math.max(0, Math.round(multaValueFromPayload));
+  }
+
+  const entryValueEur = toLegacyPositiveInteger(player?.entry_value_eur);
+  if (entryValueEur === null) return 0;
+
+  const originalValueEur = toLegacyPositiveInteger(player?.value_eur) ?? 0;
+  const rawMultiplier = Number(player?.multa_multiplicador ?? NaN);
+  const multiplier = Number.isFinite(rawMultiplier) && rawMultiplier > 0
+    ? rawMultiplier
+    : 1;
+
+  if (entryValueEur === originalValueEur) {
+    return Math.max(0, Math.round(entryValueEur * multiplier));
+  }
+
+  return entryValueEur;
+};
+
 const mapLegacyMarketPlayer = (player: any) => {
   const valueEur = Number(player?.value_eur ?? 0);
   const wageEur = Number(player?.wage_eur ?? 0);
@@ -7332,12 +7638,7 @@ const mapLegacyMarketPlayer = (player: any) => {
   const entryValueEur = entryValueRaw === null || entryValueRaw === undefined
     ? null
     : Number(entryValueRaw);
-  const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
-  const multaValueEur = Number.isFinite(multaValueFromPayload)
-    ? Math.max(0, multaValueFromPayload)
-    : Number.isFinite(entryValueEur)
-      ? Math.max(0, Number(entryValueEur))
-      : 0;
+  const multaValueEur = resolveLegacyMultaValueEur(player);
   const valueM = toLegacyMoneyInMillions(valueEur);
   const salaryM = toLegacyMoneyInMillions(wageEur);
   const clubStatus = String(player?.club_status || 'livre');
@@ -8566,14 +8867,7 @@ const MarketView = ({
   const resolvePrimaryActionFinancials = useCallback((player: any, actionType: 'multa' | 'comprar' | null) => {
     const wageEur = Math.max(0, Number(player?.wage_eur ?? 0) || 0);
     const marketValueEur = Math.max(0, Number(player?.value_eur ?? 0) || 0);
-    const entryValueRaw = Number(player?.entry_value_eur ?? NaN);
-    const multaValueFromPayload = Number(player?.multa_value_eur ?? NaN);
-    const multaFallback = Number.isFinite(entryValueRaw)
-      ? Math.max(0, entryValueRaw)
-      : 0;
-    const multaEur = Number.isFinite(multaValueFromPayload)
-      ? Math.max(0, multaValueFromPayload)
-      : multaFallback;
+    const multaEur = resolveLegacyMultaValueEur(player);
     const actionValueEur = actionType === 'multa' ? multaEur : marketValueEur;
     const saldoEur = Number.isFinite(marketClubSaldoEur) ? marketClubSaldoEur : 0;
     const salaryReserveEur = Number.isFinite(marketClubSalaryReserveEur)
