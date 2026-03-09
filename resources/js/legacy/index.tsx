@@ -1901,7 +1901,7 @@ const PublicClubProfileView = ({
             </section>
 
             <section className="space-y-4">
-               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">SALA DE TROFÉUS</h4>
+               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">CONQUISTAS</h4>
                <div className="grid grid-cols-2 gap-4">
                  {profile.wonTrophies.map((trophy: any, index: number) => {
                    const trophyId = String(trophy?.id ?? index);
@@ -1914,23 +1914,23 @@ const PublicClubProfileView = ({
                           {showTrophyImage ? (
                             <img
                               src={trophyImageUrl}
-                              alt={String(trophy?.nome ?? 'Troféu')}
+                              alt={String(trophy?.nome ?? 'Conquista')}
                               className="w-full h-full object-cover"
                               onError={() => {
                                 setTrophyImageErrorById((current) => ({ ...current, [trophyId]: true }));
                               }}
                             />
                           ) : (
-                            <i className="fas fa-trophy text-3xl text-[#FFD700]"></i>
+                            <i className="fas fa-medal text-3xl text-[#FFD700]"></i>
                           )}
                         </div>
-                        <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'TROFÉU')}</p>
+                        <p className="text-[11px] font-black italic uppercase text-white/70 mt-1 truncate">{String(trophy?.nome ?? 'CONQUISTA')}</p>
                      </div>
                    );
                  })}
                  {profile.wonTrophies.length === 0 && (
                     <div className="col-span-2 py-10 bg-[#1E1E1E] text-center opacity-20" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA TAÇA REGISTRADA</p>
+                      <p className="text-[10px] font-black italic uppercase tracking-widest">NENHUMA CONQUISTA REGISTRADA</p>
                     </div>
                  )}
                </div>
@@ -5529,7 +5529,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
             <div className="space-y-3">
               {movimentos.length > 0 ? movimentos.map((movement: any) => {
                 const meta = resolveFinanceOperationMeta(movement);
-                const title = normalizeFinanceLabel(movement?.descricao) || 'Movimento financeiro';
+                const description = normalizeFinanceLabel(movement?.descricao);
 
                 return (
                   <div key={String(movement.id)} className={`bg-[#181818] p-5 border-r-[2px] ${meta.borderClasses}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -5537,8 +5537,13 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <i className={`fas ${meta.icon} text-[10px] text-white/45`}></i>
-                          <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{title}</p>
+                          <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{meta.badge}</p>
                         </div>
+                        {description ? (
+                          <p className="text-[9px] font-bold italic text-white/65 mt-1 leading-tight whitespace-normal break-words">
+                            {description}
+                          </p>
+                        ) : null}
                         <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest mt-1">{formatFinanceDate(movement?.created_at)}</p>
                         <p className="text-[8px] font-black italic uppercase tracking-wider text-white/55 mt-2">
                           SALDO APÓS: <span className="text-white">{formatSaldoAfter(movement?.saldo_depois)}</span>
@@ -5619,7 +5624,7 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
               <div className="space-y-3">
                 {statementItems.map((movement: any) => {
                   const meta = resolveFinanceOperationMeta(movement);
-                  const title = normalizeFinanceLabel(movement?.descricao) || 'Movimento financeiro';
+                  const description = normalizeFinanceLabel(movement?.descricao);
 
                   return (
                     <div key={String(movement.id)} className={`bg-[#181818] p-5 border-r-[2px] ${meta.borderClasses}`} style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
@@ -5627,8 +5632,13 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <i className={`fas ${meta.icon} text-[10px] text-white/45`}></i>
-                            <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{title}</p>
+                            <p className="text-[10px] font-black italic text-white uppercase tracking-tighter truncate">{meta.badge}</p>
                           </div>
+                          {description ? (
+                            <p className="text-[9px] font-bold italic text-white/65 mt-1 leading-tight whitespace-normal break-words">
+                              {description}
+                            </p>
+                          ) : null}
                           <p className="text-[8px] font-bold text-white/20 uppercase italic tracking-widest mt-1">{formatFinanceDate(movement?.created_at)}</p>
                           <p className="text-[8px] font-black italic uppercase tracking-wider text-white/55 mt-2">
                             SALDO APÓS: <span className="text-white">{formatSaldoAfter(movement?.saldo_depois)}</span>
