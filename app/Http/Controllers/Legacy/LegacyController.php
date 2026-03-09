@@ -1576,24 +1576,22 @@ class LegacyController extends Controller
             ];
         }
 
-        $esquemaLayout = $clube->esquema_tatico_layout;
-        $esquemaPlayers = [];
-        if (is_array($esquemaLayout)) {
-            $rawPlayers = $esquemaLayout['players'] ?? [];
-            if (is_array($rawPlayers)) {
-                $esquemaPlayers = $rawPlayers;
-            }
-        }
-
-        $tacticalSetupCount = count($esquemaPlayers) === 0 ? 1 : 0;
+        $esquemaPlayersCount = $this->countLegacyTacticalPlayers($clube->esquema_tatico_layout);
+        $missingTacticalPlayers = max(0, 11 - $esquemaPlayersCount);
+        $tacticalSetupCount = $missingTacticalPlayers > 0 ? 1 : 0;
 
         if ($tacticalSetupCount > 0) {
+            $isTacticalSetupMissing = $esquemaPlayersCount === 0;
             $messages[] = [
-                'id' => 'tactical-setup-missing',
+                'id' => $isTacticalSetupMissing ? 'tactical-setup-missing' : 'tactical-setup-incomplete',
                 'type' => 'CLUBE',
-                'title' => 'CONFIGURE SEU ESQUEMA TATICO',
+                'title' => $isTacticalSetupMissing
+                    ? 'CONFIGURE SEU ESQUEMA TATICO'
+                    : 'ESQUEMA TATICO INCOMPLETO',
                 'sender' => 'MCO SYSTEM',
-                'content' => 'Voce ainda nao configurou o esquema tatico do seu clube. Monte o posicionamento para agilizar a organizacao das partidas.',
+                'content' => $isTacticalSetupMissing
+                    ? 'Voce ainda nao configurou o esquema tatico do seu clube. Monte o posicionamento para agilizar a organizacao das partidas.'
+                    : "Seu esquema tatico esta com {$esquemaPlayersCount} jogadores. Adicione mais {$missingTacticalPlayers} para completar os 11 titulares.",
                 'date' => now('UTC')->toIso8601String(),
                 'urgent' => false,
                 'action' => 'TACTICAL_SETUP',
@@ -1933,6 +1931,34 @@ class LegacyController extends Controller
         $opponent = $isMandante ? $partida->visitante?->nome : $partida->mandante?->nome;
 
         return (string) ($opponent ?: 'ADVERSARIO');
+    }
+
+    private function countLegacyTacticalPlayers(mixed $layout): int
+    {
+        if (! is_array($layout)) {
+            return 0;
+        }
+
+        $rawPlayers = $layout['players'] ?? [];
+        if (! is_array($rawPlayers)) {
+            return 0;
+        }
+
+        $ids = [];
+        foreach ($rawPlayers as $player) {
+            if (! is_array($player)) {
+                continue;
+            }
+
+            $id = (int) ($player['id'] ?? 0);
+            if ($id <= 0) {
+                continue;
+            }
+
+            $ids[$id] = true;
+        }
+
+        return count($ids);
     }
 
     private function buildLegacyInboxSummary(

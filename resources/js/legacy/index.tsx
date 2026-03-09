@@ -9491,9 +9491,14 @@ const MarketView = ({
         <LegacyReveal delayMs={40}>
           <div className="bg-[#1E1E1E] p-4 mb-8 border-l-[3px] border-[#FFD700]" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
           <div className="flex items-center justify-between gap-2">
-            <h4 className="text-[9px] font-black uppercase text-[#FFD700] italic tracking-widest">
+            <button
+              type="button"
+              onClick={() => setIsFilterOpen((prev) => !prev)}
+              aria-expanded={isFilterOpen}
+              className="text-[9px] font-black uppercase text-[#FFD700] italic tracking-widest text-left hover:opacity-90 focus:outline-none"
+            >
               <i className="fas fa-filter mr-2"></i> FILTROS DE BUSCA
-            </h4>
+            </button>
             <button
               type="button"
               onClick={() => setIsFilterOpen((prev) => !prev)}
