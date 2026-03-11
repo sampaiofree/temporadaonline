@@ -35,6 +35,9 @@ const LEGACY_ESQUEMA_TATICO_SAVE_URL = String(LEGACY_CONFIG?.esquemaTaticoSaveUr
 const LEGACY_PROFILE_ACCOUNT_DELETION_REQUEST_URL = String(
   LEGACY_CONFIG?.profileAccountDeletionRequestUrl || '/legacy/profile/request-account-deletion',
 );
+const LEGACY_PROFILE_ACCOUNT_DELETION_CANCEL_URL = String(
+  LEGACY_CONFIG?.profileAccountDeletionCancelUrl || '/legacy/profile/cancel-account-deletion',
+);
 
 const navigateTo = (url: string) => {
   const navigateWithLoader = (window as any).navigateWithLoader;
@@ -6324,6 +6327,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [requestingDeletion, setRequestingDeletion] = useState(false);
+  const [cancellingDeletion, setCancellingDeletion] = useState(false);
   const [showDeletionConfirmModal, setShowDeletionConfirmModal] = useState(false);
   const [options, setOptions] = useState<any>({ jogos: [], plataformas: [], geracoes: [] });
   const [userData, setUserData] = useState({ name: '', email: '', phone: '', gamertag: '' });
@@ -6464,15 +6468,6 @@ const ProfileView = ({ onBack, onNotify }: any) => {
         method: 'POST',
       });
 
-      if (payload?.status === 'processed') {
-        setShowDeletionConfirmModal(false);
-        notify(payload?.message || 'Conta excluida com sucesso.', 'success');
-        window.setTimeout(() => {
-          navigateTo('/legacy/login?account_deleted=1');
-        }, 300);
-        return;
-      }
-
       setAccountDeletion({
         pending: true,
         requested_at: payload?.requested_at || new Date().toISOString(),
@@ -6493,6 +6488,29 @@ const ProfileView = ({ onBack, onNotify }: any) => {
     }
 
     setShowDeletionConfirmModal(true);
+  };
+
+  const handleCancelAccountDeletionRequest = async () => {
+    if (!accountDeletion.pending) {
+      return;
+    }
+
+    setCancellingDeletion(true);
+    try {
+      const payload = await jsonRequest(LEGACY_PROFILE_ACCOUNT_DELETION_CANCEL_URL, {
+        method: 'POST',
+      });
+
+      setAccountDeletion({
+        pending: false,
+        requested_at: null,
+      });
+      notify(payload?.message || 'Solicitacao cancelada com sucesso.', 'success');
+    } catch (error: any) {
+      notify(error?.message || 'Nao foi possivel cancelar a solicitacao.', 'error');
+    } finally {
+      setCancellingDeletion(false);
+    }
   };
 
   return (
@@ -6533,13 +6551,23 @@ const ProfileView = ({ onBack, onNotify }: any) => {
 
         <p className="text-xs text-white/70 leading-relaxed mb-5">
           Voce pode solicitar a exclusao permanente da sua conta e dos dados associados.
-          A exclusao e processada imediatamente e nao pode ser desfeita.
+          A solicitacao sera analisada pela equipe. Enquanto estiver pendente, voce pode cancelar.
         </p>
 
         {accountDeletion.pending ? (
-          <div className="bg-[#121212] border border-[#B22222]/60 px-4 py-3 text-[11px] font-bold uppercase italic tracking-wide text-white/85" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-            SOLICITACAO JA ENVIADA
-            {formatDeletionRequestedAt(accountDeletion.requested_at) ? ` EM ${formatDeletionRequestedAt(accountDeletion.requested_at)}` : ''}.
+          <div className="space-y-3">
+            <div className="bg-[#121212] border border-[#B22222]/60 px-4 py-3 text-[11px] font-bold uppercase italic tracking-wide text-white/85" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+              SOLICITACAO JA ENVIADA
+              {formatDeletionRequestedAt(accountDeletion.requested_at) ? ` EM ${formatDeletionRequestedAt(accountDeletion.requested_at)}` : ''}.
+            </div>
+            <MCOButton
+              variant="outline"
+              className="w-full py-4 text-sm"
+              onClick={handleCancelAccountDeletionRequest}
+              disabled={cancellingDeletion}
+            >
+              {cancellingDeletion ? 'CANCELANDO...' : 'CANCELAR SOLICITACAO'}
+            </MCOButton>
           </div>
         ) : (
           <MCOButton
@@ -6562,7 +6590,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
           <div className="w-full max-w-md bg-[#1E1E1E] border-l-[6px] border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <h4 className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter mb-3">CONFIRMAR EXCLUSAO</h4>
             <p className="text-xs text-white/80 leading-relaxed mb-6">
-              Esta acao exclui a conta de forma definitiva e anonimiza seus dados pessoais.
+              Esta acao envia o pedido de exclusao para analise da equipe.
             </p>
             <div className="flex gap-3">
               <MCOButton

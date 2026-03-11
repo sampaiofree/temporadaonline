@@ -12,20 +12,13 @@ use App\Models\Plataforma;
 use App\Models\Profile;
 use App\Models\Regiao;
 use App\Models\UserDisponibilidade;
-use App\Services\AccountDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class LegacyProfileController extends Controller
 {
-    public function __construct(
-        private readonly AccountDeletionService $accountDeletionService,
-    ) {
-    }
-
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -204,20 +197,70 @@ class LegacyProfileController extends Controller
     public function requestAccountDeletion(Request $request): JsonResponse
     {
         $user = $request->user();
-        $processedRequest = $this->accountDeletionService->process($user, null, 'legacy_profile');
 
-        Auth::logout();
+        $pendingRequest = AccountDeletionRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
 
-        if ($request->hasSession()) {
-            $request->session()->invalidate();
-            $request->session()->regenerateToken();
+        if ($pendingRequest) {
+            return response()->json([
+                'message' => 'Sua solicitacao de exclusao ja foi registrada e esta em analise.',
+                'status' => 'pending',
+                'pending' => true,
+                'requested_at' => $pendingRequest->requested_at?->toIso8601String(),
+            ]);
         }
 
+        $created = AccountDeletionRequest::query()->create([
+            'user_id' => $user->id,
+            'email' => (string) $user->email,
+            'status' => 'pending',
+            'requested_at' => now(),
+        ]);
+
         return response()->json([
-            'message' => 'Conta excluida com sucesso. Seus dados pessoais foram anonimizados.',
-            'status' => 'processed',
+            'message' => 'Solicitacao de exclusao registrada com sucesso. Nossa equipe entrara em contato.',
+            'status' => 'pending',
+            'pending' => true,
+            'requested_at' => $created->requested_at?->toIso8601String(),
+        ], 201);
+    }
+
+    public function cancelAccountDeletionRequest(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $pendingRequest = AccountDeletionRequest::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'pending')
+            ->latest('id')
+            ->first();
+
+        if (! $pendingRequest) {
+            return response()->json([
+                'message' => 'Nenhuma solicitacao pendente para cancelar.',
+                'status' => 'none',
+                'pending' => false,
+            ]);
+        }
+
+        $notesPrefix = trim((string) $pendingRequest->notes);
+        $cancellationNote = sprintf('[%s] Cancelada pelo usuario no perfil legacy.', now()->toIso8601String());
+        $notes = $notesPrefix === '' ? $cancellationNote : $notesPrefix.PHP_EOL.$cancellationNote;
+
+        $pendingRequest->forceFill([
+            'status' => 'cancelled',
+            'processed_at' => now(),
+            'notes' => $notes,
+        ])->save();
+
+        return response()->json([
+            'message' => 'Solicitacao de exclusao cancelada com sucesso.',
+            'status' => 'cancelled',
             'pending' => false,
-            'processed_at' => $processedRequest->processed_at?->toIso8601String(),
+            'processed_at' => $pendingRequest->processed_at?->toIso8601String(),
         ]);
     }
 

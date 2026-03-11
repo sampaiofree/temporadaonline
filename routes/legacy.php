@@ -72,5 +72,7 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('profile.disponibilidades.sync');
         Route::post('/profile/request-account-deletion', [LegacyProfileController::class, 'requestAccountDeletion'])
             ->name('profile.account_deletion.request');
+        Route::post('/profile/cancel-account-deletion', [LegacyProfileController::class, 'cancelAccountDeletionRequest'])
+            ->name('profile.account_deletion.cancel');
     });
 });

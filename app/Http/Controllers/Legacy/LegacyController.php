@@ -75,6 +75,7 @@ class LegacyController extends Controller
                 'profileUpdateUrl' => route('legacy.profile.update'),
                 'profileDisponibilidadesSyncUrl' => route('legacy.profile.disponibilidades.sync'),
                 'profileAccountDeletionRequestUrl' => route('legacy.profile.account_deletion.request'),
+                'profileAccountDeletionCancelUrl' => route('legacy.profile.account_deletion.cancel'),
                 'logoutUrl' => route('legacy.logout'),
                 'userId' => $request->user()?->id,
                 'confederacoes' => $confederacoes,
