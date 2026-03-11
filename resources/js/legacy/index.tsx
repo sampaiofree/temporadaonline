@@ -6324,6 +6324,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [requestingDeletion, setRequestingDeletion] = useState(false);
+  const [showDeletionConfirmModal, setShowDeletionConfirmModal] = useState(false);
   const [options, setOptions] = useState<any>({ jogos: [], plataformas: [], geracoes: [] });
   const [userData, setUserData] = useState({ name: '', email: '', phone: '', gamertag: '' });
   const [gameData, setGameData] = useState<any>({ geracao_id: null, plataforma_id: null, jogo_id: null, options: { jogos: [], plataformas: [], geracoes: [] } });
@@ -6451,17 +6452,11 @@ const ProfileView = ({ onBack, onNotify }: any) => {
     return parsed.toLocaleString('pt-BR');
   };
 
-  const handleAccountDeletionRequest = async () => {
+  const submitAccountDeletionRequest = async () => {
     if (accountDeletion.pending) {
       notify('Sua solicitacao ja esta pendente de analise.', 'info');
       return;
     }
-
-    const confirmed = window.confirm(
-      'Esta acao solicita a exclusao permanente da conta. Deseja continuar?',
-    );
-
-    if (!confirmed) return;
 
     setRequestingDeletion(true);
     try {
@@ -6473,12 +6468,22 @@ const ProfileView = ({ onBack, onNotify }: any) => {
         pending: true,
         requested_at: payload?.requested_at || new Date().toISOString(),
       });
+      setShowDeletionConfirmModal(false);
       notify(payload?.message || 'Solicitacao de exclusao enviada com sucesso.', 'success');
     } catch (error: any) {
       notify(error?.message || 'Nao foi possivel enviar a solicitacao de exclusao.', 'error');
     } finally {
       setRequestingDeletion(false);
     }
+  };
+
+  const handleAccountDeletionRequest = () => {
+    if (accountDeletion.pending) {
+      notify('Sua solicitacao ja esta pendente de analise.', 'info');
+      return;
+    }
+
+    setShowDeletionConfirmModal(true);
   };
 
   return (
@@ -6543,6 +6548,34 @@ const ProfileView = ({ onBack, onNotify }: any) => {
           {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
         </MCOButton>
       </div>
+      {showDeletionConfirmModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 p-6 flex items-center justify-center">
+          <div className="w-full max-w-md bg-[#1E1E1E] border-l-[6px] border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <h4 className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter mb-3">CONFIRMAR EXCLUSAO</h4>
+            <p className="text-xs text-white/80 leading-relaxed mb-6">
+              Esta acao solicita a exclusao da conta. O pedido sera enviado para analise da equipe.
+            </p>
+            <div className="flex gap-3">
+              <MCOButton
+                variant="outline"
+                className="flex-1 py-4 text-xs"
+                onClick={() => setShowDeletionConfirmModal(false)}
+                disabled={requestingDeletion}
+              >
+                CANCELAR
+              </MCOButton>
+              <MCOButton
+                variant="danger"
+                className="flex-1 py-4 text-xs"
+                onClick={submitAccountDeletionRequest}
+                disabled={requestingDeletion}
+              >
+                {requestingDeletion ? 'ENVIANDO...' : 'CONFIRMAR'}
+              </MCOButton>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
