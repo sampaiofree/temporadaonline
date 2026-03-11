@@ -12,20 +12,26 @@ use App\Models\Plataforma;
 use App\Models\Profile;
 use App\Models\Regiao;
 use App\Models\UserDisponibilidade;
+use App\Services\AccountDeletionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class LegacyProfileController extends Controller
 {
+    public function __construct(
+        private readonly AccountDeletionService $accountDeletionService,
+    ) {
+    }
+
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
         $profile = $user->profile;
-        $pendingDeletionRequest = AccountDeletionRequest::query()
+        $latestDeletionRequest = AccountDeletionRequest::query()
             ->where('user_id', $user->id)
-            ->where('status', 'pending')
             ->latest('id')
             ->first();
 
@@ -65,8 +71,10 @@ class LegacyProfileController extends Controller
             ],
             'disponibilidades' => $disponibilidades,
             'account_deletion' => [
-                'pending' => (bool) $pendingDeletionRequest,
-                'requested_at' => $pendingDeletionRequest?->requested_at?->toIso8601String(),
+                'pending' => (string) $latestDeletionRequest?->status === 'pending',
+                'status' => $latestDeletionRequest?->status,
+                'requested_at' => $latestDeletionRequest?->requested_at?->toIso8601String(),
+                'processed_at' => $latestDeletionRequest?->processed_at?->toIso8601String(),
             ],
         ]);
     }
@@ -196,33 +204,21 @@ class LegacyProfileController extends Controller
     public function requestAccountDeletion(Request $request): JsonResponse
     {
         $user = $request->user();
+        $processedRequest = $this->accountDeletionService->process($user, null, 'legacy_profile');
 
-        $pendingRequest = AccountDeletionRequest::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'pending')
-            ->latest('id')
-            ->first();
+        Auth::logout();
 
-        if ($pendingRequest) {
-            return response()->json([
-                'message' => 'Sua solicitacao de exclusao ja foi registrada e esta em analise.',
-                'pending' => true,
-                'requested_at' => $pendingRequest->requested_at?->toIso8601String(),
-            ]);
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
         }
 
-        $created = AccountDeletionRequest::query()->create([
-            'user_id' => $user->id,
-            'email' => (string) $user->email,
-            'status' => 'pending',
-            'requested_at' => now(),
-        ]);
-
         return response()->json([
-            'message' => 'Solicitacao de exclusao registrada com sucesso. Nossa equipe entrara em contato.',
-            'pending' => true,
-            'requested_at' => $created->requested_at?->toIso8601String(),
-        ], 201);
+            'message' => 'Conta excluida com sucesso. Seus dados pessoais foram anonimizados.',
+            'status' => 'processed',
+            'pending' => false,
+            'processed_at' => $processedRequest->processed_at?->toIso8601String(),
+        ]);
     }
 
     private function normalizeTimeToHi(string $value): string

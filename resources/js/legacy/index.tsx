@@ -6464,6 +6464,15 @@ const ProfileView = ({ onBack, onNotify }: any) => {
         method: 'POST',
       });
 
+      if (payload?.status === 'processed') {
+        setShowDeletionConfirmModal(false);
+        notify(payload?.message || 'Conta excluida com sucesso.', 'success');
+        window.setTimeout(() => {
+          navigateTo('/legacy/login?account_deleted=1');
+        }, 300);
+        return;
+      }
+
       setAccountDeletion({
         pending: true,
         requested_at: payload?.requested_at || new Date().toISOString(),
@@ -6524,7 +6533,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
 
         <p className="text-xs text-white/70 leading-relaxed mb-5">
           Voce pode solicitar a exclusao permanente da sua conta e dos dados associados.
-          A solicitacao sera analisada pela equipe e, apos processada, nao podera ser desfeita.
+          A exclusao e processada imediatamente e nao pode ser desfeita.
         </p>
 
         {accountDeletion.pending ? (
@@ -6553,7 +6562,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
           <div className="w-full max-w-md bg-[#1E1E1E] border-l-[6px] border-[#B22222] p-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <h4 className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter mb-3">CONFIRMAR EXCLUSAO</h4>
             <p className="text-xs text-white/80 leading-relaxed mb-6">
-              Esta acao solicita a exclusao da conta. O pedido sera enviado para analise da equipe.
+              Esta acao exclui a conta de forma definitiva e anonimiza seus dados pessoais.
             </p>
             <div className="flex gap-3">
               <MCOButton
