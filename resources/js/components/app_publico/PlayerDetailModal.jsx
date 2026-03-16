@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 
 const currencyFormatter = new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -222,7 +223,22 @@ export default function PlayerDetailModal({
     primaryAction,
     secondaryAction,
 }) {
-    if (!player) return null;
+    const canUsePortal = typeof document !== 'undefined';
+
+    useEffect(() => {
+        if (!player || !canUsePortal) {
+            return undefined;
+        }
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = 'hidden';
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [player, canUsePortal]);
+
+    if (!player || !canUsePortal) return null;
 
     const detailSnapshot = snapshot ?? player;
     const name = getPlayerName(detailSnapshot) || '—';
@@ -245,7 +261,7 @@ export default function PlayerDetailModal({
         return { label: field.label, value };
     });
 
-    return (
+    return createPortal(
         <div
             className="player-detail-modal"
             role="dialog"
@@ -411,6 +427,7 @@ export default function PlayerDetailModal({
                     </button>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body,
     );
 }

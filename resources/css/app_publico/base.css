@@ -3183,13 +3183,15 @@ a:focus-visible {
     position: fixed;
     inset: 0;
     width: 100%;
+    min-height: 100dvh;
     height: 100%;
     background: rgba(0, 0, 0, 0.95);
-    z-index: 10000;
+    z-index: 12000;
     overflow-y: auto;
+    overscroll-behavior: contain;
     font-family: 'Segoe UI', Roboto, sans-serif;
     color: #fff;
-    padding-bottom: 120px;
+    padding-bottom: calc(120px + env(safe-area-inset-bottom));
 }
 
 .player-detail-header {
@@ -3555,10 +3557,12 @@ a:focus-visible {
     left: 0;
     width: 100%;
     background: #1a1a1a;
-    padding: 20px;
+    padding: 20px 20px calc(20px + env(safe-area-inset-bottom));
     display: flex;
     gap: 10px;
     border-top: 1px solid #333;
+    z-index: 1;
+    box-sizing: border-box;
 }
 
 .player-detail-actions .btn-outline {
