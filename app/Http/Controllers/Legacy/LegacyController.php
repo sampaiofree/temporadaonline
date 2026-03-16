@@ -155,8 +155,6 @@ class LegacyController extends Controller
         $periodoLeilaoAtivo = $marketWindow['auction_period'] ?? null;
         $periodoMultaAtivo = $marketWindow['multa_period'] ?? null;
         $multaLiberada = (bool) ($marketWindow['is_multa_open'] ?? false);
-        $periodoMultaAtivo = $marketWindow['multa_period'] ?? null;
-        $multaLiberada = (bool) ($marketWindow['is_multa_open'] ?? false);
         $mercadoFechado = $marketMode === MarketWindowService::MODE_CLOSED;
         $mercadoLeilao = $marketMode === MarketWindowService::MODE_AUCTION;
         $scopeConfederacaoId = $liga->confederacao_id;
@@ -495,7 +493,7 @@ class LegacyController extends Controller
             $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
 
             $players = $rows
-                ->map(function ($row) use ($userClub, $playstylesMap) {
+                ->map(function ($row) use ($userClub, $playstylesMap, $multaLiberada) {
                     $entryClubId = $row->entry_liga_clube_id !== null ? (int) $row->entry_liga_clube_id : null;
                     $clubStatus = 'livre';
                     $canBuy = $entryClubId === null;
@@ -718,7 +716,7 @@ class LegacyController extends Controller
         $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
 
         $players = $playersCollection
-            ->map(function (Elencopadrao $player) use ($elencos, $userClub, $playstylesMap) {
+            ->map(function (Elencopadrao $player) use ($elencos, $userClub, $playstylesMap, $multaLiberada) {
                 $entry = $elencos->get($player->id);
                 $club = $entry?->ligaClube;
                 $clubLiga = $club?->liga;
@@ -730,7 +728,7 @@ class LegacyController extends Controller
                 if ($entry && $club) {
                     $clubStatus = $userClub && $club->id === $userClub->id ? 'meu' : 'outro';
                     $canBuy = $clubStatus === 'outro';
-                    $canMulta = $clubStatus === 'outro';
+                    $canMulta = $clubStatus === 'outro' && $multaLiberada;
                 }
 
                 $entryValueEur = $entry?->value_eur !== null ? (int) $entry->value_eur : null;

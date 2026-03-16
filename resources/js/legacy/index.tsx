@@ -397,16 +397,7 @@ const multipartRequest = async (url: string, formData: FormData, options: Legacy
 
 const formatLegacyFansLabel = (rawValue: number) => {
   const value = Number.isFinite(rawValue) ? Math.max(0, rawValue) : 0;
-
-  if (value >= 1_000_000) {
-    return `${(value / 1_000_000).toFixed(1)}M`;
-  }
-
-  if (value >= 1_000) {
-    return `${(value / 1_000).toFixed(1)}K`;
-  }
-
-  return String(Math.round(value));
+  return Math.round(value).toLocaleString('pt-BR');
 };
 
 const LEGACY_FAN_PROGRESS_TIERS = [
