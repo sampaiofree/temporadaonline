@@ -18,6 +18,8 @@ const getPartidasFromWindow = () => {
 export default function LigaPartidas() {
     const liga = getLigaFromWindow();
     const clube = getClubeFromWindow();
+    const matchReportBlocked = Boolean(liga?.match_report_blocked);
+    const matchReportBlockReason = String(liga?.match_report_block_reason || '');
     const ligaTimezone =
         liga?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
     const [partidasState, setPartidasState] = useState(getPartidasFromWindow());
@@ -140,9 +142,7 @@ export default function LigaPartidas() {
 
         const now = new Date();
         const start = new Date(partida.scheduled_at);
-        const limit = new Date(start.getTime() - 60 * 60 * 1000);
-
-        return now < limit;
+        return now < start;
     };
 
     const roleFilters = [
@@ -879,6 +879,16 @@ export default function LigaPartidas() {
                     onClose={() => setSuccessMessage('')}
                 />
             )}
+            {matchReportBlocked && (
+                <Alert
+                    variant="warning"
+                    title="Finalização bloqueada"
+                    description={
+                        matchReportBlockReason ||
+                        'O envio de súmulas fica bloqueado enquanto o mercado estiver aberto.'
+                    }
+                />
+            )}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">PARTIDAS</p>
                 <h1 className="ligas-title">Agenda da liga</h1>
@@ -969,9 +979,10 @@ export default function LigaPartidas() {
                                 isParticipant(partida) &&
                                 ['confirmada', 'agendada'].includes(partida.estado) &&
                                 Boolean(partida.scheduled_at);
-                            const canFinalizar =
+                            const canOpenFinalizar =
                                 isParticipant(partida) &&
                                 ['confirmada'].includes(partida.estado);
+                            const canFinalizar = canOpenFinalizar && !matchReportBlocked;
                             const canConfirmarPlacar =
                                 isParticipant(partida) &&
                                 partida.estado === 'placar_registrado' &&
@@ -1082,11 +1093,13 @@ export default function LigaPartidas() {
                                                 Reagendar horário
                                             </button>
                                         )}
-                                        {canFinalizar && (
+                                        {canOpenFinalizar && (
                                             <button
                                                 type="button"
                                                 className="btn-primary"
-                                                onClick={() => window.location.assign(finalizarUrl)}
+                                                onClick={() => canFinalizar && window.location.assign(finalizarUrl)}
+                                                disabled={!canFinalizar}
+                                                title={!canFinalizar ? matchReportBlockReason : undefined}
                                             >
                                                 Finalizar partida
                                             </button>

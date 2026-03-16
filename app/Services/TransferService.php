@@ -135,7 +135,9 @@ class TransferService
             }
 
             $model->loadMissing('elencopadrao');
-            $baseValue = (int) ($model->elencopadrao?->value_eur ?? 0);
+            $baseValue = $model->value_eur !== null
+                ? (int) $model->value_eur
+                : (int) ($model->elencopadrao?->value_eur ?? 0);
 
             // Default taxa de venda: 20%
             $taxPercent = 20;

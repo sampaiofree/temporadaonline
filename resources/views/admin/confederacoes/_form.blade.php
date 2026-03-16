@@ -62,6 +62,28 @@
     $nextLeilaoIndex = $leilaoKeys->isNotEmpty()
         ? ((int) $leilaoKeys->max() + 1)
         : count($leiloes);
+
+    $roubosMulta = old('roubos_multa');
+    if ($roubosMulta === null) {
+        $roubosMulta = $confederacao?->roubosMulta
+            ? $confederacao->roubosMulta
+                ->sortBy('inicio')
+                ->map(fn ($roubo) => [
+                    'inicio' => $roubo->inicio
+                        ? Carbon::parse((string) $roubo->getRawOriginal('inicio'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
+                    'fim' => $roubo->fim
+                        ? Carbon::parse((string) $roubo->getRawOriginal('fim'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
+                ])
+                ->values()
+                ->toArray()
+            : [];
+    }
+    $rouboKeys = collect($roubosMulta)->keys();
+    $nextRouboIndex = $rouboKeys->isNotEmpty()
+        ? ((int) $rouboKeys->max() + 1)
+        : count($roubosMulta);
 @endphp
 
 <form action="{{ $action }}" method="POST" enctype="multipart/form-data" class="space-y-6">
@@ -379,6 +401,75 @@
         </div>
     </div>
 
+    <div class="rounded-xl border border-slate-200 bg-slate-50 p-4">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <p class="text-sm font-semibold text-slate-700">Períodos de roubo por multa</p>
+                <p class="text-xs text-slate-500">Defina as janelas (data e hora) em que é permitido roubo por multa.</p>
+            </div>
+            <button
+                type="button"
+                id="confederacao-roubos-add"
+                class="inline-flex items-center rounded-xl border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+            >
+                Adicionar janela de roubo
+            </button>
+        </div>
+
+        @error('roubos_multa')
+            <p class="mt-3 text-xs text-red-600">{{ $message }}</p>
+        @enderror
+
+        <div class="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-left text-sm">
+                    <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">Início</th>
+                            <th class="px-4 py-3 font-semibold">Fim</th>
+                            <th class="px-4 py-3 font-semibold text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="confederacao-roubos-table-body" data-next-index="{{ $nextRouboIndex }}">
+                        @foreach ($roubosMulta as $index => $roubo)
+                            @php
+                                $inicio = $roubo['inicio'] ?? '';
+                                $fim = $roubo['fim'] ?? '';
+                            @endphp
+                            <tr class="border-b border-slate-100 bg-white" data-roubo-row>
+                                <td class="px-4 py-3 text-sm text-slate-900">
+                                    <div class="font-semibold">{{ $inicio ?: '—' }}</div>
+                                    <input type="hidden" name="roubos_multa[{{ $index }}][inicio]" value="{{ $inicio }}">
+                                </td>
+                                <td class="px-4 py-3 text-sm text-slate-900">
+                                    <div class="font-semibold">{{ $fim ?: '—' }}</div>
+                                    <input type="hidden" name="roubos_multa[{{ $index }}][fim]" value="{{ $fim }}">
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <button
+                                        type="button"
+                                        data-remove-roubo
+                                        class="rounded-xl border border-rose-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-rose-600 transition hover:bg-rose-50"
+                                    >
+                                        Excluir
+                                    </button>
+                                </td>
+                            </tr>
+                        @endforeach
+                        <tr
+                            id="confederacao-roubos-empty"
+                            class="border-b border-slate-100 bg-white {{ count($roubosMulta) ? 'hidden' : '' }}"
+                        >
+                            <td colspan="3" class="px-4 py-6 text-center text-sm text-slate-500">
+                                Ainda não há períodos de roubo cadastrados.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <div class="flex items-center justify-between gap-3 pt-6">
         <a href="{{ route('admin.confederacoes.index') }}" class="text-sm font-semibold text-slate-600 hover:text-slate-900">Voltar para a lista</a>
         <button
@@ -510,6 +601,66 @@
     </div>
 </div>
 
+<div
+    id="confederacao-roubos-modal"
+    class="fixed inset-0 z-50 hidden items-center justify-center overflow-y-auto bg-black/40 p-4"
+    role="dialog"
+    aria-modal="true"
+>
+    <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-lg font-semibold text-slate-900">Adicionar janela de roubo por multa</h3>
+                <p class="text-sm text-slate-500">Configure data e hora de início e término.</p>
+            </div>
+            <button
+                type="button"
+                data-close-roubos-modal
+                class="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 transition hover:border-slate-300 hover:text-slate-900"
+            >
+                Fechar
+            </button>
+        </div>
+
+        <form id="confederacao-roubos-modal-form" class="mt-6 space-y-4">
+            <div>
+                <label for="confederacao-roubo-modal-inicio" class="text-sm font-semibold text-slate-700">Data e hora de inicio</label>
+                <input
+                    id="confederacao-roubo-modal-inicio"
+                    type="datetime-local"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    required
+                >
+            </div>
+            <div>
+                <label for="confederacao-roubo-modal-fim" class="text-sm font-semibold text-slate-700">Data e hora de fim</label>
+                <input
+                    id="confederacao-roubo-modal-fim"
+                    type="datetime-local"
+                    class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                    required
+                >
+            </div>
+            <p id="confederacao-roubos-modal-error" class="hidden text-xs text-rose-600"></p>
+            <div class="flex items-center justify-end gap-3 pt-2">
+                <button
+                    type="button"
+                    data-close-roubos-modal
+                    class="inline-flex items-center rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-900"
+                >
+                    Cancelar
+                </button>
+                <button
+                    type="submit"
+                    class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                >
+                    Salvar janela de roubo
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const initRangeManager = (config) => {
@@ -589,10 +740,10 @@
                 const row = document.createElement('tr');
                 row.className = 'border-b border-slate-100 bg-white';
                 row.setAttribute(config.rowAttribute, '');
-                const renderInicio = config.fieldName === 'periodos'
+                const renderInicio = (config.fieldName === 'periodos' || config.fieldName === 'roubos_multa')
                     ? formatDateTimeLabel(inicio)
                     : (inicio || '—');
-                const renderFim = config.fieldName === 'periodos'
+                const renderFim = (config.fieldName === 'periodos' || config.fieldName === 'roubos_multa')
                     ? formatDateTimeLabel(fim)
                     : (fim || '—');
                 row.innerHTML = `
@@ -736,6 +887,21 @@
             fieldName: 'leiloes',
             rowAttribute: 'data-leilao-row',
             removeAttribute: 'data-remove-leilao',
+        });
+
+        initRangeManager({
+            addButtonId: 'confederacao-roubos-add',
+            modalId: 'confederacao-roubos-modal',
+            modalFormId: 'confederacao-roubos-modal-form',
+            tableBodyId: 'confederacao-roubos-table-body',
+            emptyRowId: 'confederacao-roubos-empty',
+            inicioInputId: 'confederacao-roubo-modal-inicio',
+            fimInputId: 'confederacao-roubo-modal-fim',
+            errorMessageId: 'confederacao-roubos-modal-error',
+            closeSelector: '[data-close-roubos-modal]',
+            fieldName: 'roubos_multa',
+            rowAttribute: 'data-roubo-row',
+            removeAttribute: 'data-remove-roubo',
         });
     });
 </script>

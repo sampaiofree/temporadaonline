@@ -89,6 +89,8 @@ class LegacyController extends Controller
                 'achievementsDataUrl' => route('legacy.achievements.data'),
                 'patrociniosDataUrl' => route('legacy.patrocinios.data'),
                 'seasonStatsDataUrl' => route('legacy.season_stats.data'),
+                'transferHistoryDataUrl' => route('legacy.transfer_history.data'),
+                'nextEventsDataUrl' => route('legacy.next_events.data'),
                 'financeDataUrl' => route('legacy.finance.data'),
                 'financeStatementDataUrl' => route('legacy.finance.statement.data'),
                 'inboxDataUrl' => route('legacy.inbox.data'),
@@ -151,6 +153,10 @@ class LegacyController extends Controller
         $marketMode = (string) ($marketWindow['mode'] ?? MarketWindowService::MODE_OPEN);
         $periodoAtivo = $marketWindow['market_period'] ?? null;
         $periodoLeilaoAtivo = $marketWindow['auction_period'] ?? null;
+        $periodoMultaAtivo = $marketWindow['multa_period'] ?? null;
+        $multaLiberada = (bool) ($marketWindow['is_multa_open'] ?? false);
+        $periodoMultaAtivo = $marketWindow['multa_period'] ?? null;
+        $multaLiberada = (bool) ($marketWindow['is_multa_open'] ?? false);
         $mercadoFechado = $marketMode === MarketWindowService::MODE_CLOSED;
         $mercadoLeilao = $marketMode === MarketWindowService::MODE_AUCTION;
         $scopeConfederacaoId = $liga->confederacao_id;
@@ -498,7 +504,7 @@ class LegacyController extends Controller
                     if ($entryClubId !== null) {
                         $clubStatus = $entryClubId === (int) $userClub->id ? 'meu' : 'outro';
                         $canBuy = $clubStatus === 'outro';
-                        $canMulta = $clubStatus === 'outro';
+                        $canMulta = $clubStatus === 'outro' && $multaLiberada;
                     }
 
                     $entryValueEur = $row->entry_value_eur !== null ? (int) $row->entry_value_eur : null;
@@ -620,6 +626,8 @@ class LegacyController extends Controller
                 'period' => $periodoAtivo,
                 'mode' => $marketMode,
                 'auction_period' => $periodoLeilaoAtivo,
+                'multa_period' => $periodoMultaAtivo,
+                'multa_enabled' => $multaLiberada,
                 'bid_increment_options' => $auctionService->getBidIncrementOptions(),
                 'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
                 'radar_ids' => $favoriteIds,
@@ -891,6 +899,8 @@ class LegacyController extends Controller
             'period' => $periodoAtivo,
             'mode' => $marketMode,
             'auction_period' => $periodoLeilaoAtivo,
+            'multa_period' => $periodoMultaAtivo,
+            'multa_enabled' => $multaLiberada,
             'bid_increment_options' => $auctionService->getBidIncrementOptions(),
             'bid_duration_seconds' => $auctionService->getBidDurationSeconds(),
             'radar_ids' => $favoriteIds,
@@ -1332,6 +1342,10 @@ class LegacyController extends Controller
         }
 
         $scopeConfederacaoId = $liga->confederacao_id;
+        $matchReportBlocked = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $matchReportBlockReason = $matchReportBlocked
+            ? 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.'
+            : null;
         $userClubQuery = $user->clubesLiga()->with('escudo:id,clube_imagem');
 
         $userClubQuery->where('liga_id', $liga->id);
@@ -2479,6 +2493,10 @@ class LegacyController extends Controller
         }
 
         $scopeConfederacaoId = $liga->confederacao_id;
+        $matchReportBlocked = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $matchReportBlockReason = $matchReportBlocked
+            ? 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.'
+            : null;
         $userClubQuery = $user->clubesLiga()->with('escudo:id,clube_imagem');
 
         $userClubQuery->where('liga_id', $liga->id);
@@ -2493,8 +2511,12 @@ class LegacyController extends Controller
                     'timezone' => $liga->timezone,
                     'confederacao_id' => $liga->confederacao_id,
                     'confederacao_nome' => $liga->confederacao?->nome,
+                    'match_report_blocked' => $matchReportBlocked,
+                    'match_report_block_reason' => $matchReportBlockReason,
                 ],
                 'clube' => null,
+                'match_report_blocked' => $matchReportBlocked,
+                'match_report_block_reason' => $matchReportBlockReason,
                 'partidas' => [],
             ]);
         }
@@ -2517,7 +2539,7 @@ class LegacyController extends Controller
 
         $tz = $liga->timezone ?? 'UTC';
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($clube, $avaliacoes, $tz) {
+            ->map(function (Partida $partida) use ($clube, $avaliacoes, $tz, $matchReportBlocked, $matchReportBlockReason) {
                 $avaliacao = $avaliacoes->get($partida->id);
 
                 return [
@@ -2540,6 +2562,8 @@ class LegacyController extends Controller
                     'placar_registrado_em' => $partida->placar_registrado_em?->toIso8601String(),
                     'is_mandante' => (int) $partida->mandante_id === (int) $clube->id,
                     'is_visitante' => (int) $partida->visitante_id === (int) $clube->id,
+                    'match_report_blocked' => $matchReportBlocked,
+                    'match_report_block_reason' => $matchReportBlockReason,
                     'avaliacao' => $avaliacao ? [
                         'nota' => $avaliacao->nota,
                         'avaliado_user_id' => $avaliacao->avaliado_user_id,
@@ -2556,6 +2580,8 @@ class LegacyController extends Controller
                 'timezone' => $tz,
                 'confederacao_id' => $liga->confederacao_id,
                 'confederacao_nome' => $liga->confederacao?->nome,
+                'match_report_blocked' => $matchReportBlocked,
+                'match_report_block_reason' => $matchReportBlockReason,
             ],
             'clube' => [
                 'id' => $clube->id,
@@ -2563,6 +2589,8 @@ class LegacyController extends Controller
                 'nome' => $clube->nome,
                 'escudo_url' => $this->resolveEscudoUrl($clube->escudo?->clube_imagem),
             ],
+            'match_report_blocked' => $matchReportBlocked,
+            'match_report_block_reason' => $matchReportBlockReason,
             'partidas' => $partidas,
         ]);
     }
@@ -3843,6 +3871,178 @@ class LegacyController extends Controller
         ]);
     }
 
+    public function transferHistoryData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederacao.',
+                'liga' => null,
+                'history' => [
+                    'items' => [],
+                    'pagination' => [
+                        'page' => 1,
+                        'per_page' => 5,
+                        'total' => 0,
+                        'has_more' => false,
+                    ],
+                ],
+                'onboarding_url' => route('legacy.onboarding_clube'),
+            ], 404);
+        }
+
+        $scopeConfederacaoId = $liga->confederacao_id;
+        $perPage = max(1, min(20, (int) $request->query('per_page', 5)));
+        $page = max(1, (int) $request->query('page', 1));
+
+        $transfersQuery = LigaTransferencia::query()
+            ->with([
+                'clubeOrigem:id,nome,escudo_clube_id',
+                'clubeOrigem.escudo:id,clube_imagem',
+                'clubeDestino:id,nome,escudo_clube_id',
+                'clubeDestino.escudo:id,clube_imagem',
+                'elencopadrao:id,short_name,long_name,player_positions,overall,value_eur,wage_eur,age,weak_foot,skill_moves,player_traits,pace,shooting,passing,dribbling,defending,physic,goalkeeping_diving,goalkeeping_handling,goalkeeping_kicking,goalkeeping_reflexes,goalkeeping_positioning,movement_acceleration,movement_sprint_speed,attacking_finishing,power_shot_power,power_long_shots,attacking_short_passing,skill_long_passing,mentality_vision,skill_dribbling,skill_ball_control,movement_agility,movement_balance,movement_reactions,defending_marking_awareness,mentality_interceptions,defending_standing_tackle,defending_sliding_tackle,power_strength,power_stamina,power_jumping,mentality_aggression,player_face_url',
+            ])
+            ->whereIn('tipo', ['jogador_livre', 'venda', 'multa', 'troca'])
+            ->orderByDesc('created_at')
+            ->orderByDesc('id');
+
+        if ($scopeConfederacaoId) {
+            $transfersQuery->where('confederacao_id', $scopeConfederacaoId);
+        } else {
+            $transfersQuery->where('liga_id', $liga->id);
+        }
+
+        $transfersPaginator = $transfersQuery->paginate($perPage, ['*'], 'page', $page);
+
+        $traitNames = $transfersPaginator->getCollection()
+            ->pluck('elencopadrao')
+            ->filter()
+            ->flatMap(fn (Elencopadrao $player) => $this->parseLegacyTraitTags($player->player_traits))
+            ->unique(fn (string $name) => Str::lower($name))
+            ->values();
+
+        $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
+
+        $items = $transfersPaginator->getCollection()
+            ->map(function (LigaTransferencia $transfer) use ($playstylesMap): array {
+                return [
+                    'id' => (int) $transfer->id,
+                    'tipo' => (string) $transfer->tipo,
+                    'tipo_label' => $this->resolveLegacyTransferHistoryTypeLabel($transfer),
+                    'valor' => (int) ($transfer->valor ?? 0),
+                    'observacao' => (string) ($transfer->observacao ?? ''),
+                    'created_at' => $transfer->created_at?->toIso8601String(),
+                    'origem' => $this->formatLegacyTransferHistoryEndpoint($transfer, 'origem'),
+                    'destino' => $this->formatLegacyTransferHistoryEndpoint($transfer, 'destino'),
+                    'player' => $transfer->elencopadrao
+                        ? $this->formatLegacyTransferHistoryPlayer($transfer->elencopadrao, $playstylesMap)
+                        : null,
+                ];
+            })
+            ->values()
+            ->all();
+
+        return response()->json([
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'confederacao_id' => $liga->confederacao_id,
+                'confederacao_nome' => $liga->confederacao?->nome,
+            ],
+            'history' => [
+                'items' => $items,
+                'pagination' => [
+                    'page' => $transfersPaginator->currentPage(),
+                    'per_page' => $transfersPaginator->perPage(),
+                    'total' => $transfersPaginator->total(),
+                    'has_more' => $transfersPaginator->hasMorePages(),
+                ],
+            ],
+            'onboarding_url' => route('legacy.onboarding_clube', [
+                'stage' => 'confederacao',
+                'confederacao_id' => $scopeConfederacaoId,
+            ]),
+        ]);
+    }
+
+    public function nextEventsData(Request $request): JsonResponse
+    {
+        /** @var User|null $user */
+        $user = $request->user();
+
+        if (! $user) {
+            abort(403);
+        }
+
+        $rawConfederacaoId = $request->query('confederacao_id');
+        $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $liga = $this->resolveMarketLiga($user, $confederacaoId);
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Nenhuma liga encontrada para esta confederação.',
+                'liga' => null,
+                'events' => [
+                    'items' => [],
+                ],
+                'onboarding_url' => route('legacy.onboarding_clube'),
+            ]);
+        }
+
+        $marketWindow = app(MarketWindowService::class)->resolveForLiga($liga);
+
+        $items = [
+            $this->formatLegacyNextEventItem(
+                id: 'auction',
+                title: 'Abertura do leilão',
+                icon: 'fa-gavel',
+                currentWindow: $marketWindow['auction_period'] ?? null,
+                nextWindow: $marketWindow['next_auction_period'] ?? null,
+            ),
+            $this->formatLegacyNextEventItem(
+                id: 'multa',
+                title: 'Abertura das multas',
+                icon: 'fa-file-invoice-dollar',
+                currentWindow: $marketWindow['multa_period'] ?? null,
+                nextWindow: $marketWindow['next_multa_period'] ?? null,
+            ),
+            $this->formatLegacyNextEventItem(
+                id: 'market',
+                title: 'Abertura das transferências',
+                icon: 'fa-right-left',
+                currentWindow: $marketWindow['market_period'] ?? null,
+                nextWindow: $marketWindow['next_market_period'] ?? null,
+            ),
+        ];
+
+        return response()->json([
+            'liga' => [
+                'id' => $liga->id,
+                'nome' => $liga->nome,
+                'confederacao_id' => $liga->confederacao_id,
+                'confederacao_nome' => $liga->confederacao?->nome,
+            ],
+            'events' => [
+                'items' => $items,
+            ],
+            'onboarding_url' => route('legacy.onboarding_clube', [
+                'stage' => 'confederacao',
+                'confederacao_id' => $liga->confederacao_id,
+            ]),
+        ]);
+    }
+
     public function claimAchievement(Request $request, Conquista $conquista): JsonResponse
     {
         /** @var User|null $user */
@@ -4739,6 +4939,151 @@ class LegacyController extends Controller
             'assists_per_match' => 0.0,
             'skill_rating' => 0,
             'score' => 5.0,
+        ];
+    }
+
+    private function formatLegacyTransferHistoryPlayer(Elencopadrao $player, Collection $playstylesMap): array
+    {
+        return [
+            'elencopadrao_id' => (int) $player->id,
+            'short_name' => $player->short_name,
+            'long_name' => $player->long_name,
+            'player_positions' => $player->player_positions,
+            'overall' => $player->overall,
+            'value_eur' => $player->value_eur,
+            'wage_eur' => $player->wage_eur,
+            'age' => $player->age,
+            'weak_foot' => $player->weak_foot,
+            'skill_moves' => $player->skill_moves,
+            'player_traits' => $player->player_traits,
+            'playstyle_badges' => $this->mapLegacyPlaystyleBadges($player->player_traits, $playstylesMap),
+            'pace' => $player->pace,
+            'shooting' => $player->shooting,
+            'passing' => $player->passing,
+            'dribbling' => $player->dribbling,
+            'defending' => $player->defending,
+            'physic' => $player->physic,
+            'goalkeeping_diving' => $player->goalkeeping_diving,
+            'goalkeeping_handling' => $player->goalkeeping_handling,
+            'goalkeeping_kicking' => $player->goalkeeping_kicking,
+            'goalkeeping_reflexes' => $player->goalkeeping_reflexes,
+            'goalkeeping_positioning' => $player->goalkeeping_positioning,
+            'movement_acceleration' => $player->movement_acceleration,
+            'movement_sprint_speed' => $player->movement_sprint_speed,
+            'attacking_finishing' => $player->attacking_finishing,
+            'power_shot_power' => $player->power_shot_power,
+            'power_long_shots' => $player->power_long_shots,
+            'attacking_short_passing' => $player->attacking_short_passing,
+            'skill_long_passing' => $player->skill_long_passing,
+            'mentality_vision' => $player->mentality_vision,
+            'skill_dribbling' => $player->skill_dribbling,
+            'skill_ball_control' => $player->skill_ball_control,
+            'movement_agility' => $player->movement_agility,
+            'movement_balance' => $player->movement_balance,
+            'movement_reactions' => $player->movement_reactions,
+            'defending_marking_awareness' => $player->defending_marking_awareness,
+            'mentality_interceptions' => $player->mentality_interceptions,
+            'defending_standing_tackle' => $player->defending_standing_tackle,
+            'defending_sliding_tackle' => $player->defending_sliding_tackle,
+            'power_strength' => $player->power_strength,
+            'power_stamina' => $player->power_stamina,
+            'power_jumping' => $player->power_jumping,
+            'mentality_aggression' => $player->mentality_aggression,
+            'club_status' => 'historico',
+            'club_name' => null,
+            'liga_nome' => null,
+            'multa_multiplicador' => null,
+            'club_id' => null,
+            'is_free_agent' => false,
+            'can_buy' => false,
+            'can_multa' => false,
+            'entry_value_eur' => null,
+            'multa_value_eur' => null,
+            'player_face_url' => $player->player_face_url,
+        ];
+    }
+
+    private function resolveLegacyTransferHistoryTypeLabel(LigaTransferencia $transfer): string
+    {
+        return match ((string) $transfer->tipo) {
+            'multa' => 'MULTA',
+            'troca' => 'TROCA',
+            'venda' => 'COMPRA',
+            'jogador_livre' => $this->isLegacyAuctionTransfer($transfer) ? 'LEILAO' : 'COMPRA',
+            default => Str::upper((string) $transfer->tipo),
+        };
+    }
+
+    private function formatLegacyTransferHistoryEndpoint(LigaTransferencia $transfer, string $side): array
+    {
+        $club = $side === 'origem' ? $transfer->clubeOrigem : $transfer->clubeDestino;
+
+        if ($club) {
+            return [
+                'club_id' => (int) $club->id,
+                'name' => (string) $club->nome,
+                'escudo_url' => $this->resolveEscudoUrl($club->escudo?->clube_imagem),
+                'kind' => 'club',
+            ];
+        }
+
+        if ($side === 'origem' && (string) $transfer->tipo === 'jogador_livre') {
+            $isAuction = $this->isLegacyAuctionTransfer($transfer);
+
+            return [
+                'club_id' => null,
+                'name' => $isAuction ? 'Leilao' : 'Mercado Livre',
+                'escudo_url' => null,
+                'kind' => $isAuction ? 'auction' : 'market_free',
+            ];
+        }
+
+        return [
+            'club_id' => null,
+            'name' => $side === 'origem' ? 'Origem indefinida' : 'Destino indefinido',
+            'escudo_url' => null,
+            'kind' => 'unknown',
+        ];
+    }
+
+    private function isLegacyAuctionTransfer(LigaTransferencia $transfer): bool
+    {
+        $observacao = Str::of((string) ($transfer->observacao ?? ''))
+            ->ascii()
+            ->lower();
+
+        return $observacao->contains('leilao');
+    }
+
+    private function formatLegacyNextEventItem(
+        string $id,
+        string $title,
+        string $icon,
+        ?array $currentWindow,
+        ?array $nextWindow,
+    ): array {
+        return [
+            'id' => $id,
+            'title' => $title,
+            'icon' => $icon,
+            'status' => $currentWindow ? 'open' : ($nextWindow ? 'upcoming' : 'none'),
+            'current_window' => $this->formatLegacyNextEventWindow($currentWindow),
+            'next_window' => $this->formatLegacyNextEventWindow($nextWindow),
+        ];
+    }
+
+    private function formatLegacyNextEventWindow(?array $window): ?array
+    {
+        if (! $window) {
+            return null;
+        }
+
+        return [
+            'start_at' => $window['inicio'] ?? null,
+            'end_at' => $window['fim'] ?? null,
+            'start_label' => $window['inicio_label'] ?? null,
+            'end_label' => $window['fim_label'] ?? null,
+            'timezone' => $window['timezone'] ?? null,
         ];
     }
 

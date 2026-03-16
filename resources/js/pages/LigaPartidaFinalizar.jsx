@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import Navbar from '../components/app_publico/Navbar';
+import Alert from '../components/app_publico/Alert';
 
 const getLigaFromWindow = () => window.__LIGA__ ?? null;
 const getClubeFromWindow = () => window.__CLUBE__ ?? null;
@@ -24,6 +25,8 @@ export default function LigaPartidaFinalizar() {
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
     const [hasPreview, setHasPreview] = useState(false);
+    const matchReportBlocked = Boolean(liga?.match_report_blocked);
+    const matchReportBlockReason = String(liga?.match_report_block_reason || '');
 
     if (!liga) {
         return (
@@ -122,7 +125,7 @@ export default function LigaPartidaFinalizar() {
 
     const resolvedPlacar = manualDirty ? manualPlacar : placar;
     const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
-    const canAnalyze = ['confirmada'].includes(estado);
+    const canAnalyze = ['confirmada'].includes(estado) && !matchReportBlocked;
 
     useEffect(() => {
         if (!hasPreview || manualDirty) return;
@@ -133,6 +136,14 @@ export default function LigaPartidaFinalizar() {
     }, [placar.mandante, placar.visitante, hasPreview, manualDirty]);
 
     const handleAnalyze = async () => {
+        if (matchReportBlocked) {
+            setError(
+                matchReportBlockReason ||
+                    'O envio de súmulas fica bloqueado enquanto o mercado estiver aberto.',
+            );
+            return;
+        }
+
         if (!mandanteImage || !visitanteImage) {
             setError('Envie as duas imagens para continuar.');
             return;
@@ -151,6 +162,13 @@ export default function LigaPartidaFinalizar() {
                 `/api/partidas/${partida.id}/desempenho/preview`,
                 formData,
             );
+
+            if (data?.analysis_failed) {
+                setError(
+                    data?.warning ?? 'Não foi possível analisar as imagens.',
+                );
+                return;
+            }
 
             const nextMandanteEntries = data?.mandante?.entries ?? [];
             const nextVisitanteEntries = data?.visitante?.entries ?? [];
@@ -187,6 +205,14 @@ export default function LigaPartidaFinalizar() {
     };
 
     const handleConfirm = async () => {
+        if (matchReportBlocked) {
+            setError(
+                matchReportBlockReason ||
+                    'O envio de súmulas fica bloqueado enquanto o mercado estiver aberto.',
+            );
+            return;
+        }
+
         const filteredMandante = mandanteEntries.filter(isActiveEntry);
         const filteredVisitante = visitanteEntries.filter(isActiveEntry);
         const placarMandante = Number(resolvedPlacar.mandante ?? 0);
@@ -253,6 +279,16 @@ export default function LigaPartidaFinalizar() {
 
     return (
         <main className="liga-partidas-screen">
+            {matchReportBlocked && (
+                <Alert
+                    variant="warning"
+                    title="Finalização bloqueada"
+                    description={
+                        matchReportBlockReason ||
+                        'O envio de súmulas fica bloqueado enquanto o mercado estiver aberto.'
+                    }
+                />
+            )}
             <section className="liga-dashboard-hero">
                 <p className="ligas-eyebrow">FINALIZAR</p>
                 <h1 className="ligas-title">Dados da partida</h1>
@@ -341,7 +377,9 @@ export default function LigaPartidaFinalizar() {
                         <p className="finalizar-eyebrow">IMAGENS</p>
                         <h2 className="finalizar-title">Enviar desempenho</h2>
                         <p className="finalizar-subtitle">
-                            Envie uma imagem do mandante e uma do visitante para extrair notas, gols e assistências.
+                            {matchReportBlocked
+                                ? (matchReportBlockReason || 'O envio de súmulas fica bloqueado enquanto o mercado estiver aberto.')
+                                : 'Envie uma imagem do mandante e uma do visitante para extrair notas, gols e assistências.'}
                         </p>
                     </div>
                     <div className="finalizar-score">

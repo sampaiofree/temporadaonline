@@ -16,18 +16,18 @@ use Illuminate\View\View;
 
 class ElencoPadraoController extends Controller
 {
-    private const MATCH_STRATEGY_JOGO_LONG_NAME = 'jogo_long_name';
     private const MATCH_STRATEGY_PLAYER_ID = 'player_id';
 
-    public function index(): View
+    public function index(Request $request): View
     {
         $import = session('elenco_import');
+        $search = trim((string) $request->query('q', ''));
         $jogos = Jogo::orderBy('nome')->get(['id', 'nome']);
         $jogosResumo = Jogo::withCount('elencoPadrao')
             ->orderByDesc('elenco_padrao_count')
             ->get(['id', 'nome']);
         $totalPlayers = $jogosResumo->sum('elenco_padrao_count');
-        $players = Elencopadrao::query()
+        $playersQuery = Elencopadrao::query()
             ->select([
                 'id',
                 'jogo_id',
@@ -39,8 +39,16 @@ class ElencoPadraoController extends Controller
                 'player_face_url',
             ])
             ->with('jogo:id,nome')
-            ->orderBy('long_name')
-            ->paginate(100);
+            ->orderBy('long_name');
+
+        if ($search !== '') {
+            $playersQuery->where(function ($query) use ($search) {
+                $query->where('long_name', 'like', "%{$search}%")
+                    ->orWhere('short_name', 'like', "%{$search}%");
+            });
+        }
+
+        $players = $playersQuery->paginate(100)->withQueryString();
         $fields = $this->importableFields();
         $labels = $this->fieldLabels($fields);
 
@@ -50,7 +58,7 @@ class ElencoPadraoController extends Controller
         $previewFields = [];
         $previewRows = [];
         $jogoSelecionado = null;
-        $matchStrategy = self::MATCH_STRATEGY_JOGO_LONG_NAME;
+        $matchStrategy = self::MATCH_STRATEGY_PLAYER_ID;
 
         if ($import) {
             $path = $import['path'] ?? null;
@@ -82,8 +90,8 @@ class ElencoPadraoController extends Controller
             'previewRows' => $previewRows,
             'jogoSelecionado' => $jogoSelecionado,
             'matchStrategy' => $matchStrategy,
-            'matchStrategies' => $this->matchStrategies(),
             'requiredMappingFields' => $this->requiredMappingFields($matchStrategy),
+            'search' => $search,
         ]);
     }
 
@@ -201,7 +209,6 @@ class ElencoPadraoController extends Controller
             $data = $request->validate([
                 'jogo_id' => 'required|exists:jogos,id',
                 'csv' => 'required|file|mimes:csv,txt|max:20480',
-                'match_strategy' => 'required|in:'.implode(',', array_keys($this->matchStrategies())),
             ]);
 
             $path = $request->file('csv')->store('tmp');
@@ -221,7 +228,7 @@ class ElencoPadraoController extends Controller
                     'jogo_id' => (int) $data['jogo_id'],
                     'columns' => $columns,
                     'mapping' => $mapping,
-                    'match_strategy' => $this->sanitizeMatchStrategy($data['match_strategy']),
+                    'match_strategy' => self::MATCH_STRATEGY_PLAYER_ID,
                 ],
             ]);
 
@@ -248,9 +255,7 @@ class ElencoPadraoController extends Controller
         $columns = $import['columns'] ?? [];
         $mappingInput = $request->input('mapping', []);
         $mapping = $this->sanitizeMapping($mappingInput, $fields, $columns);
-        $matchStrategy = $this->sanitizeMatchStrategy(
-            $request->input('match_strategy', $import['match_strategy'] ?? null)
-        );
+        $matchStrategy = self::MATCH_STRATEGY_PLAYER_ID;
 
         $errors = $this->validateMapping($mapping, $matchStrategy);
         if (isset($errors['duplicate'])) {
@@ -608,6 +613,8 @@ class ElencoPadraoController extends Controller
         string $matchStrategy,
     ): array
     {
+        // For now the only supported strategy is player_id
+        $matchStrategy = self::MATCH_STRATEGY_PLAYER_ID;
         if (! Storage::exists($path)) {
             return ['created' => 0, 'updated' => 0, 'ignored' => 0];
         }
@@ -639,14 +646,12 @@ class ElencoPadraoController extends Controller
             $nome = $payload['long_name'] ?? null;
             $posicao = $payload['player_positions'] ?? null;
             $overall = $payload['overall'] ?? null;
-            $matchValue = $matchStrategy === self::MATCH_STRATEGY_PLAYER_ID
-                ? ($payload['player_id'] ?? null)
-                : $nome;
+        $matchValue = $payload['player_id'] ?? null;
 
-            if ($matchValue === null || $matchValue === '' || $posicao === null || $posicao === '' || $overall === null || $overall === '') {
-                $ignored++;
-                continue;
-            }
+        if ($matchValue === null || $matchValue === '' || $posicao === null || $posicao === '' || $overall === null || $overall === '') {
+            $ignored++;
+            continue;
+        }
 
             if (! is_numeric($overall)) {
                 $ignored++;
@@ -672,41 +677,22 @@ class ElencoPadraoController extends Controller
             $target = null;
             $mustCreate = false;
 
-            if ($matchStrategy === self::MATCH_STRATEGY_PLAYER_ID) {
-                $targets = Elencopadrao::query()
-                    ->where('jogo_id', $jogoId)
-                    ->where('player_id', $matchValue)
-                    ->limit(2)
-                    ->get();
+        $targets = Elencopadrao::query()
+            ->where('jogo_id', $jogoId)
+            ->where('player_id', $matchValue)
+            ->limit(2)
+            ->get();
 
-                if ($targets->count() > 1) {
-                    $ignored++;
-                    continue;
-                }
+        if ($targets->count() > 1) {
+            $ignored++;
+            continue;
+        }
 
-                if ($targets->count() === 1) {
-                    $target = $targets->first();
-                } else {
-                    $mustCreate = true;
-                }
-            } else {
-                $targets = Elencopadrao::query()
-                    ->where('jogo_id', $jogoId)
-                    ->where('long_name', $matchValue)
-                    ->limit(2)
-                    ->get();
-
-                if ($targets->count() > 1) {
-                    $ignored++;
-                    continue;
-                }
-
-                if ($targets->count() === 1) {
-                    $target = $targets->first();
-                } else {
-                    $mustCreate = true;
-                }
-            }
+        if ($targets->count() === 1) {
+            $target = $targets->first();
+        } else {
+            $mustCreate = true;
+        }
 
             try {
                 if ($mustCreate) {
@@ -736,33 +722,13 @@ class ElencoPadraoController extends Controller
         ];
     }
 
-    private function matchStrategies(): array
-    {
-        return [
-            self::MATCH_STRATEGY_JOGO_LONG_NAME => 'jogo_id + long_name',
-            self::MATCH_STRATEGY_PLAYER_ID => 'player_id',
-        ];
-    }
-
     private function sanitizeMatchStrategy(?string $matchStrategy): string
     {
-        $value = is_string($matchStrategy) ? trim($matchStrategy) : '';
-
-        return array_key_exists($value, $this->matchStrategies())
-            ? $value
-            : self::MATCH_STRATEGY_JOGO_LONG_NAME;
+        return self::MATCH_STRATEGY_PLAYER_ID;
     }
 
     private function requiredMappingFields(string $matchStrategy): array
     {
-        $required = ['player_positions', 'overall'];
-
-        if ($matchStrategy === self::MATCH_STRATEGY_PLAYER_ID) {
-            $required[] = 'player_id';
-        } else {
-            $required[] = 'long_name';
-        }
-
-        return $required;
+        return ['player_id', 'long_name', 'player_positions', 'overall'];
     }
 }

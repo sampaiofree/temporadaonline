@@ -30,13 +30,37 @@
 </div>
 
 <div class="rounded-xl border border-slate-200 bg-white shadow-sm">
+    <div class="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between">
+        <h3 class="text-sm font-semibold text-slate-700">Jogadores</h3>
+        <form action="{{ route('admin.elenco-padrao.index') }}" method="GET" class="flex w-full max-w-md items-center gap-2">
+            <input
+                type="text"
+                name="q"
+                value="{{ $search ?? '' }}"
+                placeholder="Buscar por nome ou apelido"
+                class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+            <button
+                type="submit"
+                class="inline-flex items-center rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            >
+                Buscar
+            </button>
+            @if(($search ?? '') !== '')
+                <a
+                    href="{{ route('admin.elenco-padrao.index') }}"
+                    class="text-sm font-semibold text-slate-500 hover:text-slate-700"
+                >Limpar</a>
+            @endif
+        </form>
+    </div>
     <div class="overflow-x-auto">
         <table class="min-w-full text-left text-sm">
             <thead class="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                     <th class="px-4 py-3 font-semibold">Foto</th>
                     <th class="px-4 py-3 font-semibold">Nome</th>
-                    <th class="px-4 py-3 font-semibold">PosiÇõÇœo</th>
+                    <th class="px-4 py-3 font-semibold">Posição</th>
                     <th class="px-4 py-3 font-semibold">Overall</th>
                     <th class="px-4 py-3 font-semibold">Clube</th>
                     <th class="px-4 py-3 font-semibold">Jogo</th>
@@ -64,10 +88,10 @@
                             @endif
                         </td>
                         <td class="px-4 py-4 align-middle font-semibold text-slate-900">{{ $displayName }}</td>
-                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->player_positions ?? 'ƒ?"' }}</td>
-                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->overall ?? 'ƒ?"' }}</td>
-                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->club_name ?? 'ƒ?"' }}</td>
-                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->jogo?->nome ?? 'ƒ?"' }}</td>
+                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->player_positions ?? '—' }}</td>
+                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->overall ?? '—' }}</td>
+                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->club_name ?? '—' }}</td>
+                        <td class="px-4 py-4 align-middle text-slate-600">{{ $player->jogo?->nome ?? '—' }}</td>
                         <td class="px-4 py-4 align-middle">
                             <div class="flex flex-wrap gap-2">
                                 <a
@@ -103,5 +127,5 @@
 </div>
 
 <div>
-    {{ $players->links() }}
+    {{ $players->withQueryString()->links() }}
 </div>

@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Models;
+
+use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class LigaRouboMulta extends Model
+{
+    protected $table = 'liga_roubo_multas';
+
+    protected $fillable = [
+        'confederacao_id',
+        'inicio',
+        'fim',
+    ];
+
+    protected $casts = [
+        'inicio' => 'datetime',
+        'fim' => 'datetime',
+    ];
+
+    public function confederacao(): BelongsTo
+    {
+        return $this->belongsTo(Confederacao::class, 'confederacao_id');
+    }
+
+    public static function activeRangeForLiga(Liga $liga): ?array
+    {
+        if (! $liga->confederacao_id) {
+            return null;
+        }
+
+        $tz = $liga->resolveTimezone();
+        $now = Carbon::now($tz);
+        $nowString = $now->format('Y-m-d H:i:s');
+
+        $ranges = self::query()
+            ->where('confederacao_id', $liga->confederacao_id)
+            ->where('inicio', '<=', $nowString)
+            ->where('fim', '>=', $nowString)
+            ->get(['inicio', 'fim']);
+
+        if ($ranges->isEmpty()) {
+            return null;
+        }
+
+        $start = $ranges->sortBy('inicio')->first()?->inicio;
+        $end = $ranges->sortByDesc('fim')->first()?->fim;
+
+        $startDate = $start instanceof Carbon ? $start : Carbon::parse((string) $start, $tz);
+        $endDate = $end instanceof Carbon ? $end : Carbon::parse((string) $end, $tz);
+
+        return [
+            'inicio' => $startDate->format('Y-m-d H:i:s'),
+            'fim' => $endDate->format('Y-m-d H:i:s'),
+            'inicio_label' => $startDate->format('d/m/Y H:i'),
+            'fim_label' => $endDate->format('d/m/Y H:i'),
+            'timezone' => $tz,
+        ];
+    }
+}

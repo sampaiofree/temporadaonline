@@ -63,6 +63,9 @@ class ConfederacaoController extends Controller
             'leiloes' => 'array',
             'leiloes.*.inicio' => 'nullable|date',
             'leiloes.*.fim' => 'nullable|date',
+            'roubos_multa' => 'array',
+            'roubos_multa.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'roubos_multa.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
         ]);
 
         $data['nome'] = trim($data['nome']);
@@ -77,7 +80,8 @@ class ConfederacaoController extends Controller
         $timezone = (string) ($data['timezone'] ?? 'America/Sao_Paulo');
         $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
         $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        unset($data['periodos'], $data['leiloes']);
+        $roubosMulta = $this->normalizePeriodos($request->input('roubos_multa', []), 'roubos_multa', $timezone, true);
+        unset($data['periodos'], $data['leiloes'], $data['roubos_multa']);
 
         $confederacao = Confederacao::create($data);
 
@@ -89,13 +93,17 @@ class ConfederacaoController extends Controller
             $confederacao->leiloes()->createMany($leiloes);
         }
 
+        if ($roubosMulta) {
+            $confederacao->roubosMulta()->createMany($roubosMulta);
+        }
+
         return redirect()->route('admin.confederacoes.index')->with('success', 'Confederacao criada com sucesso.');
     }
 
     public function edit(Confederacao $confederacao): View
     {
         $confederacao->loadCount('ligas');
-        $confederacao->loadMissing(['periodos', 'leiloes']);
+        $confederacao->loadMissing(['periodos', 'leiloes', 'roubosMulta']);
 
         return view('admin.confederacoes.edit', [
             'confederacao' => $confederacao,
@@ -125,6 +133,9 @@ class ConfederacaoController extends Controller
             'leiloes' => 'array',
             'leiloes.*.inicio' => 'nullable|date',
             'leiloes.*.fim' => 'nullable|date',
+            'roubos_multa' => 'array',
+            'roubos_multa.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'roubos_multa.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
         ];
 
         if ($hasLigas) {
@@ -153,7 +164,8 @@ class ConfederacaoController extends Controller
         $timezone = (string) ($data['timezone'] ?? $confederacao->timezone ?? 'America/Sao_Paulo');
         $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
         $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
-        unset($data['periodos'], $data['leiloes']);
+        $roubosMulta = $this->normalizePeriodos($request->input('roubos_multa', []), 'roubos_multa', $timezone, true);
+        unset($data['periodos'], $data['leiloes'], $data['roubos_multa']);
 
         $confederacao->update($data);
 
@@ -165,6 +177,11 @@ class ConfederacaoController extends Controller
         $confederacao->leiloes()->delete();
         if ($leiloes) {
             $confederacao->leiloes()->createMany($leiloes);
+        }
+
+        $confederacao->roubosMulta()->delete();
+        if ($roubosMulta) {
+            $confederacao->roubosMulta()->createMany($roubosMulta);
         }
 
         return redirect()->route('admin.confederacoes.index')->with('success', 'Confederacao atualizada com sucesso.');

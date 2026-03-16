@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\LigaClube;
 use App\Models\LigaClubeElenco;
+use App\Models\LigaPeriodo;
 use App\Models\Partida;
 use App\Models\PartidaDesempenho;
 use App\Services\PartidaDesempenhoAiService;
@@ -21,39 +22,65 @@ class PartidaDesempenhoController extends Controller
     ) {
     }
 
+    public function form(Request $request, Partida $partida): JsonResponse
+    {
+        $user = $request->user();
+        $this->assertParticipant($user->id, $partida);
+        $this->assertAllowedState($partida);
+        if ($response = $this->ensureMatchReportUnlocked($partida)) {
+            return $response;
+        }
+
+        $partida->loadMissing(['mandante', 'visitante']);
+        $mandanteRoster = $this->loadRoster($partida->mandante);
+        $visitanteRoster = $this->loadRoster($partida->visitante);
+
+        return response()->json([
+            'mandante' => [
+                'entries' => $mandanteRoster['entries'],
+            ],
+            'visitante' => [
+                'entries' => $visitanteRoster['entries'],
+            ],
+            'placar' => [
+                'mandante' => $this->normalizeScore($partida->placar_mandante, 0),
+                'visitante' => $this->normalizeScore($partida->placar_visitante, 0),
+            ],
+        ]);
+    }
+
     public function confirm(Request $request, Partida $partida): JsonResponse
     {
         $user = $request->user();
         $this->assertParticipant($user->id, $partida);
         $this->assertAllowedState($partida);
-
-        $data = $request->validate([
-            'mandante' => ['present', 'array'],
-            'mandante.*.elencopadrao_id' => ['required', 'integer'],
-            'mandante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
-            'mandante.*.gols' => ['required', 'integer', 'min:0'],
-            'mandante.*.assistencias' => ['required', 'integer', 'min:0'],
-            'visitante' => ['present', 'array'],
-            'visitante.*.elencopadrao_id' => ['required', 'integer'],
-            'visitante.*.nota' => ['required', 'numeric', 'min:0', 'max:10'],
-            'visitante.*.gols' => ['required', 'integer', 'min:0'],
-            'visitante.*.assistencias' => ['required', 'integer', 'min:0'],
-            'placar_mandante' => ['required', 'integer', 'min:0'],
-            'placar_visitante' => ['required', 'integer', 'min:0'],
-        ]);
+        if ($response = $this->ensureMatchReportUnlocked($partida)) {
+            return $response;
+        }
 
         $partida->loadMissing(['mandante', 'visitante']);
-        $mandanteRosterIds = $this->loadRosterIds($partida->mandante);
-        $visitanteRosterIds = $this->loadRosterIds($partida->visitante);
+        $mandanteRoster = $this->loadRoster($partida->mandante);
+        $visitanteRoster = $this->loadRoster($partida->visitante);
 
-        $this->assertRosterMembership($data['mandante'], $mandanteRosterIds);
-        $this->assertRosterMembership($data['visitante'], $visitanteRosterIds);
-        $this->assertUniquePlayers($data['mandante'], $data['visitante']);
+        $mandanteEntries = $this->sanitizeSubmittedEntries(
+            $request->input('mandante'),
+            $mandanteRoster['map'],
+        );
+        $visitanteEntries = $this->sanitizeSubmittedEntries(
+            $request->input('visitante'),
+            $visitanteRoster['map'],
+        );
 
-        $placarMandante = (int) $data['placar_mandante'];
-        $placarVisitante = (int) $data['placar_visitante'];
+        $placarMandante = $this->normalizeScore(
+            $request->input('placar_mandante'),
+            $this->sumGoals($mandanteEntries),
+        );
+        $placarVisitante = $this->normalizeScore(
+            $request->input('placar_visitante'),
+            $this->sumGoals($visitanteEntries),
+        );
 
-        DB::transaction(function () use ($partida, $user, $data, $placarMandante, $placarVisitante): void {
+        DB::transaction(function () use ($partida, $user, $mandanteEntries, $visitanteEntries, $placarMandante, $placarVisitante): void {
             $partida->fill([
                 'placar_mandante' => $placarMandante,
                 'placar_visitante' => $placarVisitante,
@@ -68,8 +95,8 @@ class PartidaDesempenhoController extends Controller
                 ->delete();
 
             $entries = array_merge(
-                $this->normalizeEntries($data['mandante'], $partida->id, $partida->mandante_id),
-                $this->normalizeEntries($data['visitante'], $partida->id, $partida->visitante_id),
+                $this->normalizeEntries($mandanteEntries, $partida->id, $partida->mandante_id),
+                $this->normalizeEntries($visitanteEntries, $partida->id, $partida->visitante_id),
             );
 
             foreach ($entries as $entry) {
@@ -90,6 +117,9 @@ class PartidaDesempenhoController extends Controller
         $user = $request->user();
         $this->assertParticipant($user->id, $partida);
         $this->assertAllowedState($partida);
+        if ($response = $this->ensureMatchReportUnlocked($partida)) {
+            return $response;
+        }
 
         $data = $request->validate([
             'mandante_imagem' => ['required', 'image', 'max:6144'],
@@ -114,8 +144,21 @@ class PartidaDesempenhoController extends Controller
             ]);
 
             return response()->json([
-                'message' => 'Não foi possível analisar as imagens. Tente novamente.',
-            ], 422);
+                'analysis_failed' => true,
+                'warning' => 'Não foi possível analisar as imagens. Você pode preencher a súmula manualmente.',
+                'mandante' => [
+                    'entries' => [],
+                    'unknown_players' => [],
+                ],
+                'visitante' => [
+                    'entries' => [],
+                    'unknown_players' => [],
+                ],
+                'placar' => [
+                    'mandante' => 0,
+                    'visitante' => 0,
+                ],
+            ]);
         }
 
         $mandanteEntries = $this->mapEntries($analysis['mandante']['entries'], $mandanteRoster['map']);
@@ -125,6 +168,8 @@ class PartidaDesempenhoController extends Controller
         $placarVisitante = (int) ($analysis['visitante']['placar_total'] ?? $this->sumGoals($visitanteEntries));
 
         return response()->json([
+            'analysis_failed' => false,
+            'warning' => null,
             'mandante' => [
                 'entries' => $mandanteEntries,
                 'unknown_players' => $analysis['mandante']['unknown_players'],
@@ -166,6 +211,26 @@ class PartidaDesempenhoController extends Controller
         }
     }
 
+    private function ensureMatchReportUnlocked(Partida $partida): ?JsonResponse
+    {
+        $partida->loadMissing('liga');
+        $liga = $partida->liga;
+
+        if (! $liga) {
+            return response()->json([
+                'message' => 'Liga da partida não encontrada.',
+            ], 404);
+        }
+
+        if (! LigaPeriodo::activeRangeForLiga($liga)) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.',
+        ], 423);
+    }
+
     private function loadRoster(LigaClube $clube): array
     {
         $entries = LigaClubeElenco::query()
@@ -176,6 +241,7 @@ class PartidaDesempenhoController extends Controller
 
         $payload = [];
         $map = [];
+        $formEntries = [];
 
         foreach ($entries as $entry) {
             $player = $entry->elencopadrao;
@@ -183,7 +249,7 @@ class PartidaDesempenhoController extends Controller
                 continue;
             }
 
-            $display = $player->short_name ?? $player->long_name ?? '';
+            $display = $player->short_name ?? $player->long_name ?? "Jogador {$player->id}";
             $item = [
                 'id' => $player->id,
                 'display_name' => $display,
@@ -197,22 +263,51 @@ class PartidaDesempenhoController extends Controller
             $map[$player->id] = [
                 'elencopadrao_id' => $player->id,
                 'nome' => $display,
+                'short_name' => $player->short_name,
+                'long_name' => $player->long_name,
+            ];
+            $formEntries[] = [
+                'elencopadrao_id' => $player->id,
+                'nome' => $display,
+                'short_name' => $player->short_name,
+                'long_name' => $player->long_name,
+                'nota' => '',
+                'gols' => 0,
+                'assistencias' => 0,
             ];
         }
 
         return [
             'payload' => $payload,
             'map' => $map,
+            'entries' => $formEntries,
         ];
     }
 
-    private function loadRosterIds(LigaClube $clube): array
+    private function sanitizeSubmittedEntries(mixed $entries, array $rosterMap): array
     {
-        return LigaClubeElenco::query()
-            ->where('liga_clube_id', $clube->id)
-            ->where('ativo', true)
-            ->pluck('elencopadrao_id')
-            ->all();
+        $normalized = [];
+        $items = is_array($entries) ? $entries : [];
+
+        foreach ($items as $entry) {
+            if (! is_array($entry)) {
+                continue;
+            }
+
+            $playerId = (int) ($entry['elencopadrao_id'] ?? 0);
+            if (! $playerId || ! isset($rosterMap[$playerId])) {
+                continue;
+            }
+
+            $normalized[$playerId] = [
+                'elencopadrao_id' => $playerId,
+                'nota' => $this->normalizeNota($entry['nota'] ?? null),
+                'gols' => $this->normalizeNonNegativeInt($entry['gols'] ?? 0),
+                'assistencias' => $this->normalizeNonNegativeInt($entry['assistencias'] ?? 0),
+            ];
+        }
+
+        return array_values(array_filter($normalized, static fn (array $entry): bool => $entry['nota'] !== null));
     }
 
     private function mapEntries(array $entries, array $rosterMap): array
@@ -246,32 +341,49 @@ class PartidaDesempenhoController extends Controller
         }, 0);
     }
 
-    private function assertRosterMembership(array $entries, array $allowedIds): void
+    private function normalizeNota(mixed $value): ?float
     {
-        $allowed = array_flip($allowedIds);
-
-        foreach ($entries as $entry) {
-            $playerId = (int) ($entry['elencopadrao_id'] ?? 0);
-            if (! $playerId || ! isset($allowed[$playerId])) {
-                abort(422, 'Jogador fora do elenco do clube.');
-            }
+        if ($value === null) {
+            return null;
         }
+
+        if (is_string($value) && trim($value) === '') {
+            return null;
+        }
+
+        $normalized = is_string($value)
+            ? str_replace(',', '.', trim($value))
+            : $value;
+
+        if (! is_numeric($normalized)) {
+            return null;
+        }
+
+        $nota = (float) $normalized;
+
+        if ($nota < 0 || $nota > 10) {
+            return null;
+        }
+
+        return $nota;
     }
 
-    private function assertUniquePlayers(array $mandante, array $visitante): void
+    private function normalizeNonNegativeInt(mixed $value): int
     {
-        $ids = array_merge(
-            array_column($mandante, 'elencopadrao_id'),
-            array_column($visitante, 'elencopadrao_id'),
-        );
-
-        $counts = array_count_values(array_map('intval', $ids));
-
-        foreach ($counts as $count) {
-            if ($count > 1) {
-                abort(422, 'Jogador duplicado na lista de desempenho.');
-            }
+        if (! is_numeric($value)) {
+            return 0;
         }
+
+        return max(0, (int) $value);
+    }
+
+    private function normalizeScore(mixed $value, int $fallback = 0): int
+    {
+        if (! is_numeric($value)) {
+            return max(0, $fallback);
+        }
+
+        return max(0, (int) $value);
     }
 
     private function normalizeEntries(array $entries, int $partidaId, int $clubeId): array

@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\LigaRouboMulta;
 
 class Confederacao extends Model
 {
@@ -47,6 +48,11 @@ class Confederacao extends Model
     public function leiloes(): HasMany
     {
         return $this->hasMany(LigaLeilao::class, 'confederacao_id');
+    }
+
+    public function roubosMulta(): HasMany
+    {
+        return $this->hasMany(LigaRouboMulta::class, 'confederacao_id');
     }
 
     public function jogo(): BelongsTo

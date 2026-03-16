@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesLiga;
+use App\Models\LigaPeriodo;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use Illuminate\Http\Request;
@@ -18,6 +19,10 @@ class LigaPartidasController extends Controller
         $liga = $this->resolveUserLiga($request);
         $clube = $this->resolveUserClub($request);
         $clube?->loadMissing('escudo');
+        $matchReportBlocked = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $matchReportBlockReason = $matchReportBlocked
+            ? 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.'
+            : null;
 
         $partidasCollection = collect();
 
@@ -89,6 +94,8 @@ class LigaPartidasController extends Controller
                 'nome' => $liga->nome,
                 'jogo' => $liga->jogo?->nome,
                 'timezone' => $tz,
+                'match_report_blocked' => $matchReportBlocked,
+                'match_report_block_reason' => $matchReportBlockReason,
             ],
             'clube' => $clube ? [
                 'id' => $clube->id,
@@ -108,6 +115,10 @@ class LigaPartidasController extends Controller
         $liga = $this->resolveUserLiga($request);
         $clube = $this->resolveUserClub($request);
         $clube?->loadMissing('escudo');
+        $matchReportBlocked = LigaPeriodo::activeRangeForLiga($liga) !== null;
+        $matchReportBlockReason = $matchReportBlocked
+            ? 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.'
+            : null;
 
         if (! $clube) {
             abort(403, 'Clube não encontrado.');
@@ -157,6 +168,8 @@ class LigaPartidasController extends Controller
                 'nome' => $liga->nome,
                 'jogo' => $liga->jogo?->nome,
                 'timezone' => $tz,
+                'match_report_blocked' => $matchReportBlocked,
+                'match_report_block_reason' => $matchReportBlockReason,
             ],
             'clube' => $clube ? [
                 'id' => $clube->id,

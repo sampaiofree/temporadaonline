@@ -50,6 +50,7 @@ Route::middleware(['web', 'auth'])->group(function (): void {
     Route::post('/partidas/{partida}/reclamacoes', [PartidaActionsController::class, 'reclamar']);
     Route::post('/partidas/{partida}/avaliacoes', [PartidaAvaliacaoController::class, 'store']);
     Route::post('/partidas/{partida}/desistir', [PartidaActionsController::class, 'desistir']);
+    Route::get('/partidas/{partida}/desempenho/form', [PartidaDesempenhoController::class, 'form']);
     Route::post('/partidas/{partida}/desempenho/preview', [PartidaDesempenhoController::class, 'preview']);
     Route::post('/partidas/{partida}/desempenho/confirm', [PartidaDesempenhoController::class, 'confirm']);
 });

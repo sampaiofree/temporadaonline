@@ -26,6 +26,8 @@ const LEGACY_LEAGUE_TABLE_DATA_URL = String(LEGACY_CONFIG?.leagueTableDataUrl ||
 const LEGACY_ACHIEVEMENTS_DATA_URL = String(LEGACY_CONFIG?.achievementsDataUrl || '/legacy/achievements-data');
 const LEGACY_PATROCINIOS_DATA_URL = String(LEGACY_CONFIG?.patrociniosDataUrl || '/legacy/patrocinios-data');
 const LEGACY_SEASON_STATS_DATA_URL = String(LEGACY_CONFIG?.seasonStatsDataUrl || '/legacy/season-stats-data');
+const LEGACY_TRANSFER_HISTORY_DATA_URL = String(LEGACY_CONFIG?.transferHistoryDataUrl || '/legacy/transfer-history-data');
+const LEGACY_NEXT_EVENTS_DATA_URL = String(LEGACY_CONFIG?.nextEventsDataUrl || '/legacy/next-events-data');
 const LEGACY_FINANCE_DATA_URL = String(LEGACY_CONFIG?.financeDataUrl || '/legacy/finance-data');
 const LEGACY_FINANCE_STATEMENT_DATA_URL = String(LEGACY_CONFIG?.financeStatementDataUrl || '/legacy/finance-statement-data');
 const LEGACY_INBOX_DATA_URL = String(LEGACY_CONFIG?.inboxDataUrl || '/legacy/inbox-data');
@@ -122,6 +124,8 @@ const LEGACY_ALLOWED_VIEWS = new Set<string>([
   'hub-global',
   'public-club-profile',
   'season-stats',
+  'transfer-history',
+  'next-events',
   'leaderboard',
   'inbox',
   'match-center',
@@ -404,6 +408,14 @@ const formatLegacyFansLabel = (rawValue: number) => {
 
   return String(Math.round(value));
 };
+
+const LEGACY_FAN_PROGRESS_TIERS = [
+  { name: 'PEQUENO', min: 0, max: 500000 },
+  { name: 'EMERGENTE', min: 500000, max: 2000000 },
+  { name: 'TRADICIONAL', min: 2000000, max: 5000000 },
+  { name: 'GIGANTE', min: 5000000, max: 10000000 },
+  { name: 'DINASTIA', min: 10000000, max: 25000000 },
+];
 
 // --- Configurações de Dados (Mock) ---
 const CONFED_CONFIG: any = {
@@ -698,7 +710,7 @@ const MCOBottomNav = ({
         const active = activeView === item.id || 
                        (item.id === 'my-club' && isClubSubView) ||
                        (item.id === 'match-center' && (activeView === 'report-match' || activeView === 'confirm-match' || activeView === 'evaluate-match' || activeView === 'schedule-matches')) || 
-                       (item.id === 'hub-global' && (activeView === 'tournaments' || activeView === 'market' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
+                       (item.id === 'hub-global' && (activeView === 'tournaments' || activeView === 'market' || activeView === 'transfer-history' || activeView === 'next-events' || activeView === 'league-table' || activeView === 'cup-detail' || activeView === 'continental-detail' || activeView === 'public-club-profile' || activeView === 'season-stats' || activeView === 'leaderboard'));
         return (
           <button key={item.id} onClick={() => onViewChange(item.id)} className={`relative flex flex-col items-center p-3 transition-all ${active ? 'text-[#FFD700]' : 'text-white/20'}`}>
             {item.badge && hasInboxNotifications && (
@@ -1087,6 +1099,27 @@ const getLegacyPatrocinioClaimEndpoint = (patrocinioId: any, careerId: any) => {
   return endpoint.toString();
 };
 
+const getLegacyTransferHistoryDataEndpoint = (careerId: any, page = 1, perPage = 5) => {
+  const endpoint = new URL(LEGACY_TRANSFER_HISTORY_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  endpoint.searchParams.set('page', String(page));
+  endpoint.searchParams.set('per_page', String(perPage));
+
+  return endpoint.toString();
+};
+
+const getLegacyNextEventsDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_NEXT_EVENTS_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
 const normalizeLegacyLeaderboardItems = (items: any) => {
   const rows = Array.isArray(items) ? items : [];
 
@@ -1116,6 +1149,68 @@ const normalizeLegacyLeagueTableRows = (rows: any) => {
     wins: Math.max(0, Number(row?.wins ?? 0) || 0),
     points: Math.max(0, Number(row?.points ?? 0) || 0),
     isUser: Boolean(row?.is_user),
+  }));
+};
+
+const normalizeLegacyTransferHistoryItems = (items: any) => {
+  const rows = Array.isArray(items) ? items : [];
+
+  return rows.map((item: any) => {
+    const rawPlayer = item?.player && typeof item.player === 'object' ? item.player : null;
+
+    return {
+      id: Number(item?.id ?? 0) || 0,
+      type: String(item?.tipo || ''),
+      typeLabel: String(item?.tipo_label || 'TRANSFERENCIA'),
+      valueEur: Math.max(0, Number(item?.valor ?? 0) || 0),
+      observation: String(item?.observacao || ''),
+      createdAt: item?.created_at ? String(item.created_at) : '',
+      origin: {
+        clubId: item?.origem?.club_id === null || item?.origem?.club_id === undefined
+          ? null
+          : Number(item.origem.club_id),
+        name: String(item?.origem?.name || 'Origem indefinida'),
+        escudoUrl: item?.origem?.escudo_url ? String(item.origem.escudo_url) : null,
+        kind: String(item?.origem?.kind || 'unknown'),
+      },
+      destination: {
+        clubId: item?.destino?.club_id === null || item?.destino?.club_id === undefined
+          ? null
+          : Number(item.destino.club_id),
+        name: String(item?.destino?.name || 'Destino indefinido'),
+        escudoUrl: item?.destino?.escudo_url ? String(item.destino.escudo_url) : null,
+        kind: String(item?.destino?.kind || 'unknown'),
+      },
+      playerRaw: rawPlayer,
+      playerCard: rawPlayer ? mapLegacyMarketPlayer(rawPlayer) : null,
+    };
+  });
+};
+
+const normalizeLegacyNextEventsItems = (items: any) => {
+  const rows = Array.isArray(items) ? items : [];
+
+  return rows.map((item: any) => ({
+    id: String(item?.id || ''),
+    title: String(item?.title || 'Evento'),
+    icon: String(item?.icon || 'fa-calendar-days'),
+    status: String(item?.status || 'none'),
+    currentWindow: item?.current_window && typeof item.current_window === 'object'
+      ? {
+          startAt: item.current_window.start_at ? String(item.current_window.start_at) : null,
+          endAt: item.current_window.end_at ? String(item.current_window.end_at) : null,
+          startLabel: item.current_window.start_label ? String(item.current_window.start_label) : null,
+          endLabel: item.current_window.end_label ? String(item.current_window.end_label) : null,
+        }
+      : null,
+    nextWindow: item?.next_window && typeof item.next_window === 'object'
+      ? {
+          startAt: item.next_window.start_at ? String(item.next_window.start_at) : null,
+          endAt: item.next_window.end_at ? String(item.next_window.end_at) : null,
+          startLabel: item.next_window.start_label ? String(item.next_window.start_label) : null,
+          endLabel: item.next_window.end_label ? String(item.next_window.end_label) : null,
+        }
+      : null,
   }));
 };
 
@@ -2120,6 +2215,24 @@ const formatLegacyMatchDate = (iso: string | null | undefined) => {
 const isLegacySchedulingAllowed = (partida: any) =>
   ['confirmacao_necessaria', 'confirmada', 'agendada'].includes(String(partida?.estado || ''));
 
+const isLegacyWoAllowed = (partida: any) => {
+  if (String(partida?.estado || '') !== 'confirmada') return false;
+  if (!partida?.scheduled_at) return false;
+
+  const start = new Date(String(partida.scheduled_at));
+  if (Number.isNaN(start.getTime())) return false;
+
+  return Date.now() < start.getTime();
+};
+
+const isLegacyMatchReportBlocked = (partida: any) => Boolean(partida?.match_report_blocked);
+
+const getLegacyMatchReportBlockReason = (partida: any) =>
+  String(
+    partida?.match_report_block_reason
+      || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.',
+  );
+
 // --- Schedule Matches View ---
 
 const ScheduleMatchesView = ({
@@ -2128,18 +2241,24 @@ const ScheduleMatchesView = ({
   initialPartida,
   onNotify,
   onOpenFinalize,
+  onRequestWo,
+  reloadToken,
 }: {
   onBack: () => void,
   currentCareer: any,
   initialPartida?: any,
   onNotify?: (message: string, variant?: LegacyToastVariant) => void,
   onOpenFinalize: (partida: any) => void,
+  onRequestWo: (partida: any) => void,
+  reloadToken: number,
 }) => {
   const initialTab: 'pending' | 'scheduled' =
     String(initialPartida?.estado || '') === 'confirmacao_necessaria' ? 'pending' : 'scheduled';
   const [matches, setMatches] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [matchReportBlocked, setMatchReportBlocked] = useState(false);
+  const [matchReportBlockReason, setMatchReportBlockReason] = useState('');
   const [activeTab, setActiveTab] = useState<'pending' | 'scheduled'>(initialTab);
   const [selectedPartidaId, setSelectedPartidaId] = useState<number | null>(initialPartida?.id ?? null);
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(Boolean(initialPartida?.id));
@@ -2180,6 +2299,8 @@ const ScheduleMatchesView = ({
       if (!currentCareer?.id) {
         setMatches([]);
         setError('Selecione uma confederação para carregar as partidas.');
+        setMatchReportBlocked(false);
+        setMatchReportBlockReason('');
         return;
       }
 
@@ -2193,9 +2314,13 @@ const ScheduleMatchesView = ({
         if (cancelled) return;
 
         setMatches(Array.isArray(payload?.partidas) ? payload.partidas : []);
+        setMatchReportBlocked(Boolean(payload?.match_report_blocked));
+        setMatchReportBlockReason(String(payload?.match_report_block_reason || ''));
       } catch (currentError: any) {
         if (cancelled) return;
         setMatches([]);
+        setMatchReportBlocked(false);
+        setMatchReportBlockReason('');
         setError(currentError?.message || 'Não foi possível carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -2207,7 +2332,7 @@ const ScheduleMatchesView = ({
     return () => {
       cancelled = true;
     };
-  }, [currentCareer?.id]);
+  }, [currentCareer?.id, reloadToken]);
 
   useEffect(() => {
     if (activeTab === 'pending' && confirmationPendingMatches.length === 0 && confirmedOrScheduledMatches.length > 0) {
@@ -2350,6 +2475,14 @@ const ScheduleMatchesView = ({
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">GERENCIAMENTO DE AGENDA</p>
       </header>
 
+      {matchReportBlocked && (
+        <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4 mb-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
+            {matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
+          </p>
+        </div>
+      )}
+
       {loading ? (
         <div className="text-center py-16 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
           CARREGANDO PARTIDAS...
@@ -2408,6 +2541,8 @@ const ScheduleMatchesView = ({
             ) : visibleMatches.map((partida) => {
               const opponent = partida.is_visitante ? partida.mandante : partida.visitante;
               const isPending = String(partida?.estado || '') === 'confirmacao_necessaria';
+              const canOpenFinalize = String(partida?.estado || '') === 'confirmada';
+              const canFinalize = canOpenFinalize && !isLegacyMatchReportBlocked(partida);
               const homeName = String(partida?.mandante || 'MANDANTE');
               const awayName = String(partida?.visitante || 'VISITANTE');
               const homeLogo = String(partida?.mandante_logo || '').trim();
@@ -2495,7 +2630,7 @@ const ScheduleMatchesView = ({
                     </span>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className={`mt-4 grid gap-2 ${isLegacyWoAllowed(partida) ? 'grid-cols-3' : 'grid-cols-2'}`}>
                     <button
                       type="button"
                       onClick={() => openScheduleModal(partida)}
@@ -2509,10 +2644,26 @@ const ScheduleMatchesView = ({
                       onClick={() => onOpenFinalize(partida)}
                       className="w-full px-3 py-2 text-[9px] font-black italic uppercase tracking-[0.15em] border border-[#FFD700]/40 bg-[#FFD700] text-[#121212]"
                       style={{ clipPath: AGGRESSIVE_CLIP }}
+                      disabled={!canFinalize}
                     >
                       FINALIZAR PARTIDA
                     </button>
+                    {isLegacyWoAllowed(partida) && (
+                      <button
+                        type="button"
+                        onClick={() => onRequestWo(partida)}
+                        className="w-full px-3 py-2 text-[9px] font-black italic uppercase tracking-[0.15em] border border-[#B22222]/50 bg-[#B22222]/18 text-[#FFB4B4]"
+                        style={{ clipPath: AGGRESSIVE_CLIP }}
+                      >
+                        DESISTIR (W.O.)
+                      </button>
+                    )}
                   </div>
+                  {canOpenFinalize && !canFinalize && (
+                    <p className="mt-3 text-[8px] font-black uppercase italic text-[#FFB4B4]">
+                      {getLegacyMatchReportBlockReason(partida)}
+                    </p>
+                  )}
                 </div>
               );
             })}
@@ -2651,6 +2802,7 @@ const MatchCenterView = ({
   onOpenFinalize,
   onOpenConfirm,
   onOpenEvaluation,
+  onRequestWo,
   onOpenProfile,
   careers,
   currentCareer,
@@ -2662,6 +2814,7 @@ const MatchCenterView = ({
   onOpenFinalize: (partida: any) => void,
   onOpenConfirm: (partida: any) => void,
   onOpenEvaluation: (partida: any) => void,
+  onRequestWo: (partida: any) => void,
   onOpenProfile: (name: string) => void,
   careers: any[],
   currentCareer: any,
@@ -2673,6 +2826,8 @@ const MatchCenterView = ({
   const [error, setError] = useState('');
   const [partidas, setPartidas] = useState<any[]>([]);
   const [clube, setClube] = useState<any>(null);
+  const [matchReportBlocked, setMatchReportBlocked] = useState(false);
+  const [matchReportBlockReason, setMatchReportBlockReason] = useState('');
   const [isAllResultsModalOpen, setIsAllResultsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -2682,6 +2837,8 @@ const MatchCenterView = ({
       if (!currentCareer?.id) {
         setPartidas([]);
         setClube(null);
+        setMatchReportBlocked(false);
+        setMatchReportBlockReason('');
         setError('Selecione uma confederação para visualizar os confrontos.');
         return;
       }
@@ -2697,10 +2854,14 @@ const MatchCenterView = ({
 
         setPartidas(Array.isArray(payload?.partidas) ? payload.partidas : []);
         setClube(payload?.clube ?? null);
+        setMatchReportBlocked(Boolean(payload?.match_report_blocked));
+        setMatchReportBlockReason(String(payload?.match_report_block_reason || ''));
       } catch (currentError: any) {
         if (cancelled) return;
         setPartidas([]);
         setClube(null);
+        setMatchReportBlocked(false);
+        setMatchReportBlockReason('');
         setError(currentError?.message || 'Não foi possível carregar as partidas.');
       } finally {
         if (!cancelled) setLoading(false);
@@ -2788,6 +2949,15 @@ const MatchCenterView = ({
         </header>
       </LegacyReveal>
       <div className="px-4 space-y-8">
+        {matchReportBlocked && (
+          <LegacyReveal delayMs={20}>
+            <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
+                {matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
+              </p>
+            </div>
+          </LegacyReveal>
+        )}
         {loading ? (
           <LegacyReveal delayMs={40}>
             <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
@@ -2846,7 +3016,7 @@ const MatchCenterView = ({
                       <MCOButton
                         onClick={() => onOpenFinalize(activeMatch)}
                         className="!py-5 !px-2 !text-[9px]"
-                        disabled={String(activeMatch?.estado || '') !== 'confirmada'}
+                        disabled={String(activeMatch?.estado || '') !== 'confirmada' || isLegacyMatchReportBlocked(activeMatch)}
                       >
                         FINALIZAR PARTIDA
                       </MCOButton>
@@ -2858,7 +3028,21 @@ const MatchCenterView = ({
                       >
                         AGENDAR / REAGENDAR HORÁRIO
                       </MCOButton>
+                      {isLegacyWoAllowed(activeMatch) && (
+                        <MCOButton
+                          variant="danger"
+                          onClick={() => onRequestWo(activeMatch)}
+                          className="!py-5 !px-2 !text-[9px]"
+                        >
+                          DESISTIR (W.O.)
+                        </MCOButton>
+                      )}
                     </div>
+                    {String(activeMatch?.estado || '') === 'confirmada' && isLegacyMatchReportBlocked(activeMatch) && (
+                      <p className="mt-3 text-[8px] font-black uppercase italic text-[#FFB4B4] text-center">
+                        {getLegacyMatchReportBlockReason(activeMatch)}
+                      </p>
+                    )}
                   </div>
                 ) : (
                   <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -3061,11 +3245,19 @@ const ReportMatchView = ({
   const [placarExtras, setPlacarExtras] = useState({ mandante: 0, visitante: 0 });
   const [manualPlacar, setManualPlacar] = useState<any>({ mandante: '', visitante: '' });
   const [manualDirty, setManualDirty] = useState(false);
-  const [hasPreview, setHasPreview] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [formReady, setFormReady] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [warning, setWarning] = useState('');
   const [success, setSuccess] = useState('');
+  const touchedFieldsRef = useRef<any>({
+    mandante: {},
+    visitante: {},
+  });
+  const matchReportBlocked = isLegacyMatchReportBlocked(partida);
+  const matchReportBlockReason = getLegacyMatchReportBlockReason(partida);
 
   if (!partida) {
     return (
@@ -3098,34 +3290,144 @@ const ReportMatchView = ({
   );
 
   const resolvedPlacar = manualDirty ? manualPlacar : placarCalculado;
-  const canAnalyze = ['confirmada', 'agendada'].includes(String(partida?.estado || ''));
+  const canEditReport = ['confirmada', 'agendada'].includes(String(partida?.estado || '')) && !matchReportBlocked;
+  const canAnalyze = canEditReport && formReady;
+  const canConfirm = canEditReport && formReady;
 
-  useEffect(() => {
-    if (!hasPreview || manualDirty) return;
-    setManualPlacar({
-      mandante: placarCalculado.mandante,
-      visitante: placarCalculado.visitante,
-    });
-  }, [placarCalculado.mandante, placarCalculado.visitante, hasPreview, manualDirty]);
-
-  const resetPreview = () => {
-    setHasPreview(false);
-    setMandanteEntries([]);
-    setVisitanteEntries([]);
-    setUnknownMandante([]);
-    setUnknownVisitante([]);
-    setPlacarExtras({ mandante: 0, visitante: 0 });
-    setManualDirty(false);
-    setManualPlacar({ mandante: '', visitante: '' });
+  const resetTouchedFields = () => {
+    touchedFieldsRef.current = {
+      mandante: {},
+      visitante: {},
+    };
   };
 
+  const markEntryFieldAsTouched = (side: 'mandante' | 'visitante', playerId: number, field: string) => {
+    const sideState = touchedFieldsRef.current[side] || {};
+    const playerState = sideState[playerId] || {};
+    playerState[field] = true;
+    sideState[playerId] = playerState;
+    touchedFieldsRef.current[side] = sideState;
+  };
+
+  const hasFieldBeenTouched = (side: 'mandante' | 'visitante', playerId: number, field: string) =>
+    Boolean(touchedFieldsRef.current?.[side]?.[playerId]?.[field]);
+
+  const mergeAnalyzedEntries = (side: 'mandante' | 'visitante', currentEntries: any[], analyzedEntries: any[]) => {
+    const analyzedMap = new Map(
+      analyzedEntries
+        .filter((entry: any) => Number(entry?.elencopadrao_id) > 0)
+        .map((entry: any) => [Number(entry.elencopadrao_id), entry]),
+    );
+
+    return currentEntries.map((entry) => {
+      const playerId = Number(entry?.elencopadrao_id || 0);
+      const analyzed = analyzedMap.get(playerId);
+      if (!analyzed) {
+        return entry;
+      }
+
+      const nextEntry = { ...entry };
+      (['nota', 'gols', 'assistencias'] as const).forEach((field) => {
+        if (hasFieldBeenTouched(side, playerId, field)) {
+          return;
+        }
+
+        if (analyzed[field] === undefined || analyzed[field] === null) {
+          return;
+        }
+
+        nextEntry[field] = analyzed[field];
+      });
+
+      return nextEntry;
+    });
+  };
+
+  const resolveManualScoreValue = (side: 'mandante' | 'visitante') =>
+    manualDirty ? manualPlacar[side] : placarCalculado[side];
+
+  const normalizeScoreValue = (value: any, fallback: number) => {
+    const parsed = Number(value);
+
+    if (!Number.isFinite(parsed)) {
+      return Math.max(0, Math.floor(fallback));
+    }
+
+    return Math.max(0, Math.floor(parsed));
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!partida?.id) {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const loadForm = async () => {
+      setFormLoading(true);
+      setFormReady(false);
+      setError('');
+      setWarning('');
+      setSuccess('');
+      setMandanteEntries([]);
+      setVisitanteEntries([]);
+      setUnknownMandante([]);
+      setUnknownVisitante([]);
+      setPlacarExtras({ mandante: 0, visitante: 0 });
+      setManualDirty(false);
+      setManualPlacar({ mandante: '', visitante: '' });
+      setMandanteImage(null);
+      setVisitanteImage(null);
+      resetTouchedFields();
+
+      try {
+        const response = await jsonRequest(`/api/partidas/${partida.id}/desempenho/form`);
+        if (cancelled) return;
+
+        setMandanteEntries(Array.isArray(response?.mandante?.entries) ? response.mandante.entries : []);
+        setVisitanteEntries(Array.isArray(response?.visitante?.entries) ? response.visitante.entries : []);
+        setManualPlacar({
+          mandante: response?.placar?.mandante ?? '',
+          visitante: response?.placar?.visitante ?? '',
+        });
+        setFormReady(true);
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setError(currentError?.message || 'Não foi possível carregar a súmula.');
+      } finally {
+        if (!cancelled) {
+          setFormLoading(false);
+        }
+      }
+    };
+
+    void loadForm();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [partida?.id]);
+
   const handleAnalyze = async () => {
+    if (matchReportBlocked) {
+      setError(matchReportBlockReason);
+      return;
+    }
+
+    if (!formReady) {
+      setError('A súmula ainda está carregando.');
+      return;
+    }
+
     if (!mandanteImage || !visitanteImage) {
       setError('Envie as duas imagens para continuar.');
       return;
     }
 
     setError('');
+    setWarning('');
     setSuccess('');
     setLoading(true);
 
@@ -3135,27 +3437,32 @@ const ReportMatchView = ({
       formData.append('visitante_imagem', visitanteImage);
 
       const response = await multipartRequest(`/api/partidas/${partida.id}/desempenho/preview`, formData);
-      const nextMandanteEntries = Array.isArray(response?.mandante?.entries) ? response.mandante.entries : [];
-      const nextVisitanteEntries = Array.isArray(response?.visitante?.entries) ? response.visitante.entries : [];
-      const previewMandante = Number(response?.placar?.mandante ?? 0);
-      const previewVisitante = Number(response?.placar?.visitante ?? 0);
+      const nextUnknownMandante = Array.isArray(response?.mandante?.unknown_players) ? response.mandante.unknown_players : [];
+      const nextUnknownVisitante = Array.isArray(response?.visitante?.unknown_players) ? response.visitante.unknown_players : [];
+
+      setUnknownMandante(nextUnknownMandante);
+      setUnknownVisitante(nextUnknownVisitante);
+
+      if (response?.analysis_failed) {
+        setWarning(String(response?.warning || 'Não foi possível analisar as imagens. Você pode preencher a súmula manualmente.'));
+        return;
+      }
+
+      const analyzedMandanteEntries = Array.isArray(response?.mandante?.entries) ? response.mandante.entries : [];
+      const analyzedVisitanteEntries = Array.isArray(response?.visitante?.entries) ? response.visitante.entries : [];
+      const nextMandanteEntries = mergeAnalyzedEntries('mandante', mandanteEntries, analyzedMandanteEntries);
+      const nextVisitanteEntries = mergeAnalyzedEntries('visitante', visitanteEntries, analyzedVisitanteEntries);
+      const previewMandante = normalizeScoreValue(response?.placar?.mandante, 0);
+      const previewVisitante = normalizeScoreValue(response?.placar?.visitante, 0);
       const knownMandante = sumGoals(nextMandanteEntries);
       const knownVisitante = sumGoals(nextVisitanteEntries);
 
       setMandanteEntries(nextMandanteEntries);
       setVisitanteEntries(nextVisitanteEntries);
-      setUnknownMandante(Array.isArray(response?.mandante?.unknown_players) ? response.mandante.unknown_players : []);
-      setUnknownVisitante(Array.isArray(response?.visitante?.unknown_players) ? response.visitante.unknown_players : []);
       setPlacarExtras({
-        mandante: Number.isFinite(previewMandante) ? Math.max(previewMandante - knownMandante, 0) : 0,
-        visitante: Number.isFinite(previewVisitante) ? Math.max(previewVisitante - knownVisitante, 0) : 0,
+        mandante: Math.max(previewMandante - knownMandante, 0),
+        visitante: Math.max(previewVisitante - knownVisitante, 0),
       });
-      setManualDirty(false);
-      setManualPlacar({
-        mandante: previewMandante,
-        visitante: previewVisitante,
-      });
-      setHasPreview(true);
     } catch (currentError: any) {
       setError(currentError?.message || 'Não foi possível analisar as imagens.');
     } finally {
@@ -3164,33 +3471,37 @@ const ReportMatchView = ({
   };
 
   const handleConfirm = async () => {
-    const filteredMandante = mandanteEntries.filter(isActiveEntry);
-    const filteredVisitante = visitanteEntries.filter(isActiveEntry);
-    const placarMandante = Number(resolvedPlacar.mandante ?? 0);
-    const placarVisitante = Number(resolvedPlacar.visitante ?? 0);
-
-    if (!Number.isFinite(placarMandante) || !Number.isFinite(placarVisitante)) {
-      setError('Placar inválido. Faça uma nova análise.');
+    if (matchReportBlocked) {
+      setError(matchReportBlockReason);
       return;
     }
 
+    if (!formReady) {
+      setError('A súmula ainda está carregando.');
+      return;
+    }
+
+    const placarMandante = normalizeScoreValue(resolvedPlacar.mandante, placarCalculado.mandante);
+    const placarVisitante = normalizeScoreValue(resolvedPlacar.visitante, placarCalculado.visitante);
+
     setSaving(true);
     setError('');
+    setWarning('');
     setSuccess('');
 
     const normalize = (entry: any) => ({
       elencopadrao_id: Number(entry.elencopadrao_id),
-      nota: Number(entry.nota),
-      gols: Number(entry.gols || 0),
-      assistencias: Number(entry.assistencias || 0),
+      nota: entry?.nota ?? '',
+      gols: entry?.gols ?? 0,
+      assistencias: entry?.assistencias ?? 0,
     });
 
     try {
       await jsonRequest(`/api/partidas/${partida.id}/desempenho/confirm`, {
         method: 'POST',
         body: JSON.stringify({
-          mandante: filteredMandante.map(normalize),
-          visitante: filteredVisitante.map(normalize),
+          mandante: mandanteEntries.map(normalize),
+          visitante: visitanteEntries.map(normalize),
           placar_mandante: placarMandante,
           placar_visitante: placarVisitante,
         }),
@@ -3207,6 +3518,13 @@ const ReportMatchView = ({
 
   const updateEntry = (side: 'mandante' | 'visitante', index: number, field: string, value: string) => {
     const setter = side === 'mandante' ? setMandanteEntries : setVisitanteEntries;
+    const entries = side === 'mandante' ? mandanteEntries : visitanteEntries;
+    const targetEntry = entries[index];
+
+    if (targetEntry?.elencopadrao_id) {
+      markEntryFieldAsTouched(side, Number(targetEntry.elencopadrao_id), field);
+    }
+
     setter((prev: any[]) =>
       prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)),
     );
@@ -3220,7 +3538,7 @@ const ReportMatchView = ({
     }));
   };
 
-  const placarLabel = hasPreview ? `${resolvedPlacar.mandante} x ${resolvedPlacar.visitante}` : '—';
+  const placarLabel = `${resolveManualScoreValue('mandante') || 0} x ${resolveManualScoreValue('visitante') || 0}`;
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
@@ -3235,35 +3553,43 @@ const ReportMatchView = ({
         </p>
       </header>
 
+      {matchReportBlocked && (
+        <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4 mb-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
+            {matchReportBlockReason}
+          </p>
+        </div>
+      )}
+
       <section className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
         <div className="flex items-center justify-between gap-4">
-          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar extraído</p>
+          <p className="text-[10px] text-white/50 font-black uppercase italic tracking-[0.1em]">Placar da súmula</p>
           <p className="text-2xl font-black italic font-heading text-[#FFD700]">{placarLabel}</p>
         </div>
-        {hasPreview && (
-          <div className="grid grid-cols-2 gap-3">
-            <label className="text-[8px] font-black uppercase italic text-white/50">
-              {partida?.mandante}
-              <input
-                type="number"
-                min="0"
-                value={manualPlacar.mandante}
-                onChange={(e) => handleManualPlacarChange('mandante', e.target.value)}
-                className="mt-2 w-full bg-[#121212] border border-[#FFD700]/20 px-3 py-2 text-[11px] text-white font-black italic"
-              />
-            </label>
-            <label className="text-[8px] font-black uppercase italic text-white/50">
-              {partida?.visitante}
-              <input
-                type="number"
-                min="0"
-                value={manualPlacar.visitante}
-                onChange={(e) => handleManualPlacarChange('visitante', e.target.value)}
-                className="mt-2 w-full bg-[#121212] border border-[#FFD700]/20 px-3 py-2 text-[11px] text-white font-black italic"
-              />
-            </label>
-          </div>
-        )}
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-[8px] font-black uppercase italic text-white/50">
+            {partida?.mandante}
+            <input
+              type="number"
+              min="0"
+              value={resolveManualScoreValue('mandante')}
+              onChange={(e) => handleManualPlacarChange('mandante', e.target.value)}
+              className="mt-2 w-full bg-[#121212] border border-[#FFD700]/20 px-3 py-2 text-[11px] text-white font-black italic"
+              disabled={loading || saving || !formReady}
+            />
+          </label>
+          <label className="text-[8px] font-black uppercase italic text-white/50">
+            {partida?.visitante}
+            <input
+              type="number"
+              min="0"
+              value={resolveManualScoreValue('visitante')}
+              onChange={(e) => handleManualPlacarChange('visitante', e.target.value)}
+              className="mt-2 w-full bg-[#121212] border border-[#FFD700]/20 px-3 py-2 text-[11px] text-white font-black italic"
+              disabled={loading || saving || !formReady}
+            />
+          </label>
+        </div>
       </section>
 
       <section className="space-y-6">
@@ -3275,10 +3601,11 @@ const ReportMatchView = ({
               accept="image/*"
               onChange={(e) => {
                 setMandanteImage(e.target.files?.[0] ?? null);
-                resetPreview();
+                setError('');
+                setWarning('');
               }}
               className="w-full text-[10px] text-white"
-              disabled={loading || saving}
+              disabled={loading || saving || formLoading}
             />
           </label>
           <label className="bg-[#1E1E1E] p-5 border border-white/10 cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -3288,36 +3615,48 @@ const ReportMatchView = ({
               accept="image/*"
               onChange={(e) => {
                 setVisitanteImage(e.target.files?.[0] ?? null);
-                resetPreview();
+                setError('');
+                setWarning('');
               }}
               className="w-full text-[10px] text-white"
-              disabled={loading || saving}
+              disabled={loading || saving || formLoading}
             />
           </label>
         </div>
 
+        {formLoading && (
+          <p className="text-[9px] font-black uppercase italic text-white/50">CARREGANDO ELENCOS DA SÚMULA...</p>
+        )}
+
         {!!error && <p className="text-[9px] font-black uppercase italic text-[#B22222]">{error}</p>}
+        {!!warning && <p className="text-[9px] font-black uppercase italic text-[#FFD700]">{warning}</p>}
         {!!success && <p className="text-[9px] font-black uppercase italic text-[#008000]">{success}</p>}
 
         <div className="grid grid-cols-1 gap-3">
           <MCOButton onClick={handleAnalyze} disabled={loading || saving || !canAnalyze || !mandanteImage || !visitanteImage}>
             {loading ? 'ANALISANDO...' : 'ANALISAR IMAGENS'}
           </MCOButton>
-          {hasPreview && (
-            <MCOButton variant="outline" onClick={handleConfirm} disabled={loading || saving || !canAnalyze}>
-              {saving ? 'SALVANDO...' : 'CONFIRMAR DADOS'}
-            </MCOButton>
-          )}
+          <MCOButton variant="outline" onClick={handleConfirm} disabled={loading || saving || !canConfirm}>
+            {saving ? 'SALVANDO...' : 'CONFIRMAR DADOS'}
+          </MCOButton>
         </div>
 
-        {!canAnalyze && (
+        {!canEditReport && (
           <p className="text-[8px] font-black uppercase italic text-white/40">
-            Esta partida precisa estar em estado CONFIRMADA ou AGENDADA para finalizar.
+            {matchReportBlocked
+              ? matchReportBlockReason
+              : 'Esta partida precisa estar em estado CONFIRMADA ou AGENDADA para finalizar.'}
+          </p>
+        )}
+
+        {formReady && (
+          <p className="text-[8px] font-black uppercase italic text-white/35">
+            Linhas sem nota continuam visíveis, mas ficam fora do placar automático e não são salvas na súmula.
           </p>
         )}
       </section>
 
-      {hasPreview && (
+      {formReady && (
         <section className="mt-8 space-y-6">
           <article className="bg-[#1E1E1E] p-5 border-l-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <h4 className="text-[10px] font-black uppercase italic text-[#FFD700] tracking-[0.2em] mb-4">{partida?.mandante}</h4>
@@ -3328,11 +3667,16 @@ const ReportMatchView = ({
             )}
             <div className="space-y-2">
               {mandanteEntries.map((entry, index) => (
-                <div key={`${entry.elencopadrao_id}-${index}`} className="grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center">
-                  <span className="text-[10px] font-black italic text-white truncate">{entry.nome}</span>
-                  <input type="number" step="0.1" min="0" max="10" value={entry.nota ?? ''} onChange={(e) => updateEntry('mandante', index, 'nota', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
-                  <input type="number" min="0" value={entry.gols ?? 0} onChange={(e) => updateEntry('mandante', index, 'gols', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
-                  <input type="number" min="0" value={entry.assistencias ?? 0} onChange={(e) => updateEntry('mandante', index, 'assistencias', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
+                <div key={`${entry.elencopadrao_id}-${index}`} className={`grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center ${isActiveEntry(entry) ? '' : 'opacity-70'}`}>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black italic text-white truncate block">{entry.nome}</span>
+                    {!isActiveEntry(entry) && (
+                      <span className="text-[7px] font-black uppercase italic text-white/25">Sem nota, fora do placar</span>
+                    )}
+                  </div>
+                  <input type="number" step="0.1" min="0" max="10" value={entry.nota ?? ''} onChange={(e) => updateEntry('mandante', index, 'nota', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
+                  <input type="number" min="0" value={entry.gols ?? 0} onChange={(e) => updateEntry('mandante', index, 'gols', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
+                  <input type="number" min="0" value={entry.assistencias ?? 0} onChange={(e) => updateEntry('mandante', index, 'assistencias', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
                 </div>
               ))}
             </div>
@@ -3347,11 +3691,16 @@ const ReportMatchView = ({
             )}
             <div className="space-y-2">
               {visitanteEntries.map((entry, index) => (
-                <div key={`${entry.elencopadrao_id}-${index}`} className="grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center">
-                  <span className="text-[10px] font-black italic text-white truncate">{entry.nome}</span>
-                  <input type="number" step="0.1" min="0" max="10" value={entry.nota ?? ''} onChange={(e) => updateEntry('visitante', index, 'nota', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
-                  <input type="number" min="0" value={entry.gols ?? 0} onChange={(e) => updateEntry('visitante', index, 'gols', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
-                  <input type="number" min="0" value={entry.assistencias ?? 0} onChange={(e) => updateEntry('visitante', index, 'assistencias', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" />
+                <div key={`${entry.elencopadrao_id}-${index}`} className={`grid grid-cols-[1fr_56px_56px_56px] gap-2 items-center ${isActiveEntry(entry) ? '' : 'opacity-70'}`}>
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-black italic text-white truncate block">{entry.nome}</span>
+                    {!isActiveEntry(entry) && (
+                      <span className="text-[7px] font-black uppercase italic text-white/25">Sem nota, fora do placar</span>
+                    )}
+                  </div>
+                  <input type="number" step="0.1" min="0" max="10" value={entry.nota ?? ''} onChange={(e) => updateEntry('visitante', index, 'nota', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
+                  <input type="number" min="0" value={entry.gols ?? 0} onChange={(e) => updateEntry('visitante', index, 'gols', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
+                  <input type="number" min="0" value={entry.assistencias ?? 0} onChange={(e) => updateEntry('visitante', index, 'assistencias', e.target.value)} className="bg-[#121212] text-white text-[10px] px-2 py-1" disabled={loading || saving} />
                 </div>
               ))}
             </div>
@@ -3719,33 +4068,63 @@ const EvaluateMatchView = ({ onBack, match, onCompleted, onNotify }: any) => {
 
 // --- Widgets ---
 
-const FanProgressWidget = ({ fans, clubSizeName }: { fans: number, clubSizeName?: string | null }) => {
-  const tiers = [
-    { name: 'PEQUENO', min: 0, max: 500000 },
-    { name: 'EMERGENTE', min: 500000, max: 2000000 },
-    { name: 'TRADICIONAL', min: 2000000, max: 5000000 },
-    { name: 'GIGANTE', min: 5000000, max: 10000000 },
-    { name: 'DINASTIA', min: 10000000, max: 25000000 },
-  ];
-  const currentTier = tiers.find(t => fans >= t.min && fans < t.max) || tiers[tiers.length - 1];
-  const progress = Math.min(((fans - currentTier.min) / (currentTier.max - currentTier.min)) * 100, 100);
-  const formatFans = (n: number) => n >= 1000000 ? (n / 1000000).toFixed(1) + 'M' : n >= 1000 ? (n / 1000).toFixed(0) + 'K' : n.toString();
-  const currentTierLabel = String(clubSizeName || '').trim() || currentTier.name;
+const FanProgressWidget = ({ fans }: { fans: number }) => {
+  const normalizedFans = Number.isFinite(fans) ? Math.max(0, fans) : 0;
+  const currentTierIndex = LEGACY_FAN_PROGRESS_TIERS.findIndex((tier) => normalizedFans >= tier.min && normalizedFans < tier.max);
+  const safeTierIndex = currentTierIndex >= 0 ? currentTierIndex : LEGACY_FAN_PROGRESS_TIERS.length - 1;
+  const currentTier = LEGACY_FAN_PROGRESS_TIERS[safeTierIndex];
+  const nextTier = LEGACY_FAN_PROGRESS_TIERS[safeTierIndex + 1] || null;
+  const rangeSize = Math.max(1, currentTier.max - currentTier.min);
+  const progressWithinTier = nextTier
+    ? ((normalizedFans - currentTier.min) / rangeSize) * 100
+    : 100;
+  const progress = Math.max(0, Math.min(100, progressWithinTier));
+  const fansRemaining = nextTier ? Math.max(0, currentTier.max - normalizedFans) : 0;
+  const fullFansLabel = `${Math.round(normalizedFans).toLocaleString('pt-BR')} torcedores`;
+  const nextTierTarget = nextTier ? Math.round(currentTier.max).toLocaleString('pt-BR') : null;
 
   return (
     <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
-      <div className="flex justify-between items-end mb-4">
-        <div>
+      <div className="flex flex-col gap-5 mb-5 md:flex-row md:items-end md:justify-between">
+        <div className="min-w-0">
           <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-[0.3em]">CLASSIFICAÇÃO DO CLUBE</p>
-          <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTierLabel}</h3>
+          <h3 className="text-3xl font-black italic uppercase font-heading text-white">{currentTier.name}</h3>
+          {nextTier ? (
+            <p className="mt-2 text-[10px] font-black uppercase italic tracking-[0.12em] text-white/75">
+              FALTAM <span className="text-[#FFD700]">{formatLegacyFansLabel(fansRemaining)}</span> TORCEDORES PARA O NÍVEL {nextTier.name}
+            </p>
+          ) : (
+            <p className="mt-2 text-[10px] font-black uppercase italic tracking-[0.16em] text-[#FFD700]">
+              NÍVEL MÁXIMO ATINGIDO
+            </p>
+          )}
         </div>
-        <div className="text-right">
+        <div className="text-left md:text-right">
           <p className="text-[9px] text-white/30 font-black uppercase italic tracking-widest">TORCIDA TOTAL</p>
-          <p className="text-xl font-black italic font-heading text-white">{formatFans(fans)}</p>
+          <p className="text-xl font-black italic font-heading text-white" title={fullFansLabel}>
+            {formatLegacyFansLabel(normalizedFans)}
+          </p>
+          <p className="text-[9px] text-white/35 font-bold uppercase italic tracking-[0.1em]">
+            {fullFansLabel}
+          </p>
         </div>
+      </div>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <p className="text-[8px] text-white/30 font-black uppercase italic tracking-[0.18em]">
+          {nextTier ? `META: ${nextTier.name}` : 'TOPO DA ESCADA DE TORCIDA'}
+        </p>
+        <p className="text-[8px] text-[#FFD700] font-black uppercase italic tracking-[0.18em]">
+          {Math.round(progress)}% DO NÍVEL
+        </p>
       </div>
       <div className="relative h-4 bg-[#121212] overflow-hidden" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
         <div className="absolute top-0 left-0 h-full bg-[#FFD700] transition-all duration-1000 shadow-[0_0_15px_rgba(255,215,0,0.5)]" style={{ width: `${progress}%` }}></div>
+      </div>
+      <div className="mt-3 flex items-center justify-between gap-4 text-[8px] font-black uppercase italic tracking-[0.14em] text-white/35">
+        <span>{formatLegacyFansLabel(currentTier.min)}</span>
+        <span className="text-right">
+          {nextTier && nextTierTarget ? `${nextTier.name} EM ${nextTierTarget}` : 'PATAMAR FINAL'}
+        </span>
       </div>
     </div>
   );
@@ -3988,6 +4367,46 @@ const DetailedAttributes = ({ player }: { player: any }) => {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+const LegacyPlayerShowcaseModal = ({
+  player,
+  showDetailed,
+  onToggleDetailed,
+  onClose,
+  zIndexClass = 'z-[120]',
+}: {
+  player: any,
+  showDetailed: boolean,
+  onToggleDetailed: () => void,
+  onClose: () => void,
+  zIndexClass?: string,
+}) => {
+  if (!player) return null;
+
+  return (
+    <div className={`fixed inset-0 ${zIndexClass} flex items-center justify-center p-6 bg-black/95 backdrop-blur-md`}>
+      <div className="absolute inset-0" onClick={onClose}></div>
+      <div className="relative w-full max-w-sm flex flex-col items-center">
+        <div className="w-full flex justify-end mb-4">
+          <button
+            onClick={onClose}
+            className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]"
+            style={{ clipPath: AGGRESSIVE_CLIP }}
+            type="button"
+          >
+            <i className="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        {showDetailed ? <DetailedAttributes player={player} /> : <LegacyUTCard player={player} preferAssetTemplate />}
+        <div className="mt-8 w-full">
+          <MCOButton variant={showDetailed ? "primary" : "outline"} className="w-full py-5 !text-[11px]" onClick={onToggleDetailed}>
+            {showDetailed ? "VER CARD ULTIMATE" : "FICHA TECNICA COMPLETA"}
+          </MCOButton>
+        </div>
       </div>
     </div>
   );
@@ -5674,6 +6093,469 @@ const FinanceView = ({ onBack, currentCareer }: any) => {
   );
 };
 
+const TransferHistoryView = ({ onBack, currentCareer }: { onBack: () => void, currentCareer: any }) => {
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [error, setError] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [showDetailed, setShowDetailed] = useState(false);
+
+  const loadTransferHistoryPage = useCallback(async (targetPage: number, append: boolean) => {
+    if (!currentCareer?.id) return;
+
+    if (append) {
+      setLoadingMore(true);
+    } else {
+      setLoading(true);
+      setError('');
+    }
+
+    try {
+      const payload = await jsonRequest(
+        getLegacyTransferHistoryDataEndpoint(currentCareer.id, targetPage, 5),
+        { method: 'GET' },
+      );
+      const history = payload?.history ?? {};
+      const normalizedItems = normalizeLegacyTransferHistoryItems(history?.items);
+      const pagination = history?.pagination ?? {};
+
+      setItems((current) => (append ? [...current, ...normalizedItems] : normalizedItems));
+      setPage(Math.max(1, Number(pagination?.page ?? targetPage) || 1));
+      setHasMore(Boolean(pagination?.has_more));
+      setTotal(Math.max(0, Number(pagination?.total ?? normalizedItems.length) || 0));
+      if (!append) {
+        setError('');
+      }
+    } catch (currentError: any) {
+      if (!append) {
+        setItems([]);
+      }
+      setError(currentError?.message || 'Nao foi possivel carregar o historico de transferencias.');
+    } finally {
+      if (append) {
+        setLoadingMore(false);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [currentCareer?.id]);
+
+  useEffect(() => {
+    if (!currentCareer?.id) {
+      setItems([]);
+      setError('Selecione uma confederacao para visualizar as transferencias.');
+      setLoading(false);
+      setLoadingMore(false);
+      setPage(1);
+      setHasMore(false);
+      setTotal(0);
+      return;
+    }
+
+    setSelectedPlayer(null);
+    setShowDetailed(false);
+    setItems([]);
+    setPage(1);
+    setHasMore(false);
+    setTotal(0);
+    void loadTransferHistoryPage(1, false);
+  }, [currentCareer?.id, loadTransferHistoryPage]);
+
+  const handleLoadMore = () => {
+    if (!hasMore || loading || loadingMore) return;
+    void loadTransferHistoryPage(page + 1, true);
+  };
+
+  const openPlayer = (player: any) => {
+    if (!player) return;
+    setSelectedPlayer(player);
+    setShowDetailed(false);
+  };
+
+  const closePlayer = () => {
+    setSelectedPlayer(null);
+    setShowDetailed(false);
+  };
+
+  const formatTransferDate = (value: string) => {
+    if (!value) return '--';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '--';
+
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  };
+
+  const resolveTransferTypeMeta = (typeLabel: string) => {
+    const normalized = String(typeLabel || '').toUpperCase();
+
+    if (normalized === 'MULTA') {
+      return {
+        badgeClasses: 'bg-[#B22222]/20 text-[#FFB4B4] border-[#B22222]/50',
+        borderClasses: 'border-[#B22222]/45',
+      };
+    }
+
+    if (normalized === 'LEILAO') {
+      return {
+        badgeClasses: 'bg-[#FFD700]/20 text-[#FFD700] border-[#FFD700]/35',
+        borderClasses: 'border-[#FFD700]/45',
+      };
+    }
+
+    if (normalized === 'TROCA') {
+      return {
+        badgeClasses: 'bg-[#60A5FA]/20 text-[#BFDBFE] border-[#60A5FA]/45',
+        borderClasses: 'border-[#60A5FA]/35',
+      };
+    }
+
+    return {
+      badgeClasses: 'bg-[#22C55E]/20 text-[#A7F3D0] border-[#22C55E]/45',
+      borderClasses: 'border-[#22C55E]/35',
+    };
+  };
+
+  const renderEndpoint = (endpoint: any, label: string) => {
+    const kind = String(endpoint?.kind || 'unknown');
+    const iconClass = kind === 'auction'
+      ? 'fa-gavel'
+      : kind === 'market_free'
+        ? 'fa-store'
+        : kind === 'club'
+          ? 'fa-shield-halved'
+          : 'fa-circle-question';
+
+    return (
+      <div className="min-w-0 bg-[#121212] border border-white/10 p-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+        <p className="text-[7px] font-black uppercase italic tracking-[0.18em] text-white/30">{label}</p>
+        <div className="mt-2 flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 shrink-0 bg-[#1E1E1E] border border-[#FFD700]/20 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
+            {endpoint?.escudoUrl ? (
+              <img src={endpoint.escudoUrl} alt={endpoint?.name || label} className="w-full h-full object-cover" />
+            ) : (
+              <i className={`fas ${iconClass} text-sm text-[#FFD700]/55`}></i>
+            )}
+          </div>
+          <p className="text-[10px] font-black italic uppercase text-white truncate">
+            {String(endpoint?.name || '--')}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
+      <header className="mb-10">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">TRANSFERENCIAS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic mt-2">
+          ULTIMAS MOVIMENTACOES DA CONFERENCIA
+        </p>
+        <p className="text-[8px] text-white/35 font-black uppercase italic tracking-[0.2em] mt-2">
+          {total} REGISTRO{total === 1 ? '' : 'S'}
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="text-center py-14 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO TRANSFERENCIAS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="bg-[#1E1E1E] border border-white/10 p-6 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <i className="fas fa-clock-rotate-left text-4xl text-white/20 mb-4"></i>
+          <p className="text-[10px] font-black uppercase italic text-white/45">
+            Nenhuma transferencia registrada nesta confederacao.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item: any, index: number) => {
+            const meta = resolveTransferTypeMeta(item.typeLabel);
+            const playerCard = item?.playerCard;
+            const thumbPlayer = playerCard || {
+              name: 'ATLETA',
+              photo: '',
+              ovr: 0,
+              pos: '--',
+            };
+
+            return (
+              <LegacyReveal key={String(item.id || index)} delayMs={Math.min(index * 40, 180)}>
+                <div className={`bg-[#1E1E1E] p-4 border-l-[4px] ${meta.borderClasses}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <div className="flex items-start gap-4">
+                    <button
+                      type="button"
+                      onClick={() => openPlayer(playerCard)}
+                      className={`shrink-0 ${playerCard ? 'cursor-pointer active:scale-95 transition-transform' : 'cursor-default'}`}
+                      disabled={!playerCard}
+                    >
+                      <LegacyMarketPlayerThumb
+                        player={thumbPlayer}
+                        useReducedTemplate
+                        thumbClassName="w-16 h-16"
+                      />
+                    </button>
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-[12px] font-black italic uppercase text-white truncate">
+                            {String(playerCard?.name || item?.playerRaw?.short_name || item?.playerRaw?.long_name || 'ATLETA')}
+                          </p>
+                          <p className="text-[8px] font-bold uppercase italic tracking-[0.18em] text-white/35 mt-1">
+                            {String(playerCard?.pos || '--')} • OVR {Number(playerCard?.ovr ?? 0) || '--'}
+                          </p>
+                          <p className="text-[8px] font-bold uppercase italic tracking-[0.16em] text-white/25 mt-2">
+                            {formatTransferDate(String(item.createdAt || ''))}
+                          </p>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <span className={`inline-flex items-center px-2 py-1 border text-[7px] font-black uppercase italic ${meta.badgeClasses}`}>
+                            {item.typeLabel}
+                          </span>
+                          <p className="text-lg font-black italic font-heading text-[#FFD700] mt-2">
+                            M$ {toLegacyMoneyCompact(item.valueEur)}
+                          </p>
+                        </div>
+                      </div>
+
+                      {item.observation ? (
+                        <p className="text-[9px] font-bold italic text-white/60 mt-3 leading-tight break-words">
+                          {item.observation}
+                        </p>
+                      ) : null}
+
+                      <div className="mt-4 grid grid-cols-[1fr_auto_1fr] gap-2 items-center">
+                        {renderEndpoint(item.origin, 'ORIGEM')}
+                        <div className="flex items-center justify-center text-[#FFD700]/65">
+                          <i className="fas fa-arrow-right text-sm"></i>
+                        </div>
+                        {renderEndpoint(item.destination, 'DESTINO')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </LegacyReveal>
+            );
+          })}
+
+          {hasMore && (
+            <MCOButton className="w-full" onClick={handleLoadMore} disabled={loadingMore}>
+              {loadingMore ? 'CARREGANDO...' : 'MOSTRAR MAIS'}
+            </MCOButton>
+          )}
+        </div>
+      )}
+
+      <LegacyPlayerShowcaseModal
+        player={selectedPlayer}
+        showDetailed={showDetailed}
+        onToggleDetailed={() => setShowDetailed((current) => !current)}
+        onClose={closePlayer}
+      />
+    </div>
+  );
+};
+
+const NextEventsView = ({ onBack, currentCareer }: { onBack: () => void, currentCareer: any }) => {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [items, setItems] = useState<any[]>([]);
+  const [onboardingUrl, setOnboardingUrl] = useState(LEGACY_ONBOARDING_CLUBE_URL);
+  const [showOnboardingCta, setShowOnboardingCta] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadNextEvents = async () => {
+      if (!currentCareer?.id) {
+        setItems([]);
+        setError('Selecione uma confederacao para visualizar os proximos eventos.');
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setShowOnboardingCta(false);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const payload = await jsonRequest(getLegacyNextEventsDataEndpoint(currentCareer.id), { method: 'GET' });
+        if (cancelled) return;
+
+        setOnboardingUrl(String(payload?.onboarding_url || LEGACY_ONBOARDING_CLUBE_URL));
+        setShowOnboardingCta(!payload?.liga);
+        setItems(normalizeLegacyNextEventsItems(payload?.events?.items));
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setItems([]);
+        setError(currentError?.message || 'Nao foi possivel carregar os proximos eventos.');
+        setShowOnboardingCta(false);
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadNextEvents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const resolveStatusMeta = (status: string) => {
+    if (status === 'open') {
+      return {
+        badge: 'EM ANDAMENTO',
+        badgeClasses: 'bg-[#22C55E]/20 text-[#BBF7D0] border-[#22C55E]/45',
+        borderClasses: 'border-[#22C55E]',
+        accent: 'text-[#86EFAC]',
+      };
+    }
+
+    if (status === 'upcoming') {
+      return {
+        badge: 'PRÓXIMA ABERTURA',
+        badgeClasses: 'bg-[#FFD700]/20 text-[#FFD700] border-[#FFD700]/35',
+        borderClasses: 'border-[#FFD700]',
+        accent: 'text-[#FFD700]',
+      };
+    }
+
+    return {
+      badge: 'SEM DATA PROGRAMADA',
+      badgeClasses: 'bg-white/10 text-white/50 border-white/10',
+      borderClasses: 'border-white/10',
+      accent: 'text-white/40',
+    };
+  };
+
+  return (
+    <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
+      <header className="mb-10">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">PRÓXIMOS EVENTOS</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.35em] uppercase italic mt-2">
+          JANELAS DA CONFERÊNCIA
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="text-center py-14 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO EVENTOS...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5 mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="bg-[#1E1E1E] border border-white/10 p-6 text-center" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <i className="fas fa-calendar-days text-4xl text-white/20 mb-4"></i>
+          <p className="text-[10px] font-black uppercase italic text-white/45">
+            Nenhum evento programado nesta confederacao.
+          </p>
+          {showOnboardingCta ? (
+            <MCOButton className="mt-5 w-full sm:w-auto" onClick={() => navigateTo(onboardingUrl || LEGACY_ONBOARDING_CLUBE_URL)}>
+              IR PARA O ONBOARDING
+            </MCOButton>
+          ) : null}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {items.map((item: any, index: number) => {
+            const meta = resolveStatusMeta(String(item?.status || 'none'));
+            const currentWindow = item?.currentWindow;
+            const nextWindow = item?.nextWindow;
+
+            return (
+              <LegacyReveal key={String(item?.id || index)} delayMs={Math.min(index * 50, 180)}>
+                <div className={`bg-[#1E1E1E] p-5 border-l-[4px] ${meta.borderClasses}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4 min-w-0">
+                      <div className="w-12 h-12 shrink-0 bg-[#121212] border border-[#FFD700]/20 flex items-center justify-center text-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
+                        <i className={`fas ${String(item?.icon || 'fa-calendar-days')} text-lg`}></i>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-black uppercase italic tracking-[0.18em] text-[#FFD700]">
+                          AGENDA
+                        </p>
+                        <h3 className="text-lg font-black italic uppercase text-white leading-tight">
+                          {String(item?.title || 'Evento')}
+                        </h3>
+                      </div>
+                    </div>
+
+                    <span className={`inline-flex items-center px-2 py-1 border text-[7px] font-black uppercase italic shrink-0 ${meta.badgeClasses}`}>
+                      {meta.badge}
+                    </span>
+                  </div>
+
+                  <div className="mt-4 space-y-3">
+                    {currentWindow ? (
+                      <div className="bg-[#121212] border border-white/10 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                        <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/35">JANELA ATUAL</p>
+                        <p className={`text-[10px] font-black italic uppercase mt-2 ${meta.accent}`}>
+                          {currentWindow?.startLabel || '--'} {currentWindow?.endLabel ? `ATE ${currentWindow.endLabel}` : ''}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {nextWindow ? (
+                      <div className="bg-[#121212] border border-white/10 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                        <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/35">
+                          {currentWindow ? 'PRÓXIMA ABERTURA' : 'ABERTURA PROGRAMADA'}
+                        </p>
+                        <p className="text-[10px] font-black italic uppercase mt-2 text-white">
+                          {nextWindow?.startLabel || '--'}
+                        </p>
+                        {nextWindow?.endLabel ? (
+                          <p className="text-[8px] font-black uppercase italic tracking-[0.14em] text-white/30 mt-1">
+                            FECHA EM {nextWindow.endLabel}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : null}
+
+                    {!currentWindow && !nextWindow ? (
+                      <p className="text-[9px] font-black uppercase italic text-white/35">
+                        Ainda nao existe janela cadastrada para este evento.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              </LegacyReveal>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const TrophiesView = ({ onBack, userStats }: any) => {
   const latest = userStats?.latestFinalizedLeagueResult ?? null;
   const hasLatest = Boolean(latest?.liga_nome);
@@ -6138,7 +7020,7 @@ const ProfileScheduleWidget = ({ availability, onAddSlot, onRemoveSlot, onTimeCh
 
 // --- Container Views ---
 
-const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenStats, onOpenLeaderboard, onOpenInbox, onOpenSchedulePending, careers, currentCareer, onCareerChange, userStats, onOpenOwnProfile }: any) => {
+const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenNextEvents, onOpenTransferHistory, onOpenStats, onOpenLeaderboard, onOpenInbox, onOpenSchedulePending, careers, currentCareer, onCareerChange, userStats, onOpenOwnProfile }: any) => {
   const [inboxSummary, setInboxSummary] = useState(LEGACY_INBOX_EMPTY_SUMMARY);
   const [inboxLoading, setInboxLoading] = useState(false);
 
@@ -6276,6 +7158,34 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
           </LegacyReveal>
 
           <LegacyReveal delayMs={170}>
+            <section onClick={onOpenNextEvents} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">AGENDA DA CONFERENCIA</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">PRÓXIMOS EVENTOS</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-calendar-days"></i>
+                </div>
+              </div>
+            </section>
+          </LegacyReveal>
+
+          <LegacyReveal delayMs={210}>
+            <section onClick={onOpenTransferHistory} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
+              <div className="relative z-10 flex justify-between items-center">
+                <div>
+                  <h4 className="text-[10px] font-black uppercase text-[#FFD700] italic mb-1 tracking-widest">RADAR DE MERCADO</h4>
+                  <p className="text-2xl font-black italic uppercase font-heading text-white tracking-tighter">ULTIMAS TRANSFERENCIAS</p>
+                </div>
+                <div className="bg-[#FFD700] w-12 h-12 flex items-center justify-center italic text-[#121212] text-2xl font-black" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
+                  <i className="fas fa-clock-rotate-left"></i>
+                </div>
+              </div>
+            </section>
+          </LegacyReveal>
+
+          <LegacyReveal delayMs={250}>
             <section onClick={onOpenLeaderboard} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <div className="relative z-10 flex justify-between items-center">
                 <div>
@@ -6289,7 +7199,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
             </section>
           </LegacyReveal>
 
-          <LegacyReveal delayMs={210}>
+          <LegacyReveal delayMs={290}>
             <section onClick={onOpenStats} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <div className="relative z-10 flex justify-between items-center">
                 <div>
@@ -6303,7 +7213,7 @@ const HubGlobalView = ({ onOpenMyClub, onOpenTournaments, onOpenMarket, onOpenSt
             </section>
           </LegacyReveal>
 
-          <LegacyReveal delayMs={250}>
+          <LegacyReveal delayMs={330}>
             <section onClick={onOpenMyClub} className="bg-[#1E1E1E] border-l-[6px] border-[#FFD700] p-6 relative overflow-hidden group cursor-pointer" style={{ clipPath: AGGRESSIVE_CLIP }}>
               <div className="relative z-10 flex justify-between items-center">
                 <div>
@@ -7181,7 +8091,6 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
   const hasClub = Boolean(clubData?.id);
   const clubName = hasClub ? String(clubData.nome || 'MEU CLUBE') : 'SEM CLUBE';
   const clubFans = Number(clubData?.fans ?? 0);
-  const clubSizeName = hasClub ? String(clubData?.club_size_name || 'SEM CLASSIFICAÇÃO') : 'SEM CLASSIFICAÇÃO';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
@@ -7219,7 +8128,7 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
         </LegacyReveal>
       ) : (
         <LegacyReveal delayMs={40}>
-          <FanProgressWidget fans={clubFans} clubSizeName={clubSizeName} />
+          <FanProgressWidget fans={clubFans} />
         </LegacyReveal>
       )}
       <div className={`grid grid-cols-2 gap-4 ${!hasClub ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -10321,6 +11230,9 @@ const App = () => {
   const [selectedEvaluationMatch, setSelectedEvaluationMatch] = useState<any>(null);
   const [selectedScheduleMatch, setSelectedScheduleMatch] = useState<any>(null);
   const [selectedReportMatch, setSelectedReportMatch] = useState<any>(null);
+  const [selectedWoMatch, setSelectedWoMatch] = useState<any>(null);
+  const [woSubmitting, setWoSubmitting] = useState(false);
+  const [woError, setWoError] = useState('');
   const [matchCenterReloadToken, setMatchCenterReloadToken] = useState(0);
   const [clubProfileToView, setClubProfileToView] = useState<any>(null);
   const [clubProfileLoading, setClubProfileLoading] = useState(false);
@@ -10649,6 +11561,41 @@ const App = () => {
     setView('evaluate-match');
   };
 
+  const closeWoConfirm = useCallback(() => {
+    if (woSubmitting) return;
+
+    setSelectedWoMatch(null);
+    setWoError('');
+  }, [woSubmitting]);
+
+  const handleRequestWo = useCallback((match: any) => {
+    setSelectedWoMatch(match);
+    setWoError('');
+  }, []);
+
+  const handleWo = useCallback(async () => {
+    if (!selectedWoMatch?.id || woSubmitting) return;
+
+    setWoSubmitting(true);
+    setWoError('');
+
+    try {
+      const endpoint = `/api/partidas/${selectedWoMatch.id}/desistir`;
+      const payload = await jsonRequest(endpoint, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      });
+
+      setSelectedWoMatch(null);
+      pushLegacyToast(payload?.message || 'Partida encerrada por W.O.', 'success');
+      setMatchCenterReloadToken((current) => current + 1);
+    } catch (currentError: any) {
+      setWoError(currentError?.message || 'Não foi possível aplicar W.O. nesta partida.');
+    } finally {
+      setWoSubmitting(false);
+    }
+  }, [pushLegacyToast, selectedWoMatch, woSubmitting]);
+
   const handleOpenClubProfile = async (clubRef?: any) => {
     setView('public-club-profile');
     setClubProfileLoading(true);
@@ -10715,9 +11662,11 @@ const App = () => {
 
   const renderContent = (activeView: string) => {
     switch(activeView) {
-      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
+      case 'hub-global': return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenNextEvents={() => setView('next-events')} onOpenTransferHistory={() => setView('transfer-history')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
       case 'public-club-profile': return <PublicClubProfileView clubData={clubProfileToView} loading={clubProfileLoading} error={clubProfileError} onBack={() => setView('hub-global')} />;
       case 'season-stats': return <SeasonStatsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
+      case 'transfer-history': return <TransferHistoryView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
+      case 'next-events': return <NextEventsView currentCareer={currentCareer} onBack={() => setView('hub-global')} />;
       case 'leaderboard': return <LeaderboardView onBack={() => setView('hub-global')} onOpenProfile={handleOpenClubProfile} currentCareer={currentCareer} />;
       case 'inbox': return <InboxView currentCareer={currentCareer} onBack={() => setView('hub-global')} onAction={(t, payload) => {
         if (t === 'SCHEDULE') {
@@ -10765,8 +11714,8 @@ const App = () => {
           setView('hub-global');
         }
       }} />;
-      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenEvaluation={handleOpenEvaluation} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
-      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} onOpenFinalize={(match) => { setSelectedReportMatch(match ?? null); setView('report-match'); }} />;
+      case 'match-center': return <MatchCenterView onOpenSchedule={(match) => { setSelectedScheduleMatch(match ?? null); setView('schedule-matches'); }} onOpenFinalize={(match) => { setSelectedReportMatch(match); setView('report-match'); }} onOpenConfirm={handleConfirmResult} onOpenEvaluation={handleOpenEvaluation} onRequestWo={handleRequestWo} onOpenProfile={handleOpenClubProfile} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} reloadToken={matchCenterReloadToken} />;
+      case 'schedule-matches': return <ScheduleMatchesView onBack={() => setView('match-center')} currentCareer={currentCareer} initialPartida={selectedScheduleMatch} onNotify={pushLegacyToast} onOpenFinalize={(match) => { setSelectedReportMatch(match ?? null); setView('report-match'); }} onRequestWo={handleRequestWo} reloadToken={matchCenterReloadToken} />;
       case 'report-match': return <ReportMatchView onBack={() => setView('match-center')} partida={selectedReportMatch} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setView('match-center'); }} />;
       case 'confirm-match': return <ConfirmResultView onBack={() => { setView('match-center'); setSelectedPendingMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedPendingMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedPendingMatch} />;
       case 'evaluate-match': return <EvaluateMatchView onBack={() => { setView('match-center'); setSelectedEvaluationMatch(null); }} onCompleted={() => { setMatchCenterReloadToken((current) => current + 1); setSelectedEvaluationMatch(null); setView('match-center'); }} onNotify={pushLegacyToast} match={selectedEvaluationMatch} />;
@@ -10783,7 +11732,7 @@ const App = () => {
       case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'profile': return <ProfileView onBack={() => setView('hub-global')} onNotify={pushLegacyToast} />;
-      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
+      default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenNextEvents={() => setView('next-events')} onOpenTransferHistory={() => setView('transfer-history')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;
     }
   };
 
@@ -10794,6 +11743,56 @@ const App = () => {
       <div style={viewTransitionStyle}>
         {renderContent(renderView)}
       </div>
+      {selectedWoMatch && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
+          <div className="absolute inset-0" onClick={closeWoConfirm}></div>
+          <div
+            className="relative w-full max-w-lg bg-[#1E1E1E] border border-[#B22222]/45 p-6"
+            style={{ clipPath: AGGRESSIVE_CLIP }}
+          >
+            <p className="text-[9px] font-black uppercase italic tracking-[0.25em] text-[#FFB4B4]">
+              DESISTENCIA POR W.O.
+            </p>
+            <h3 className="text-2xl font-black italic uppercase text-white mt-3">
+              Desistir da partida
+            </h3>
+            <p className="text-[10px] font-bold uppercase italic tracking-[0.12em] text-white/45 mt-2">
+              {String(selectedWoMatch?.mandante || 'MANDANTE')} VS {String(selectedWoMatch?.visitante || 'VISITANTE')}
+            </p>
+            <p className="text-sm text-white/70 mt-5 leading-relaxed">
+              Ao desistir, a partida sera encerrada por W.O. e o adversario recebera vitoria por 3x0.
+            </p>
+            {!!selectedWoMatch?.scheduled_at && (
+              <p className="text-[9px] font-black uppercase italic tracking-[0.15em] text-[#FFD700] mt-4">
+                {formatLegacyMatchDate(selectedWoMatch.scheduled_at)}
+              </p>
+            )}
+            {!!woError && (
+              <div className="mt-5 bg-[#B22222]/20 border border-[#B22222]/55 p-3" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">{woError}</p>
+              </div>
+            )}
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <MCOButton
+                variant="outline"
+                onClick={closeWoConfirm}
+                className="!py-4 !px-3 !text-[9px]"
+                disabled={woSubmitting}
+              >
+                Voltar
+              </MCOButton>
+              <MCOButton
+                variant="danger"
+                onClick={() => { void handleWo(); }}
+                className="!py-4 !px-3 !text-[9px]"
+                disabled={woSubmitting}
+              >
+                {woSubmitting ? 'APLICANDO W.O....' : 'DESISTIR E APLICAR W.O.'}
+              </MCOButton>
+            </div>
+          </div>
+        </div>
+      )}
       <LegacyToastStack toasts={legacyToasts} hasBottomNav={!hideBottomNav} onClose={dismissLegacyToast} />
       {!hideBottomNav && (
         <MCOBottomNav

@@ -202,24 +202,20 @@ class PartidaActionsController extends Controller
         $this->assertParticipante($user->id, $partida);
         $partida->loadMissing(['mandante.user', 'visitante.user']);
 
-        $this->state->assertActionAllowed($partida, ['confirmacao_necessaria', 'agendada', 'confirmada']);
+        $this->state->assertActionAllowed($partida, ['confirmada']);
+
+        if (! $partida->scheduled_at) {
+            throw ValidationException::withMessages([
+                'scheduled_at' => ['Não é possível desistir sem horário definido para a partida.'],
+            ]);
+        }
 
         $now = Carbon::now('UTC');
 
-        if ($partida->scheduled_at) {
-            if ($now->greaterThanOrEqualTo($partida->scheduled_at)) {
-                throw ValidationException::withMessages([
-                    'scheduled_at' => ['Não é possível desistir após o horário da partida.'],
-                ]);
-            }
-
-            $limit = $partida->scheduled_at->copy()->subMinutes(60);
-
-            if ($now->greaterThan($limit)) {
-                throw ValidationException::withMessages([
-                    'scheduled_at' => ['Só é possível desistir com antecedência mínima de 60 minutos.'],
-                ]);
-            }
+        if ($now->greaterThanOrEqualTo($partida->scheduled_at)) {
+            throw ValidationException::withMessages([
+                'scheduled_at' => ['Não é possível desistir após o horário da partida.'],
+            ]);
         }
 
         $isMandante = $user->id === $partida->mandante->user_id;

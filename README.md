@@ -1,75 +1,119 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Temporada Online
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicacao web para gestao de ligas de futebol com foco em mercado de jogadores, partidas PvP, financeiro, conquistas e uma experiencia mobile-first no modo Legacy.
 
-## About Laravel
+## Stack principal
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- PHP 8.2+
+- Laravel 12
+- React 18 + Vite
+- Tailwind CSS 4
+- Blade para views tradicionais e admin
+- Inertia apenas em partes pontuais da stack padrao
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Areas da aplicacao
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### 1. Legacy
 
-## Learning Laravel
+Interface principal do produto em `legacy/`, renderizada por `resources/js/legacy/index.tsx` com payload inicial em `window.__LEGACY_CONFIG__`.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Fluxos principais:
+- hub-global
+- mercado
+- my-club
+- squad
+- match-center
+- report-match
+- finance
+- inbox
+- onboarding de clube
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 2. Views autenticadas da liga
 
-## Laravel Sponsors
+Conjunto de telas Blade + React especificas por rota, por exemplo:
+- `liga/mercado`
+- `liga/partidas`
+- `liga/partidas/{partida}/finalizar`
+- `liga/classificacao`
+- `liga/elenco`
+- `liga/clubes/{clube}`
+- `minha_liga/*`
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Essas telas usam bootstrap via `window.__LIGA__`, `window.__CLUBE__` e payloads especificos por view.
 
-### Premium Partners
+### 3. Admin
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Area separada por `auth + admin`, baseada em controllers Blade. Cobre cadastro de catalogos, confederacoes, ligas, clubes, partidas, assets, usuarios e importacao do elenco padrao.
 
-## Contributing
+## Dominios principais
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- Catalogos: jogos, geracoes, plataformas, paises, playstyles, assets
+- Estrutura competitiva: confederacoes, ligas, clubes
+- Mercado: compra, venda, multa, proposta, leilao e favoritos
+- Janelas da confederacao: transferencias, leilao e roubo por multa
+- Partidas: agendamento, check-in, W.O., registro de placar, sumula e avaliacao
+- Financeiro: carteira do clube, ledger, patrocinio, folha e historico de transferencias
+- Progressao: conquistas, premiacoes, patrocinio e torcida
 
-## Code of Conduct
+## Regras estruturais importantes
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- `elencopadrao` usa chave logica por `(jogo_id, player_id)`.
+- Posse do jogador dentro da competicao fica em `liga_clube_elencos`.
+- Janelas de mercado, leilao e multa sao definidas por `confederacao_id`, nao por liga individual.
+- O Legacy e hoje a superficie mais completa do produto para o usuario final.
 
-## Security Vulnerabilities
+## Setup rapido
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### Dependencias
 
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-
-## Importando o elenco padrão (FC26)
-
-1. Rode `php artisan migrate` para criar a nova tabela `elencopadrao`.
-2. Execute `php artisan elenco:import FC26.csv fc26` para ler `storage/app/private/elenco/FC26.csv`, preencher os campos com os dados do arquivo e relacionar tudo ao `jogo` que possui `slug = "fc26"`.
-3. A cada importação o comando é idempotente (usa `long_name` + `jogo_id` como chave) e atualiza o registro caso ele já exista.
-
-## Seeds adicionais para testes de mercado
-
-Quando quiser povoar a “Liga Demo MCO” com clubes extras (para testar filtros como “Outros clubes”), rode:
-
+```bash
+composer install
+npm install
 ```
-php artisan db:seed --class=OtherLigaClubsSeeder
+
+### Ambiente
+
+```bash
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
 ```
 
-Esse seeder cria três clubes parceiros (cada um com carteira inicial e até 12 jogadores) usando jogadores do `elencopadrao` que ainda não pertencem a um clube. Repita sempre que resetar o banco de dados para reconstituir rapidamente o mercado completo.
+Se quiser usar o script padrao do projeto:
+
+```bash
+composer run setup
+```
+
+## Desenvolvimento
+
+### Backend + Vite
+
+```bash
+php artisan serve
+npm run dev
+```
+
+Ou com o script combinado do projeto:
+
+```bash
+composer run dev
+```
+
+## Testes e build
+
+```bash
+php artisan test
+npm run build
+```
+
+## Documentacao
+
+A documentacao atual foi reorganizada em `docs/`.
+
+- indice: `docs/INDEX.md`
+- rotas: `docs/integracao/rotas.md`
+- payloads: `docs/integracao/payloads.md`
+- modelo de dados: `docs/arquitetura/modelo-de-dados.md`
+
+Os arquivos antigos da raiz foram movidos para `docs/_archive/2026-03-16/` como referencia historica.
