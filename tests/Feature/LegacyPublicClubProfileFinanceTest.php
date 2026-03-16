@@ -3,12 +3,15 @@
 namespace Tests\Feature;
 
 use App\Http\Middleware\EnsureLegacyFirstAccessCompleted;
+use App\Models\ClubeTamanho;
 use App\Models\Confederacao;
+use App\Models\Conquista;
 use App\Models\Elencopadrao;
 use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaClubeConquista;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\Plataforma;
@@ -155,6 +158,77 @@ class LegacyPublicClubProfileFinanceTest extends TestCase
             ->assertJsonPath('clube.financeiro.poder_investimento', 120_000_000);
     }
 
+    public function test_public_profile_returns_club_size_tiers_from_database(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $rivalOwner = User::factory()->create();
+
+        $viewer->ligas()->attach($liga->id);
+        $rivalOwner->ligas()->attach($liga->id);
+
+        $rivalClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $rivalOwner->id,
+            'nome' => 'Clube Rival',
+        ]);
+
+        ClubeTamanho::insert([
+            [
+                'nome' => 'LOCAL',
+                'descricao' => 'Local',
+                'n_fans' => 0,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nome' => 'REGIONAL',
+                'descricao' => 'Regional',
+                'n_fans' => 500000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'nome' => 'NACIONAL',
+                'descricao' => 'Nacional',
+                'n_fans' => 1500000,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $conquista = Conquista::create([
+            'nome' => 'Torcida rival',
+            'descricao' => 'Aumenta torcida',
+            'imagem' => 'conquistas/torcida-rival.png',
+            'tipo' => 'gols',
+            'quantidade' => 1,
+            'fans' => 800000,
+        ]);
+
+        LigaClubeConquista::create([
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $rivalClub->id,
+            'user_id' => $rivalOwner->id,
+            'confederacao_id' => $confederacao->id,
+            'conquista_id' => $conquista->id,
+            'claimed_at' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}&club_id={$rivalClub->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('clube.club_size_name', 'REGIONAL')
+            ->assertJsonPath('clube.club_size_tiers.0.name', 'LOCAL')
+            ->assertJsonPath('clube.club_size_tiers.1.name', 'REGIONAL')
+            ->assertJsonPath('clube.club_size_tiers.1.min_fans', 500000)
+            ->assertJsonPath('clube.club_size_tiers.2.name', 'NACIONAL');
+    }
+
     /**
      * @return array{liga:Liga, confederacao:Confederacao, jogo:Jogo}
      */
@@ -227,4 +301,3 @@ class LegacyPublicClubProfileFinanceTest extends TestCase
         ], $overrides));
     }
 }
-

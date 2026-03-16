@@ -400,13 +400,36 @@ const formatLegacyFansLabel = (rawValue: number) => {
   return Math.round(value).toLocaleString('pt-BR');
 };
 
-const LEGACY_FAN_PROGRESS_TIERS = [
-  { name: 'PEQUENO', min: 0, max: 500000 },
-  { name: 'EMERGENTE', min: 500000, max: 2000000 },
-  { name: 'TRADICIONAL', min: 2000000, max: 5000000 },
-  { name: 'GIGANTE', min: 5000000, max: 10000000 },
-  { name: 'DINASTIA', min: 10000000, max: 25000000 },
-];
+const normalizeLegacyFanProgressTiers = (rawTiers: any, fallbackName = 'SEM CLASSIFICACAO') => {
+  const tiers = Array.isArray(rawTiers)
+    ? rawTiers
+        .map((tier: any, index: number) => ({
+          id: tier?.id ?? `tier-${index}`,
+          name: String(tier?.name ?? tier?.nome ?? '').trim(),
+          minFans: Math.max(0, Number(tier?.min_fans ?? tier?.n_fans ?? 0) || 0),
+        }))
+        .filter((tier: any) => tier.name !== '')
+        .sort((left: any, right: any) => {
+          if (left.minFans !== right.minFans) {
+            return left.minFans - right.minFans;
+          }
+
+          return left.name.localeCompare(right.name, 'pt-BR', { sensitivity: 'base' });
+        })
+    : [];
+
+  if (tiers.length > 0) {
+    return tiers;
+  }
+
+  return [
+    {
+      id: 'fallback-tier',
+      name: String(fallbackName || 'SEM CLASSIFICACAO').trim() || 'SEM CLASSIFICACAO',
+      minFans: 0,
+    },
+  ];
+};
 
 // --- Configurações de Dados (Mock) ---
 const CONFED_CONFIG: any = {
@@ -1732,6 +1755,7 @@ const PublicClubProfileView = ({
     clubName: String(clubData?.clubName ?? 'CLUBE'),
     fans: Number(clubData?.fans ?? 0),
     clubSizeName: String(clubData?.clubSizeName ?? 'SEM CLASSIFICACAO'),
+    clubSizeTiers: Array.isArray(clubData?.clubSizeTiers) ? clubData.clubSizeTiers : [],
     wins: Number(clubData?.wins ?? 0),
     goals: Number(clubData?.goals ?? 0),
     assists: Number(clubData?.assists ?? 0),
@@ -1994,18 +2018,11 @@ const PublicClubProfileView = ({
           <>
             <section className="space-y-4">
               <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">NÍVEL DE PRESTÍGIO</h4>
-              <div className="bg-[#1E1E1E] p-8 border-l-[6px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-[9px] text-[#FFD700] font-black uppercase italic tracking-widest mb-1">CLASSIFICAÇÃO ATUAL</p>
-                    <h3 className="text-4xl font-black italic uppercase font-heading text-white">{profile.clubSizeName}</h3>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[9px] text-white/30 font-black uppercase italic tracking-widest mb-1">TORCIDA</p>
-                    <p className="text-2xl font-black italic font-heading text-white">{formatLegacyFansLabel(profile.fans)}</p>
-                  </div>
-                </div>
-              </div>
+              <FanProgressWidget
+                fans={profile.fans}
+                tiers={profile.clubSizeTiers}
+                fallbackName={profile.clubSizeName}
+              />
             </section>
 
             <section className="space-y-4">
@@ -2909,9 +2926,9 @@ const MatchCenterView = ({
       ),
     [partidas],
   );
-  const registeredAndConfirmedResults = useMemo(
+  const recentResultMatches = useMemo(
     () => partidas
-      .filter((partida) => ['placar_registrado', 'placar_confirmado'].includes(String(partida?.estado || '')))
+      .filter((partida) => ['placar_registrado', 'placar_confirmado', 'finalizada', 'wo'].includes(String(partida?.estado || '')))
       .slice()
       .sort((a, b) => {
         const aPrimaryTs = new Date(String(a?.placar_registrado_em || '')).getTime();
@@ -2931,8 +2948,8 @@ const MatchCenterView = ({
     [partidas],
   );
   const recentResults = useMemo(
-    () => registeredAndConfirmedResults.slice(0, 3),
-    [registeredAndConfirmedResults],
+    () => recentResultMatches.slice(0, 3),
+    [recentResultMatches],
   );
 
   const renderMatchResultCard = (partida: any) => (
@@ -3162,7 +3179,7 @@ const MatchCenterView = ({
                     </div>
                   )}
                 </div>
-                {registeredAndConfirmedResults.length > 0 && (
+                {recentResultMatches.length > 0 && (
                   <button
                     type="button"
                     onClick={() => setIsAllResultsModalOpen(true)}
@@ -3197,7 +3214,7 @@ const MatchCenterView = ({
                     TODOS OS RESULTADOS
                   </h3>
                   <p className="text-[8px] font-black uppercase italic text-white/45 mt-1">
-                    REGISTRADOS E CONFIRMADOS
+                    COM PLACAR E W.O.
                   </p>
                 </div>
                 <button
@@ -3212,9 +3229,9 @@ const MatchCenterView = ({
             </div>
 
             <div className="px-6 py-6 pb-32">
-              {registeredAndConfirmedResults.length > 0 ? (
+              {recentResultMatches.length > 0 ? (
                 <div className="space-y-2">
-                  {registeredAndConfirmedResults.map((partida) => (
+                  {recentResultMatches.map((partida) => (
                     <div key={`all-result-${partida.id}`}>
                       {renderMatchResultCard(partida)}
                     </div>
@@ -3223,7 +3240,7 @@ const MatchCenterView = ({
               ) : (
                 <div className="bg-[#1E1E1E] p-5 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
                   <p className="text-[10px] font-black uppercase italic text-white/45">
-                    Sem resultados registrados ou confirmados.
+                    Sem resultados recentes com placar ou W.O.
                   </p>
                 </div>
               )}
@@ -4078,20 +4095,34 @@ const EvaluateMatchView = ({ onBack, match, onCompleted, onNotify }: any) => {
 
 // --- Widgets ---
 
-const FanProgressWidget = ({ fans }: { fans: number }) => {
+const FanProgressWidget = ({
+  fans,
+  tiers,
+  fallbackName = 'SEM CLASSIFICACAO',
+}: {
+  fans: number,
+  tiers?: any[],
+  fallbackName?: string,
+}) => {
   const normalizedFans = Number.isFinite(fans) ? Math.max(0, fans) : 0;
-  const currentTierIndex = LEGACY_FAN_PROGRESS_TIERS.findIndex((tier) => normalizedFans >= tier.min && normalizedFans < tier.max);
-  const safeTierIndex = currentTierIndex >= 0 ? currentTierIndex : LEGACY_FAN_PROGRESS_TIERS.length - 1;
-  const currentTier = LEGACY_FAN_PROGRESS_TIERS[safeTierIndex];
-  const nextTier = LEGACY_FAN_PROGRESS_TIERS[safeTierIndex + 1] || null;
-  const rangeSize = Math.max(1, currentTier.max - currentTier.min);
+  const normalizedTiers = normalizeLegacyFanProgressTiers(tiers, fallbackName);
+  const currentTierIndex = normalizedTiers.reduce((matchedIndex: number, tier: any, index: number) => {
+    return normalizedFans >= tier.minFans ? index : matchedIndex;
+  }, -1);
+  const safeTierIndex = currentTierIndex >= 0 ? currentTierIndex : 0;
+  const currentTier = normalizedTiers[safeTierIndex];
+  const nextTier = normalizedTiers[safeTierIndex + 1] || null;
+  const currentTierStart = safeTierIndex > 0 ? currentTier.minFans : 0;
+  const nextTierTargetFans = nextTier ? nextTier.minFans : null;
+  const rangeSize = Math.max(1, (nextTierTargetFans ?? currentTierStart) - currentTierStart);
   const progressWithinTier = nextTier
-    ? ((normalizedFans - currentTier.min) / rangeSize) * 100
+    ? ((normalizedFans - currentTierStart) / rangeSize) * 100
     : 100;
   const progress = Math.max(0, Math.min(100, progressWithinTier));
-  const fansRemaining = nextTier ? Math.max(0, currentTier.max - normalizedFans) : 0;
+  const fansRemaining = nextTierTargetFans !== null ? Math.max(0, nextTierTargetFans - normalizedFans) : 0;
   const fullFansLabel = `${Math.round(normalizedFans).toLocaleString('pt-BR')} torcedores`;
-  const nextTierTarget = nextTier ? Math.round(currentTier.max).toLocaleString('pt-BR') : null;
+  const nextTierTarget = nextTierTargetFans !== null ? Math.round(nextTierTargetFans).toLocaleString('pt-BR') : null;
+  const currentTierFloorLabel = Math.round(currentTierStart).toLocaleString('pt-BR');
 
   return (
     <div className="bg-[#1E1E1E] p-6 border-r-[3px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -4131,7 +4162,7 @@ const FanProgressWidget = ({ fans }: { fans: number }) => {
         <div className="absolute top-0 left-0 h-full bg-[#FFD700] transition-all duration-1000 shadow-[0_0_15px_rgba(255,215,0,0.5)]" style={{ width: `${progress}%` }}></div>
       </div>
       <div className="mt-3 flex items-center justify-between gap-4 text-[8px] font-black uppercase italic tracking-[0.14em] text-white/35">
-        <span>{formatLegacyFansLabel(currentTier.min)}</span>
+        <span>{currentTierFloorLabel}</span>
         <span className="text-right">
           {nextTier && nextTierTarget ? `${nextTier.name} EM ${nextTierTarget}` : 'PATAMAR FINAL'}
         </span>
@@ -8138,7 +8169,11 @@ const MyClubView = ({ onBack, onOpenSubView, currentCareer }: any) => {
         </LegacyReveal>
       ) : (
         <LegacyReveal delayMs={40}>
-          <FanProgressWidget fans={clubFans} />
+          <FanProgressWidget
+            fans={clubFans}
+            tiers={Array.isArray(clubData?.club_size_tiers) ? clubData.club_size_tiers : []}
+            fallbackName={String(clubData?.club_size_name ?? 'SEM CLASSIFICACAO')}
+          />
         </LegacyReveal>
       )}
       <div className={`grid grid-cols-2 gap-4 ${!hasClub ? 'opacity-40 pointer-events-none' : ''}`}>
@@ -11644,6 +11679,7 @@ const App = () => {
         clubName: clube.nome,
         fans: clube.fans ?? 0,
         clubSizeName: clube.club_size_name ?? 'SEM CLASSIFICACAO',
+        clubSizeTiers: Array.isArray(clube.club_size_tiers) ? clube.club_size_tiers : [],
         wins: clube.wins ?? 0,
         goals: clube.goals ?? 0,
         assists: clube.assists ?? 0,

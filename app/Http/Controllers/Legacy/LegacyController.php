@@ -2230,6 +2230,7 @@ class LegacyController extends Controller
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
         $clubSize = $this->resolveClubeTamanhoByFans($fans);
+        $clubSizeTiers = $this->resolveLegacyClubeTamanhoTiers();
 
         $statesWithScore = ['finalizada', 'placar_confirmado', 'wo'];
         $clubMatches = Partida::query()
@@ -2295,6 +2296,7 @@ class LegacyController extends Controller
                 'club_size_name' => (string) ($clubSize?->nome ?? 'SEM CLASSIFICAÇÃO'),
                 'club_size_min_fans' => (int) ($clubSize?->n_fans ?? 0),
                 'club_size_image_url' => $this->resolveEscudoUrl($clubSize?->imagem),
+                'club_size_tiers' => $clubSizeTiers,
                 'saldo' => $walletSaldo,
                 'salary_per_round' => $salaryPerRound,
                 'elenco_count' => $elencoCount,
@@ -4221,6 +4223,7 @@ class LegacyController extends Controller
             ->join('conquistas', 'conquistas.id', 'liga_clube_conquistas.conquista_id')
             ->sum('conquistas.fans');
         $clubSize = $this->resolveClubeTamanhoByFans($fans);
+        $clubSizeTiers = $this->resolveLegacyClubeTamanhoTiers();
 
         $trophies = LigaClubeConquista::query()
             ->where('user_id', $club->user_id)
@@ -4321,6 +4324,7 @@ class LegacyController extends Controller
                 'club_size_name' => (string) ($clubSize?->nome ?? 'SEM CLASSIFICACAO'),
                 'club_size_min_fans' => (int) ($clubSize?->n_fans ?? 0),
                 'club_size_image_url' => $this->resolveEscudoUrl($clubSize?->imagem),
+                'club_size_tiers' => $clubSizeTiers,
                 'wins' => $wins,
                 'goals' => $goals,
                 'assists' => $assists,
@@ -4358,6 +4362,21 @@ class LegacyController extends Controller
             ->orderBy('n_fans')
             ->orderBy('nome')
             ->first();
+    }
+
+    private function resolveLegacyClubeTamanhoTiers(): array
+    {
+        return ClubeTamanho::query()
+            ->orderBy('n_fans')
+            ->orderBy('nome')
+            ->get(['id', 'nome', 'n_fans', 'imagem'])
+            ->map(fn (ClubeTamanho $tier): array => [
+                'id' => (int) $tier->id,
+                'name' => (string) $tier->nome,
+                'min_fans' => (int) ($tier->n_fans ?? 0),
+                'image_url' => $this->resolveEscudoUrl($tier->imagem),
+            ])
+            ->all();
     }
 
     public function esquemaTaticoData(Request $request): JsonResponse
