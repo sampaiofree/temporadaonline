@@ -8,6 +8,7 @@ use App\Models\Jogo;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,7 @@ use Illuminate\View\View;
 class ElencoPadraoController extends Controller
 {
     private const MATCH_STRATEGY_PLAYER_ID = 'player_id';
+    private const IMPORT_BATCH_SIZE = 500;
 
     public function index(Request $request): View
     {
@@ -488,6 +490,8 @@ class ElencoPadraoController extends Controller
         $formats = [
             'd/m/Y',
             'd/M/Y',
+            'M d, Y',
+            'M j, Y',
             'Y-m-d',
             'Y-m-d H:i:s',
         ];
@@ -502,7 +506,11 @@ class ElencoPadraoController extends Controller
             return $date->toDateString();
         }
 
-        return null;
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Exception $exception) {
+            return null;
+        }
     }
 
     private function sanitizeMapping(array $mapping, array $fields, array $columns): array
@@ -627,9 +635,12 @@ class ElencoPadraoController extends Controller
         fgetcsv($handle, 0, ';');
         $indexes = array_flip($columns);
         $mappedFields = array_keys(array_filter($mapping));
+        $casts = (new Elencopadrao())->getCasts();
+        $columnTypes = $this->resolveImportColumnTypes($mappedFields);
         $created = 0;
         $updated = 0;
         $ignored = 0;
+        $batch = [];
 
         while (($row = fgetcsv($handle, 0, ';')) !== false) {
             $payload = [];
@@ -643,74 +654,28 @@ class ElencoPadraoController extends Controller
                 $payload[$field] = $value === '' ? null : $value;
             }
 
-            $nome = $payload['long_name'] ?? null;
-            $posicao = $payload['player_positions'] ?? null;
-            $overall = $payload['overall'] ?? null;
-        $matchValue = $payload['player_id'] ?? null;
-
-        if ($matchValue === null || $matchValue === '' || $posicao === null || $posicao === '' || $overall === null || $overall === '') {
-            $ignored++;
-            continue;
-        }
-
-            if (! is_numeric($overall)) {
+            $prepared = $this->prepareImportRow($payload, $jogoId, $casts, $columnTypes);
+            if ($prepared === null) {
                 $ignored++;
                 continue;
             }
 
-            $overallValue = (int) $overall;
-            if ($overallValue < 1 || $overallValue > 99) {
-                $ignored++;
-                continue;
+            $batch[] = $prepared;
+
+            if (count($batch) >= self::IMPORT_BATCH_SIZE) {
+                $summary = $this->flushImportBatch($jogoId, $batch, $mappedFields);
+                $created += $summary['created'];
+                $updated += $summary['updated'];
+                $ignored += $summary['ignored'];
+                $batch = [];
             }
-
-            $payload['overall'] = $overallValue;
-
-            if (array_key_exists('potential', $payload)) {
-                $payload['potential'] = $payload['potential'] !== null && is_numeric($payload['potential'])
-                    ? (int) $payload['potential']
-                    : null;
-            }
-
-            $this->normalizePayloadDates($payload);
-
-            $target = null;
-            $mustCreate = false;
-
-        $targets = Elencopadrao::query()
-            ->where('jogo_id', $jogoId)
-            ->where('player_id', $matchValue)
-            ->limit(2)
-            ->get();
-
-        if ($targets->count() > 1) {
-            $ignored++;
-            continue;
         }
 
-        if ($targets->count() === 1) {
-            $target = $targets->first();
-        } else {
-            $mustCreate = true;
-        }
-
-            try {
-                if ($mustCreate) {
-                    if (($payload['long_name'] ?? null) === null) {
-                        $ignored++;
-                        continue;
-                    }
-
-                    $payload['jogo_id'] = $jogoId;
-                    Elencopadrao::query()->create($payload);
-                    $created++;
-                } else {
-                    $target->update($payload);
-                    $updated++;
-                }
-            } catch (QueryException $exception) {
-                $ignored++;
-            }
+        if ($batch !== []) {
+            $summary = $this->flushImportBatch($jogoId, $batch, $mappedFields);
+            $created += $summary['created'];
+            $updated += $summary['updated'];
+            $ignored += $summary['ignored'];
         }
 
         fclose($handle);
@@ -720,6 +685,246 @@ class ElencoPadraoController extends Controller
             'updated' => $updated,
             'ignored' => $ignored,
         ];
+    }
+
+    private function prepareImportRow(array $payload, int $jogoId, array $casts, array $columnTypes): ?array
+    {
+        $matchValue = isset($payload['player_id']) ? trim((string) $payload['player_id']) : '';
+        $posicao = isset($payload['player_positions']) ? trim((string) $payload['player_positions']) : '';
+        $overall = $payload['overall'] ?? null;
+
+        if ($matchValue === '' || $posicao === '' || $overall === null || $overall === '') {
+            return null;
+        }
+
+        if (! is_numeric($overall)) {
+            return null;
+        }
+
+        $overallValue = (int) round((float) $overall);
+        if ($overallValue < 1 || $overallValue > 99) {
+            return null;
+        }
+
+        $payload['player_id'] = $matchValue;
+        $payload['player_positions'] = $posicao;
+        $payload['overall'] = $overallValue;
+        $payload = $this->normalizeImportPayload($payload, $casts, $columnTypes);
+        $payload['jogo_id'] = $jogoId;
+
+        return $payload;
+    }
+
+    private function normalizeImportPayload(array $payload, array $casts, array $columnTypes): array
+    {
+        foreach ($payload as $field => $value) {
+            if ($value === null) {
+                continue;
+            }
+
+            if (is_string($value)) {
+                $value = trim($value);
+                $payload[$field] = $value === '' ? null : $value;
+            }
+
+            if ($payload[$field] === null) {
+                continue;
+            }
+
+            $cast = $casts[$field] ?? null;
+            $columnType = $columnTypes[$field] ?? null;
+
+            if ($cast === 'integer' || in_array($columnType, ['integer', 'bigint', 'smallint'], true)) {
+                $payload[$field] = $this->normalizeIntegerValue($payload[$field]);
+                continue;
+            }
+
+            if ($cast === 'boolean' || $columnType === 'boolean') {
+                $payload[$field] = $this->normalizeBooleanValue($payload[$field]);
+                continue;
+            }
+
+            if ($cast === 'date' || $columnType === 'date') {
+                $payload[$field] = $this->parseDateString((string) $payload[$field]);
+            }
+        }
+
+        return $payload;
+    }
+
+    private function normalizeIntegerValue(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_float($value)) {
+            return (int) round($value);
+        }
+
+        $rawValue = Str::of((string) $value)
+            ->trim()
+            ->replace("\u{00A0}", ' ')
+            ->upper()
+            ->replace('€', '')
+            ->replace('$', '')
+            ->replace(' ', '')
+            ->value();
+
+        if ($rawValue === '' || $rawValue === '?' || $rawValue === '#VALOR!') {
+            return null;
+        }
+
+        if (preg_match('/^(-?\d+(?:[.,]\d+)?)([KMB])$/', $rawValue, $matches) === 1) {
+            $number = (float) str_replace(',', '.', $matches[1]);
+            $multiplier = match ($matches[2]) {
+                'K' => 1_000,
+                'M' => 1_000_000,
+                'B' => 1_000_000_000,
+                default => 1,
+            };
+
+            return (int) round($number * $multiplier);
+        }
+
+        $normalized = Str::of($rawValue)
+            ->replace(',', '.')
+            ->replaceMatches('/[^0-9.\-]/', '')
+            ->value();
+
+        if ($normalized === '' || $normalized === '-' || ! is_numeric($normalized)) {
+            return null;
+        }
+
+        return (int) round((float) $normalized);
+    }
+
+    private function normalizeBooleanValue(mixed $value): ?bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        $normalized = Str::lower(trim((string) $value));
+
+        return match ($normalized) {
+            '1', 'true', 'yes', 'sim' => true,
+            '0', 'false', 'no', 'nao', 'não' => false,
+            default => null,
+        };
+    }
+
+    private function flushImportBatch(int $jogoId, array $batch, array $mappedFields): array
+    {
+        if ($batch === []) {
+            return ['created' => 0, 'updated' => 0, 'ignored' => 0];
+        }
+
+        $deduplicated = [];
+        foreach ($batch as $row) {
+            $deduplicated[(string) $row['player_id']] = $row;
+        }
+
+        $rows = array_values($deduplicated);
+        $playerIds = array_keys($deduplicated);
+        $existing = DB::table('elencopadrao')
+            ->where('jogo_id', $jogoId)
+            ->whereIn('player_id', $playerIds)
+            ->pluck('id', 'player_id')
+            ->all();
+
+        $rowsToPersist = [];
+        $created = 0;
+        $updated = 0;
+        $ignored = count($batch) - count($rows);
+
+        foreach ($rows as $row) {
+            $playerId = (string) $row['player_id'];
+            $exists = array_key_exists($playerId, $existing);
+
+            if (! $exists && ($row['long_name'] ?? null) === null) {
+                $ignored++;
+                continue;
+            }
+
+            $rowsToPersist[] = $row;
+
+            if ($exists) {
+                $updated++;
+            } else {
+                $created++;
+            }
+        }
+
+        if ($rowsToPersist === []) {
+            return ['created' => 0, 'updated' => 0, 'ignored' => $ignored];
+        }
+
+        $updateColumns = array_values(array_filter(
+            $mappedFields,
+            fn (string $field): bool => $field !== 'player_id',
+        ));
+
+        try {
+            DB::table('elencopadrao')->upsert(
+                $rowsToPersist,
+                ['jogo_id', 'player_id'],
+                $updateColumns,
+            );
+
+            return [
+                'created' => $created,
+                'updated' => $updated,
+                'ignored' => $ignored,
+            ];
+        } catch (QueryException $exception) {
+            $created = 0;
+            $updated = 0;
+
+            foreach ($rowsToPersist as $row) {
+                $playerId = (string) $row['player_id'];
+                $exists = array_key_exists($playerId, $existing);
+
+                try {
+                    DB::table('elencopadrao')->updateOrInsert(
+                        [
+                            'jogo_id' => $jogoId,
+                            'player_id' => $playerId,
+                        ],
+                        $row,
+                    );
+
+                    if ($exists) {
+                        $updated++;
+                    } else {
+                        $created++;
+                    }
+                } catch (QueryException $rowException) {
+                    $ignored++;
+                }
+            }
+        }
+
+        return [
+            'created' => $created,
+            'updated' => $updated,
+            'ignored' => $ignored,
+        ];
+    }
+
+    private function resolveImportColumnTypes(array $fields): array
+    {
+        $types = [];
+
+        foreach ($fields as $field) {
+            $types[$field] = Schema::getColumnType('elencopadrao', $field);
+        }
+
+        return $types;
     }
 
     private function sanitizeMatchStrategy(?string $matchStrategy): string

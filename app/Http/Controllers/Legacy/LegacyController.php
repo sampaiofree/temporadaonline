@@ -4026,6 +4026,13 @@ class LegacyController extends Controller
             ),
         ];
 
+        $items = array_values(array_filter(
+            $items,
+            fn (array $item): bool => ($item['current_window'] ?? null) !== null || ($item['next_window'] ?? null) !== null,
+        ));
+
+        usort($items, fn (array $left, array $right): int => $this->compareLegacyNextEventItems($left, $right));
+
         return response()->json([
             'liga' => [
                 'id' => $liga->id,
@@ -5085,6 +5092,30 @@ class LegacyController extends Controller
             'end_label' => $window['fim_label'] ?? null,
             'timezone' => $window['timezone'] ?? null,
         ];
+    }
+
+    private function compareLegacyNextEventItems(array $left, array $right): int
+    {
+        $leftHasCurrent = ($left['current_window'] ?? null) !== null;
+        $rightHasCurrent = ($right['current_window'] ?? null) !== null;
+
+        if ($leftHasCurrent !== $rightHasCurrent) {
+            return $leftHasCurrent ? -1 : 1;
+        }
+
+        if ($leftHasCurrent && $rightHasCurrent) {
+            return $this->legacyNextEventTimestamp($right['current_window']) <=> $this->legacyNextEventTimestamp($left['current_window']);
+        }
+
+        return $this->legacyNextEventTimestamp($left['next_window']) <=> $this->legacyNextEventTimestamp($right['next_window']);
+    }
+
+    private function legacyNextEventTimestamp(?array $window): int
+    {
+        $rawValue = (string) ($window['start_at'] ?? '');
+        $timestamp = strtotime($rawValue);
+
+        return $timestamp !== false ? $timestamp : PHP_INT_MAX;
     }
 
     private function formatFinanceLedgerMovement(LigaClubeFinanceiroMovimento $movimento): array

@@ -1190,7 +1190,7 @@ const normalizeLegacyTransferHistoryItems = (items: any) => {
 const normalizeLegacyNextEventsItems = (items: any) => {
   const rows = Array.isArray(items) ? items : [];
 
-  return rows.map((item: any) => ({
+  const normalized = rows.map((item: any) => ({
     id: String(item?.id || ''),
     title: String(item?.title || 'Evento'),
     icon: String(item?.icon || 'fa-calendar-days'),
@@ -1212,6 +1212,25 @@ const normalizeLegacyNextEventsItems = (items: any) => {
         }
       : null,
   }));
+
+  const toTimestamp = (value: string | null) => {
+    if (!value) return Number.POSITIVE_INFINITY;
+    const timestamp = Date.parse(value);
+    return Number.isFinite(timestamp) ? timestamp : Number.POSITIVE_INFINITY;
+  };
+
+  return normalized
+    .filter((item) => item.currentWindow || item.nextWindow)
+    .sort((left, right) => {
+      if (left.currentWindow && !right.currentWindow) return -1;
+      if (!left.currentWindow && right.currentWindow) return 1;
+
+      if (left.currentWindow && right.currentWindow) {
+        return toTimestamp(right.currentWindow.startAt) - toTimestamp(left.currentWindow.startAt);
+      }
+
+      return toTimestamp(left.nextWindow?.startAt ?? null) - toTimestamp(right.nextWindow?.startAt ?? null);
+    });
 };
 
 const normalizeLegacyAchievementGroups = (groups: any) => {

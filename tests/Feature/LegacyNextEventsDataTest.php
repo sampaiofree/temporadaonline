@@ -88,11 +88,16 @@ class LegacyNextEventsDataTest extends TestCase
         $response->assertOk();
 
         $items = collect($response->json('events.items'))->keyBy('id');
+        $orderedIds = collect($response->json('events.items'))
+            ->pluck('id')
+            ->values()
+            ->all();
 
         $auction = $items->get('auction');
         $multa = $items->get('multa');
         $market = $items->get('market');
 
+        $this->assertSame(['multa', 'market', 'auction'], $orderedIds);
         $this->assertSame('upcoming', $auction['status'] ?? null);
         $this->assertNull($auction['current_window'] ?? null);
         $this->assertSame('20/03/2026', $auction['next_window']['start_label'] ?? null);
@@ -109,7 +114,7 @@ class LegacyNextEventsDataTest extends TestCase
         $this->assertSame('18/03/2026 10:00', $market['next_window']['start_label'] ?? null);
     }
 
-    public function test_next_events_endpoint_returns_none_when_selected_confederacao_has_no_windows(): void
+    public function test_next_events_endpoint_returns_empty_when_selected_confederacao_has_no_windows(): void
     {
         ['liga' => $ligaA, 'confederacao' => $confederacaoA] = $this->createLeagueContext('C');
         ['liga' => $ligaB, 'confederacao' => $confederacaoB] = $this->createLeagueContext('D');
@@ -145,12 +150,54 @@ class LegacyNextEventsDataTest extends TestCase
 
         $items = collect($response->json('events.items'))->keyBy('id');
 
-        $this->assertCount(3, $items);
-        $this->assertSame('none', $items->get('auction')['status'] ?? null);
-        $this->assertSame('none', $items->get('multa')['status'] ?? null);
-        $this->assertSame('none', $items->get('market')['status'] ?? null);
-        $this->assertNull($items->get('auction')['current_window'] ?? null);
-        $this->assertNull($items->get('auction')['next_window'] ?? null);
+        $this->assertCount(0, $items);
+    }
+
+    public function test_next_events_endpoint_hides_finished_windows_and_keeps_only_current_or_future_items(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLeagueContext('E');
+
+        $viewer = User::factory()->create();
+        $viewer->ligas()->attach([$liga->id]);
+
+        LigaPeriodo::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => '2026-03-10 09:00:00',
+            'fim' => '2026-03-10 18:00:00',
+        ]);
+
+        LigaRouboMulta::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => '2026-03-11 11:00:00',
+            'fim' => '2026-03-11 13:00:00',
+        ]);
+
+        LigaLeilao::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => '2026-03-12',
+            'fim' => '2026-03-13',
+        ]);
+
+        LigaPeriodo::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => '2026-03-18 10:00:00',
+            'fim' => '2026-03-18 19:00:00',
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->get(route('legacy.next_events.data', [
+                'confederacao_id' => $confederacao->id,
+            ]));
+
+        $response->assertOk();
+
+        $items = collect($response->json('events.items'));
+
+        $this->assertCount(1, $items);
+        $this->assertSame('market', $items->first()['id'] ?? null);
+        $this->assertSame('upcoming', $items->first()['status'] ?? null);
+        $this->assertSame('18/03/2026 10:00', $items->first()['next_window']['start_label'] ?? null);
     }
 
     /**
