@@ -4862,7 +4862,7 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
       {sellPlayer && (() => {
         const entryId = Number(sellPlayer?.id ?? 0);
         const isBusy = sellingEntryId === entryId;
-        const baseValueEur = Math.max(0, Number(sellPlayer?.value_eur ?? 0));
+        const baseValueEur = Math.max(0, Number(sellPlayer?.original_value_eur ?? 0));
         const taxPercent = 20;
         const taxValueEur = Math.round((baseValueEur * taxPercent) / 100);
         const netCreditEur = Math.max(0, baseValueEur - taxValueEur);
@@ -4876,7 +4876,7 @@ const SquadView = ({ onBack, currentCareer, onNotify }: any) => {
                 {String(sellPlayer?.name || 'ATLETA')}
               </h4>
               <p className="text-[8px] font-black italic uppercase text-white/40 mt-1">
-                Confirme a venda do atleta para o mercado livre.
+                Confirme a venda do atleta para o mercado livre usando o valor base do cadastro do jogador.
               </p>
 
               <div className="mt-4 bg-[#121212]/75 border border-white/10 p-3 space-y-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
@@ -8873,6 +8873,7 @@ const mapLegacySquadPlayer = (entry: any) => {
   const physical = toLegacyStatValue(player?.physic, player?.power_strength ?? 65);
 
   const valueEur = Number(entry?.value_eur ?? player?.value_eur ?? 0);
+  const originalValueEur = Number(player?.value_eur ?? 0);
   const wageEur = Number(entry?.wage_eur ?? player?.wage_eur ?? 0);
   const playstyles = normalizeLegacyTraits(player?.player_traits);
   const playstyleBadges = normalizeLegacyPlaystyleBadges(player?.playstyle_badges, playstyles);
@@ -8889,6 +8890,7 @@ const mapLegacySquadPlayer = (entry: any) => {
     salary: toLegacyMoneyInMillions(wageEur),
     marketValue: toLegacyMoneyInMillions(valueEur),
     value_eur: valueEur,
+    original_value_eur: originalValueEur,
     wage_eur: wageEur,
     photo: proxyFaceUrl(player?.player_face_url),
     skillMoves: toLegacyStarRating(player?.skill_moves, 3),

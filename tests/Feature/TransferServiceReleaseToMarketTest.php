@@ -22,7 +22,7 @@ class TransferServiceReleaseToMarketTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_release_to_market_uses_entry_value_for_credit(): void
+    public function test_release_to_market_uses_elencopadrao_value_for_credit(): void
     {
         $plataforma = Plataforma::create([
             'nome' => 'PlayStation 5',
@@ -116,14 +116,14 @@ class TransferServiceReleaseToMarketTest extends TestCase
             ->latest('id')
             ->firstOrFail();
 
-        $this->assertSame(400, $result['base_value']);
-        $this->assertSame(80, $result['tax_value']);
-        $this->assertSame(320, $result['credit']);
-        $this->assertSame(1320, (int) $wallet->saldo);
-        $this->assertSame(400, (int) $saleRecord->valor_base);
-        $this->assertSame(320, (int) $saleRecord->valor_credito);
-        $this->assertSame(400, (int) data_get($movement->metadata, 'base_value'));
-        $this->assertSame(320, (int) data_get($movement->metadata, 'action_value'));
+        $this->assertSame(200, $result['base_value']);
+        $this->assertSame(40, $result['tax_value']);
+        $this->assertSame(160, $result['credit']);
+        $this->assertSame(1160, (int) $wallet->saldo);
+        $this->assertSame(200, (int) $saleRecord->valor_base);
+        $this->assertSame(160, (int) $saleRecord->valor_credito);
+        $this->assertSame(200, (int) data_get($movement->metadata, 'base_value'));
+        $this->assertSame(160, (int) data_get($movement->metadata, 'action_value'));
         $this->assertDatabaseMissing('liga_clube_elencos', [
             'id' => $entry->id,
         ]);
