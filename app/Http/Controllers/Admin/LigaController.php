@@ -11,11 +11,14 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class LigaController extends Controller
 {
+    private const ALLOWED_MAX_TIMES = [8, 16, 32, 64];
+
     private const CREATE_STATUS_OPTIONS = [
         'ativa' => 'Ativa',
         'aguardando' => 'Inativa',
@@ -52,7 +55,7 @@ class LigaController extends Controller
         $data = $request->validate([
             'nome' => 'required|string|max:255',
             'confederacao_id' => 'required|exists:confederacoes,id',
-            'max_times' => 'required|integer|min:8|multiple_of:8',
+            'max_times' => ['required', 'integer', Rule::in(self::ALLOWED_MAX_TIMES)],
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
@@ -62,8 +65,7 @@ class LigaController extends Controller
             'status' => 'required|in:ativa,aguardando',
             'imagem' => 'nullable|image:allow_svg|max:2048',
         ], [
-            'max_times.min' => 'A quantidade maxima de clubes deve ser no minimo 8.',
-            'max_times.multiple_of' => 'A quantidade maxima de clubes deve ser multiplo de 8 (8, 16, 24...).',
+            'max_times.in' => 'A quantidade maxima de clubes deve ser 8, 16, 32 ou 64.',
         ]);
 
         $confederacao = Confederacao::with(['jogo', 'geracao', 'plataforma'])
@@ -126,7 +128,7 @@ class LigaController extends Controller
     {
         $data = $request->validate([
             'nome' => 'required|string|max:255',
-            'max_times' => 'required|integer|min:8|multiple_of:8',
+            'max_times' => ['required', 'integer', Rule::in(self::ALLOWED_MAX_TIMES)],
             'saldo_inicial' => 'required|integer|min:0',
             'usuario_pontuacao' => 'nullable|numeric|min:0|max:5',
             'whatsapp_grupo_link' => 'nullable|url|max:255',
@@ -136,9 +138,14 @@ class LigaController extends Controller
             'status' => 'required|in:ativa,finalizada',
             'imagem' => 'nullable|image:allow_svg|max:2048',
         ], [
-            'max_times.min' => 'A quantidade maxima de clubes deve ser no minimo 8.',
-            'max_times.multiple_of' => 'A quantidade maxima de clubes deve ser multiplo de 8 (8, 16, 24...).',
+            'max_times.in' => 'A quantidade maxima de clubes deve ser 8, 16, 32 ou 64.',
         ]);
+
+        if ($liga->clubes()->exists() && (int) $data['max_times'] !== (int) $liga->max_times) {
+            throw ValidationException::withMessages([
+                'max_times' => ['Nao e possivel alterar a quantidade maxima de clubes apos a entrada de clubes na liga.'],
+            ]);
+        }
 
         if (($data['status'] ?? null) === 'finalizada') {
             $data['status'] = 'encerrada';

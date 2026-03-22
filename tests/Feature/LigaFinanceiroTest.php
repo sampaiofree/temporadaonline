@@ -15,6 +15,7 @@ use App\Models\LigaPeriodo;
 use App\Models\LigaTransferencia;
 use App\Models\Plataforma;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -27,25 +28,42 @@ class LigaFinanceiroTest extends TestCase
         $plataforma = Plataforma::create(['nome' => 'PlayStation 5', 'slug' => 'ps5']);
         $jogo = Jogo::create(['nome' => 'FC26', 'slug' => 'fc26']);
         $geracao = Geracao::create(['nome' => 'Nova', 'slug' => 'nova']);
+        $confederacao = Confederacao::create([
+            'nome' => 'Confederacao Teste',
+            'descricao' => 'Confederacao de teste.',
+            'timezone' => 'America/Sao_Paulo',
+            'jogo_id' => $jogo->id,
+            'geracao_id' => $geracao->id,
+            'plataforma_id' => $plataforma->id,
+        ]);
 
-        return Liga::create(array_merge([
+        $liga = Liga::create(array_merge([
             'nome' => 'Liga Teste',
             'descricao' => 'Liga de teste.',
             'regras' => 'Regras de teste.',
             'imagem' => null,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'max_jogadores_por_clube' => 18,
             'saldo_inicial' => 1000,
             'multa_multiplicador' => 2.00,
             'cobranca_salario' => 'rodada',
             'venda_min_percent' => 100,
             'bloquear_compra_saldo_negativo' => true,
+            'confederacao_id' => $confederacao->id,
             'jogo_id' => $jogo->id,
             'geracao_id' => $geracao->id,
             'plataforma_id' => $plataforma->id,
         ], $overrides));
+
+        LigaPeriodo::create([
+            'confederacao_id' => $confederacao->id,
+            'inicio' => Carbon::now('America/Sao_Paulo')->subDay(),
+            'fim' => Carbon::now('America/Sao_Paulo')->addDay(),
+        ]);
+
+        return $liga;
     }
 
     private function createElenco(Jogo $jogo, array $overrides = []): Elencopadrao
@@ -71,6 +89,7 @@ class LigaFinanceiroTest extends TestCase
 
         $clube = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $user->id,
             'nome' => 'Clube A',
         ]);
@@ -83,6 +102,7 @@ class LigaFinanceiroTest extends TestCase
             ]);
 
             LigaClubeElenco::create([
+                'confederacao_id' => $liga->confederacao_id,
                 'liga_id' => $liga->id,
                 'liga_clube_id' => $clube->id,
                 'elencopadrao_id' => $player->id,
@@ -116,12 +136,14 @@ class LigaFinanceiroTest extends TestCase
 
         $clubeA = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $userA->id,
             'nome' => 'Clube A',
         ]);
 
         $clubeB = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $userB->id,
             'nome' => 'Clube B',
         ]);
@@ -156,6 +178,7 @@ class LigaFinanceiroTest extends TestCase
 
         $clube = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $user->id,
             'nome' => 'Clube A',
         ]);
@@ -196,17 +219,20 @@ class LigaFinanceiroTest extends TestCase
 
         $clubeSeller = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $seller->id,
             'nome' => 'Clube Seller',
         ]);
 
         $clubeBuyer = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $buyer->id,
             'nome' => 'Clube Buyer',
         ]);
 
         LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
             'liga_id' => $liga->id,
             'liga_clube_id' => $clubeSeller->id,
             'elencopadrao_id' => $player->id,
@@ -263,7 +289,7 @@ class LigaFinanceiroTest extends TestCase
             'imagem' => null,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'max_jogadores_por_clube' => 18,
             'saldo_inicial' => 5000,
             'multa_multiplicador' => 2.00,
@@ -368,7 +394,7 @@ class LigaFinanceiroTest extends TestCase
             'imagem' => null,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'max_jogadores_por_clube' => 18,
             'saldo_inicial' => 5000,
             'multa_multiplicador' => 1.50,
@@ -452,57 +478,18 @@ class LigaFinanceiroTest extends TestCase
             ->exists());
     }
 
-    public function test_salario_cobra_so_uma_vez_por_rodada(): void
+    public function test_cobranca_manual_por_rodada_esta_desativada(): void
     {
         $liga = $this->createLiga(['saldo_inicial' => 1000]);
-        $jogo = Jogo::findOrFail($liga->jogo_id);
 
         $user = User::factory()->create();
         $user->ligas()->attach($liga->id);
 
-        $clube = LigaClube::create([
-            'liga_id' => $liga->id,
-            'user_id' => $user->id,
-            'nome' => 'Clube A',
-        ]);
-
-        $playerA = $this->createElenco($jogo, ['long_name' => 'Wage A', 'wage_eur' => 30]);
-        $playerB = $this->createElenco($jogo, ['long_name' => 'Wage B', 'wage_eur' => 40]);
-
-        LigaClubeElenco::create([
-            'liga_id' => $liga->id,
-            'liga_clube_id' => $clube->id,
-            'elencopadrao_id' => $playerA->id,
-            'value_eur' => 0,
-            'wage_eur' => 30,
-            'ativo' => true,
-        ]);
-
-        LigaClubeElenco::create([
-            'liga_id' => $liga->id,
-            'liga_clube_id' => $clube->id,
-            'elencopadrao_id' => $playerB->id,
-            'value_eur' => 0,
-            'wage_eur' => 40,
-            'ativo' => true,
-        ]);
-
         $this
             ->actingAs($user)
             ->postJson("/api/ligas/{$liga->id}/rodadas/1/cobrar-salarios")
-            ->assertOk();
-
-        $this
-            ->actingAs($user)
-            ->postJson("/api/ligas/{$liga->id}/rodadas/1/cobrar-salarios")
-            ->assertOk();
-
-        $wallet = LigaClubeFinanceiro::where('liga_id', $liga->id)
-            ->where('clube_id', $clube->id)
-            ->firstOrFail();
-
-        $this->assertSame(1000 - 70, (int) $wallet->saldo);
-        $this->assertSame(1, LigaFolhaPagamento::where('liga_id', $liga->id)->where('rodada', 1)->count());
+            ->assertStatus(410)
+            ->assertJsonPath('message', 'Cobrança por rodada desativada. Use a cobrança automática por partida.');
     }
 
     public function test_salario_pode_ficar_negativo_mas_bloqueia_compra_e_multa(): void
@@ -522,47 +509,27 @@ class LigaFinanceiroTest extends TestCase
 
         $clubeOwner = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $owner->id,
             'nome' => 'Clube Dono',
         ]);
 
         $clubeBuyer = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $buyer->id,
             'nome' => 'Clube Comprador',
         ]);
 
-        $wageA = $this->createElenco($jogo, ['long_name' => 'Wage A', 'wage_eur' => 40]);
-        $wageB = $this->createElenco($jogo, ['long_name' => 'Wage B', 'wage_eur' => 40]);
-
-        LigaClubeElenco::create([
-            'liga_id' => $liga->id,
-            'liga_clube_id' => $clubeBuyer->id,
-            'elencopadrao_id' => $wageA->id,
-            'value_eur' => 0,
-            'wage_eur' => 40,
-            'ativo' => true,
-        ]);
-
-        LigaClubeElenco::create([
-            'liga_id' => $liga->id,
-            'liga_clube_id' => $clubeBuyer->id,
-            'elencopadrao_id' => $wageB->id,
-            'value_eur' => 0,
-            'wage_eur' => 40,
-            'ativo' => true,
-        ]);
-
-        $this
-            ->actingAs($buyer)
-            ->postJson("/api/ligas/{$liga->id}/rodadas/1/cobrar-salarios")
-            ->assertOk();
-
-        $buyerWallet = LigaClubeFinanceiro::where('liga_id', $liga->id)
-            ->where('clube_id', $clubeBuyer->id)
-            ->firstOrFail();
-
-        $this->assertSame(-30, (int) $buyerWallet->saldo);
+        LigaClubeFinanceiro::query()->updateOrCreate(
+            [
+                'liga_id' => $liga->id,
+                'clube_id' => $clubeBuyer->id,
+            ],
+            [
+                'saldo' => -30,
+            ],
+        );
 
         $free = $this->createElenco($jogo, ['long_name' => 'Livre', 'value_eur' => 10]);
 
@@ -576,6 +543,7 @@ class LigaFinanceiroTest extends TestCase
         $victim = $this->createElenco($jogo, ['long_name' => 'Multa Victim', 'value_eur' => 10]);
 
         $entryVictim = LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
             'liga_id' => $liga->id,
             'liga_clube_id' => $clubeOwner->id,
             'elencopadrao_id' => $victim->id,
@@ -610,12 +578,14 @@ class LigaFinanceiroTest extends TestCase
 
         $clubeA = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $userA->id,
             'nome' => 'Clube A',
         ]);
 
         $clubeB = LigaClube::create([
             'liga_id' => $liga->id,
+            'confederacao_id' => $liga->confederacao_id,
             'user_id' => $userB->id,
             'nome' => 'Clube B',
         ]);
@@ -624,6 +594,7 @@ class LigaFinanceiroTest extends TestCase
         $playerB = $this->createElenco($jogo, ['long_name' => 'Troca B', 'value_eur' => 100]);
 
         $entryA = LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
             'liga_id' => $liga->id,
             'liga_clube_id' => $clubeA->id,
             'elencopadrao_id' => $playerA->id,
@@ -633,6 +604,7 @@ class LigaFinanceiroTest extends TestCase
         ]);
 
         $entryB = LigaClubeElenco::create([
+            'confederacao_id' => $liga->confederacao_id,
             'liga_id' => $liga->id,
             'liga_clube_id' => $clubeB->id,
             'elencopadrao_id' => $playerB->id,

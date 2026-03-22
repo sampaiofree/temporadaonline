@@ -24,7 +24,7 @@ class PartidaSchedulerService
         $this->ensureMatchesForClub($novoClube, true);
     }
 
-    public function ensureMatchesForClub(LigaClube $clube, bool $generatedByNewClub = false): void
+    public function ensureMatchesForClub(LigaClube $clube, bool $generatedByNewClub = false, string $competitionType = Partida::COMPETITION_LEAGUE): void
     {
         $liga = $clube->liga()->firstOrFail();
 
@@ -34,40 +34,57 @@ class PartidaSchedulerService
             ->get();
 
         foreach ($outrosClubes as $oponente) {
-            $this->createAndSchedulePartida($liga, $clube, $oponente, $generatedByNewClub);
-            $this->createAndSchedulePartida($liga, $oponente, $clube, $generatedByNewClub);
+            $this->createAndSchedulePartida($liga, $clube, $oponente, $generatedByNewClub, $competitionType);
+            $this->createAndSchedulePartida($liga, $oponente, $clube, $generatedByNewClub, $competitionType);
         }
     }
 
     /**
      * Cria uma partida (sem agendamento automático).
      */
-    public function createAndSchedulePartida(Liga $liga, LigaClube $mandante, LigaClube $visitante, bool $generatedByNewClub = false): Partida
+    public function createAndSchedulePartida(
+        Liga $liga,
+        LigaClube $mandante,
+        LigaClube $visitante,
+        bool $generatedByNewClub = false,
+        string $competitionType = Partida::COMPETITION_LEAGUE,
+    ): Partida
     {
-        $existing = $this->findExistingMatch($liga, $mandante, $visitante);
+        $existing = $this->findExistingMatch($liga, $mandante, $visitante, $competitionType);
         if ($existing) {
             return $existing;
         }
 
-        return DB::transaction(function () use ($liga, $mandante, $visitante, $generatedByNewClub): Partida {
-            $partida = Partida::create([
+        return DB::transaction(function () use ($liga, $mandante, $visitante, $generatedByNewClub, $competitionType): Partida {
+            $payload = [
                 'liga_id' => $liga->id,
                 'mandante_id' => $mandante->id,
                 'visitante_id' => $visitante->id,
                 'estado' => 'confirmacao_necessaria',
-            ]);
+            ];
+
+            if (Partida::competitionSchemaReady()) {
+                $payload['competition_type'] = $competitionType;
+            }
+
+            $partida = Partida::create($payload);
 
             return $partida;
         });
     }
 
-    private function findExistingMatch(Liga $liga, LigaClube $mandante, LigaClube $visitante): ?Partida
+    private function findExistingMatch(Liga $liga, LigaClube $mandante, LigaClube $visitante, string $competitionType): ?Partida
     {
-        return Partida::query()
+        $query = Partida::query()
             ->where('liga_id', $liga->id)
             ->where('mandante_id', $mandante->id)
-            ->where('visitante_id', $visitante->id)
-            ->first();
+            ->where('visitante_id', $visitante->id);
+
+        if (Partida::competitionSchemaReady()) {
+            $query->where('competition_type', $competitionType);
+        }
+
+        return $query->first();
     }
 
     /**
@@ -214,6 +231,7 @@ class PartidaSchedulerService
     public function hasScheduleConflict(int $clubeId, Carbon $candidateStart): bool
     {
         $candidateEnd = $candidateStart->copy()->addMinutes(self::BLOCK_MINUTES);
+        $windowStart = $candidateStart->copy()->subMinutes(self::BLOCK_MINUTES);
 
         return Partida::query()
             ->whereNotNull('scheduled_at')
@@ -222,12 +240,12 @@ class PartidaSchedulerService
                 $q->where('mandante_id', $clubeId)
                     ->orWhere('visitante_id', $clubeId);
             })
-            ->where(function ($q) use ($candidateStart, $candidateEnd): void {
-                $q->where('scheduled_at', '<', $candidateEnd)
-                    ->whereRaw(
-                        "scheduled_at + interval '".self::BLOCK_MINUTES." minutes' > ?",
-                        [$candidateStart->toDateTimeString()]
-                    );
+            ->where(function ($q) use ($candidateEnd, $windowStart): void {
+                // As partidas ocupam blocos fixos de 30 minutos.
+                // Dois blocos colidem quando o inicio existente cai dentro da janela
+                // (candidateStart - 30min, candidateStart + 30min).
+                $q->where('scheduled_at', '<', $candidateEnd->toDateTimeString())
+                    ->where('scheduled_at', '>', $windowStart->toDateTimeString());
             })
             ->exists();
     }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesLiga;
 use App\Models\LigaPeriodo;
 use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
+use App\Services\LigaCopaService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
@@ -23,12 +24,24 @@ class LigaPartidasController extends Controller
         $matchReportBlockReason = $matchReportBlocked
             ? 'Mercado aberto. O envio de súmulas fica bloqueado até o fechamento da janela.'
             : null;
+        $copaService = app(LigaCopaService::class);
+        $partidaRelations = [
+            'mandante.user',
+            'visitante.user',
+            'mandante.escudo',
+            'visitante.escudo',
+        ];
+
+        if ($copaService->schemaReady()) {
+            $partidaRelations[] = 'cupMeta.fase:id,tipo';
+            $partidaRelations[] = 'cupMeta.grupo:id,label';
+        }
 
         $partidasCollection = collect();
 
         if ($clube) {
             $partidasCollection = Partida::query()
-                ->with(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo'])
+                ->with($partidaRelations)
                 ->where('liga_id', $liga->id)
                 ->where(function ($query) use ($clube): void {
                     $query->where('mandante_id', $clube->id)
@@ -50,8 +63,9 @@ class LigaPartidasController extends Controller
         $tz = $liga->resolveTimezone();
 
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($tz, $clube, $avaliacoes) {
+            ->map(function (Partida $partida) use ($tz, $clube, $avaliacoes, $copaService) {
                 $avaliacao = $avaliacoes->get($partida->id);
+                $competitionContext = $copaService->resolvePartidaCompetitionContext($partida);
 
                 return [
                     'id' => $partida->id,
@@ -79,6 +93,10 @@ class LigaPartidasController extends Controller
                     'checkin_visitante_at' => $partida->checkin_visitante_at?->timezone($tz)->toIso8601String(),
                     'is_mandante' => $clube ? (int) $partida->mandante_id === (int) $clube->id : false,
                     'is_visitante' => $clube ? (int) $partida->visitante_id === (int) $clube->id : false,
+                    'competition_type' => $competitionContext['competition_type'],
+                    'competition_label' => $competitionContext['competition_label'],
+                    'cup_phase_label' => $competitionContext['cup_phase_label'],
+                    'cup_group_label' => $competitionContext['cup_group_label'],
                     'avaliacao' => $avaliacao ? [
                         'nota' => $avaliacao->nota,
                         'avaliado_user_id' => $avaliacao->avaliado_user_id,
@@ -136,9 +154,23 @@ class LigaPartidasController extends Controller
             abort(403, 'Partida não está disponível para finalização.');
         }
 
-        $partida->loadMissing(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo']);
+        $copaService = app(LigaCopaService::class);
+        $partidaRelations = [
+            'mandante.user',
+            'visitante.user',
+            'mandante.escudo',
+            'visitante.escudo',
+        ];
+
+        if ($copaService->schemaReady()) {
+            $partidaRelations[] = 'cupMeta.fase:id,tipo';
+            $partidaRelations[] = 'cupMeta.grupo:id,label';
+        }
+
+        $partida->loadMissing($partidaRelations);
 
         $tz = $liga->resolveTimezone();
+        $competitionContext = $copaService->resolvePartidaCompetitionContext($partida);
 
         $payload = [
             'id' => $partida->id,
@@ -160,6 +192,10 @@ class LigaPartidasController extends Controller
             'placar_registrado_em' => $partida->placar_registrado_em?->toIso8601String(),
             'checkin_mandante_at' => $partida->checkin_mandante_at?->timezone($tz)->toIso8601String(),
             'checkin_visitante_at' => $partida->checkin_visitante_at?->timezone($tz)->toIso8601String(),
+            'competition_type' => $competitionContext['competition_type'],
+            'competition_label' => $competitionContext['competition_label'],
+            'cup_phase_label' => $competitionContext['cup_phase_label'],
+            'cup_group_label' => $competitionContext['cup_group_label'],
         ];
 
         return view('liga_partida_finalizar', [

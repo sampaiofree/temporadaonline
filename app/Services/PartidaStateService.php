@@ -8,7 +8,10 @@ use Illuminate\Validation\ValidationException;
 
 class PartidaStateService
 {
-    public function __construct(private readonly PartidaPayrollService $payroll)
+    public function __construct(
+        private readonly PartidaPayrollService $payroll,
+        private readonly LigaCopaService $ligaCopaService,
+    )
     {
     }
 
@@ -63,6 +66,7 @@ class PartidaStateService
 
         if ($stateChanged && in_array($targetState, ['placar_confirmado', 'wo'], true)) {
             $this->payroll->chargeIfNeeded($partida);
+            $this->ligaCopaService->handlePartidaResolved($partida);
         }
 
         return $partida;

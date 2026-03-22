@@ -17,7 +17,6 @@ use App\Models\Partida;
 use App\Models\Pais;
 use App\Models\User;
 use App\Services\LeagueFinanceService;
-use App\Services\PartidaSchedulerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -161,6 +160,14 @@ class LegacyOnboardingClubeController extends Controller
 
             $escudo = $escudoId ? EscudoClube::query()->find($escudoId) : null;
 
+            $matchesBefore = Partida::query()
+                ->where('liga_id', $liga->id)
+                ->where(function ($query) use ($request): void {
+                    $query->whereHas('mandante', fn ($builder) => $builder->where('user_id', $request->user()->id))
+                        ->orWhereHas('visitante', fn ($builder) => $builder->where('user_id', $request->user()->id));
+                })
+                ->count();
+
             $clube = LigaClube::updateOrCreate(
                 [
                     'liga_id' => $liga->id,
@@ -179,16 +186,6 @@ class LegacyOnboardingClubeController extends Controller
             $generatedMatches = 0;
             if ($clube->wasRecentlyCreated) {
                 $initialAdded = $this->seedInitialRoster($liga, $clube);
-
-                $matchesBefore = Partida::query()
-                    ->where('liga_id', $liga->id)
-                    ->where(function ($query) use ($clube) {
-                        $query->where('mandante_id', $clube->id)
-                            ->orWhere('visitante_id', $clube->id);
-                    })
-                    ->count();
-
-                app(PartidaSchedulerService::class)->generateMatchesForNewClub($clube);
 
                 $matchesAfter = Partida::query()
                     ->where('liga_id', $liga->id)

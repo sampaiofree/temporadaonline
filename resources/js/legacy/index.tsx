@@ -23,6 +23,7 @@ const LEGACY_SQUAD_DATA_URL = String(LEGACY_CONFIG?.squadDataUrl || '/legacy/squ
 const LEGACY_MATCH_CENTER_DATA_URL = String(LEGACY_CONFIG?.matchCenterDataUrl || '/legacy/match-center-data');
 const LEGACY_LEADERBOARD_DATA_URL = String(LEGACY_CONFIG?.leaderboardDataUrl || '/legacy/leaderboard-data');
 const LEGACY_LEAGUE_TABLE_DATA_URL = String(LEGACY_CONFIG?.leagueTableDataUrl || '/legacy/league-table-data');
+const LEGACY_CUP_DATA_URL = String(LEGACY_CONFIG?.cupDataUrl || '/legacy/cup-data');
 const LEGACY_ACHIEVEMENTS_DATA_URL = String(LEGACY_CONFIG?.achievementsDataUrl || '/legacy/achievements-data');
 const LEGACY_PATROCINIOS_DATA_URL = String(LEGACY_CONFIG?.patrociniosDataUrl || '/legacy/patrocinios-data');
 const LEGACY_SEASON_STATS_DATA_URL = String(LEGACY_CONFIG?.seasonStatsDataUrl || '/legacy/season-stats-data');
@@ -1077,6 +1078,15 @@ const getLegacyLeagueTableDataEndpoint = (careerId: any) => {
   return endpoint.toString();
 };
 
+const getLegacyCupDataEndpoint = (careerId: any) => {
+  const endpoint = new URL(LEGACY_CUP_DATA_URL, window.location.origin);
+  if (careerId) {
+    endpoint.searchParams.set('confederacao_id', String(careerId));
+  }
+
+  return endpoint.toString();
+};
+
 const getLegacyAchievementsDataEndpoint = (careerId: any) => {
   const endpoint = new URL(LEGACY_ACHIEVEMENTS_DATA_URL, window.location.origin);
   if (careerId) {
@@ -1315,6 +1325,10 @@ const normalizeLegacyInboxMatchPayload = (payload: any) => {
     placar_registrado_por: payload?.placar_registrado_por ?? null,
     is_mandante: Boolean(payload?.is_mandante),
     is_visitante: Boolean(payload?.is_visitante),
+    competition_type: String(payload?.competition_type || 'liga'),
+    competition_label: String(payload?.competition_label || 'Liga'),
+    cup_phase_label: payload?.cup_phase_label ? String(payload.cup_phase_label) : null,
+    cup_group_label: payload?.cup_group_label ? String(payload.cup_group_label) : null,
     avaliacao: Number.isFinite(nota)
       ? {
           nota,
@@ -2955,7 +2969,11 @@ const MatchCenterView = ({
   const renderMatchResultCard = (partida: any) => (
     <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
       <div className="flex-1 min-w-0">
-        <p className="text-[9px] font-black italic text-white/60 uppercase">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
+        <p className="text-[8px] font-black italic text-[#FFD700] uppercase tracking-[0.16em]">
+          {String(partida.cup_phase_label || partida.competition_label || 'PARTIDA')}
+          {partida.cup_group_label ? ` • ${String(partida.cup_group_label).toUpperCase()}` : ''}
+        </p>
+        <p className="text-[9px] font-black italic text-white/60 uppercase mt-1">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
         <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
       </div>
       <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
@@ -3036,6 +3054,10 @@ const MatchCenterView = ({
                         <p className="text-[9px] font-black italic uppercase text-white truncate">{activeMatch?.visitante || 'VISITANTE'}</p>
                       </div>
                     </div>
+                    <p className="text-[8px] font-black uppercase italic text-[#FFD700] tracking-[0.18em] text-center mt-4">
+                      {String(activeMatch?.cup_phase_label || activeMatch?.competition_label || 'PARTIDA')}
+                      {activeMatch?.cup_group_label ? ` • ${String(activeMatch.cup_group_label).toUpperCase()}` : ''}
+                    </p>
                     <p className="text-[8px] font-black uppercase italic text-white/45 tracking-[0.1em] text-center mt-6">
                       {formatLegacyMatchDate(activeMatch?.scheduled_at)}
                     </p>
@@ -3116,7 +3138,9 @@ const MatchCenterView = ({
                         <p className="text-[11px] font-black italic text-white uppercase truncate">
                           VS {match?.is_mandante ? match?.visitante : match?.mandante}
                         </p>
-                        <p className="text-[8px] font-bold text-[#FFD700] uppercase italic tracking-widest">PLACAR REGISTRADO</p>
+                        <p className="text-[8px] font-bold text-[#FFD700] uppercase italic tracking-widest">
+                          {String(match?.cup_phase_label || match?.competition_label || 'PARTIDA')} • PLACAR REGISTRADO
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[8px] font-black text-white/30 uppercase italic">PENDENTE</p>
@@ -3147,7 +3171,9 @@ const MatchCenterView = ({
                         <p className="text-[11px] font-black italic text-white uppercase truncate">
                           VS {match?.is_mandante ? match?.visitante : match?.mandante}
                         </p>
-                        <p className="text-[8px] font-bold text-[#22C55E] uppercase italic tracking-widest">AVALIAÇÃO DO ADVERSÁRIO</p>
+                        <p className="text-[8px] font-bold text-[#22C55E] uppercase italic tracking-widest">
+                          {String(match?.cup_phase_label || match?.competition_label || 'PARTIDA')} • AVALIAÇÃO DO ADVERSÁRIO
+                        </p>
                       </div>
                       <div className="text-right">
                         <p className="text-[8px] font-black text-white/30 uppercase italic">
@@ -3575,6 +3601,10 @@ const ReportMatchView = ({
         </MCOButton>
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">FINALIZAR PARTIDA</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.3em] uppercase italic">{partida?.mandante} VS {partida?.visitante}</p>
+        <p className="text-[8px] text-[#22C55E] font-black uppercase italic tracking-[0.18em] mt-2">
+          {String(partida?.cup_phase_label || partida?.competition_label || 'PARTIDA')}
+          {partida?.cup_group_label ? ` • ${String(partida.cup_group_label).toUpperCase()}` : ''}
+        </p>
         <p className="text-[9px] text-white/40 font-bold uppercase italic tracking-[0.1em] mt-2">
           {LEGACY_MATCH_STATUS_LABELS[String(partida?.estado)] || partida?.estado} • {formatLegacyMatchDate(partida?.scheduled_at)}
         </p>
@@ -3863,6 +3893,10 @@ const ConfirmResultView = ({ onBack, match, onCompleted, onNotify }: any) => {
         </MCOButton>
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">CONFIRMAR RESULTADO</h2>
         <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">VALIDAÇÃO DO OPONENTE</p>
+        <p className="text-[8px] text-[#22C55E] font-black uppercase italic tracking-[0.18em] mt-2">
+          {String(match?.cup_phase_label || match?.competition_label || 'PARTIDA')}
+          {match?.cup_group_label ? ` • ${String(match.cup_group_label).toUpperCase()}` : ''}
+        </p>
       </header>
       <div className="space-y-6">
         <div className="bg-[#1E1E1E] p-6 relative overflow-hidden text-center border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -4036,6 +4070,10 @@ const EvaluateMatchView = ({ onBack, match, onCompleted, onNotify }: any) => {
         </MCOButton>
         <h2 className="text-4xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">AVALIAR ADVERSÁRIO</h2>
         <p className="text-[10px] text-[#22C55E] font-bold tracking-[0.35em] uppercase italic">FAIR PLAY DA PARTIDA</p>
+        <p className="text-[8px] text-[#FFD700] font-black uppercase italic tracking-[0.18em] mt-2">
+          {String(match?.cup_phase_label || match?.competition_label || 'PARTIDA')}
+          {match?.cup_group_label ? ` • ${String(match.cup_group_label).toUpperCase()}` : ''}
+        </p>
       </header>
 
       <div className="space-y-6">
@@ -6764,45 +6802,344 @@ const LeagueTableView = ({
   );
 };
 
-const LeagueCupView = ({ onBack, onOpenClub }: { onBack: () => void, onOpenClub: (name: string) => void }) => {
-  const currentStage = MOCK_CUP_BRACKET[0];
+const LeagueCupView = ({
+  onBack,
+  onOpenClub,
+  onOpenMatchCenter,
+  currentCareer,
+}: {
+  onBack: () => void,
+  onOpenClub: (clubRef: any) => void,
+  onOpenMatchCenter: () => void,
+  currentCareer: any,
+}) => {
+  const [tab, setTab] = useState<'groups' | 'bracket' | 'matches'>('groups');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [cupPayload, setCupPayload] = useState<any>(null);
+  const [ligaData, setLigaData] = useState<any>(null);
+  const [onboardingUrl, setOnboardingUrl] = useState<string>(LEGACY_ONBOARDING_CLUBE_URL);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadCup = async () => {
+      if (!currentCareer?.id) {
+        setCupPayload(null);
+        setLigaData(null);
+        setOnboardingUrl(LEGACY_ONBOARDING_CLUBE_URL);
+        setError('Selecione uma confederação para visualizar a Copa.');
+        return;
+      }
+
+      setLoading(true);
+      setError('');
+
+      try {
+        const payload = await jsonRequest(getLegacyCupDataEndpoint(currentCareer.id), { method: 'GET' });
+        if (cancelled) return;
+
+        setLigaData(payload?.liga ?? null);
+        setCupPayload(payload?.cup ?? null);
+        setOnboardingUrl(
+          String(
+            payload?.onboarding_url ||
+              `${LEGACY_ONBOARDING_CLUBE_URL}?stage=confederacao&confederacao_id=${encodeURIComponent(String(currentCareer.id))}`,
+          ),
+        );
+      } catch (currentError: any) {
+        if (cancelled) return;
+        setCupPayload(null);
+        setLigaData(null);
+        setError(currentError?.message || 'Não foi possível carregar a Copa da Liga.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void loadCup();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCareer?.id]);
+
+  const summary = cupPayload?.summary ?? {};
+  const groups = Array.isArray(cupPayload?.groups) ? cupPayload.groups : [];
+  const bracketPhases = Array.isArray(cupPayload?.bracket?.phases) ? cupPayload.bracket.phases : [];
+  const matches = Array.isArray(cupPayload?.matches) ? cupPayload.matches : [];
+  const hasLeague = Boolean(ligaData?.id);
+
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 flex flex-col">
-      <header className="mb-8"><MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40"><i className="fas fa-arrow-left mr-2"></i> VOLTAR</MCOButton><h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">COPA DA LIGA</h2><p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">{currentStage.stage}</p></header>
-      <div className="space-y-10">
-        {currentStage.matches.filter(m => m.isUser).map((match, idx) => (
-          <div key={idx} className="bg-[#1E1E1E] p-8 border-l-[4px] border-[#FFD700] relative overflow-hidden" style={{ clipPath: AGGRESSIVE_CLIP }}>
-            <div className="flex justify-between items-center mb-8 relative z-10">
-              <div className="text-center w-1/3 cursor-pointer active:opacity-60" onClick={() => onOpenClub(match.home)}><div className="w-16 h-16 bg-[#121212] mx-auto mb-3 flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}><i className="fas fa-shield text-2xl text-[#FFD700]/40"></i></div><p className="text-[10px] font-black italic uppercase text-white tracking-tighter">{match.home}</p></div>
-              <div className="flex flex-col items-center"><div className="flex items-center gap-4"><span className="text-4xl font-black italic font-heading text-white">{match.scoreH}</span><span className="text-xs font-black text-[#FFD700] opacity-50">X</span><span className="text-4xl font-black italic font-heading text-white">{match.scoreA}</span></div><span className="bg-[#FFD700] text-[#121212] text-[8px] font-black px-2 py-0.5 mt-2 italic">FINALIZADO</span></div>
-              <div className="text-center w-1/3 cursor-pointer active:opacity-60" onClick={() => onOpenClub(match.away)}><div className="w-16 h-16 bg-[#121212] mx-auto mb-3 flex items-center justify-center border-b-2 border-white/10" style={{ clipPath: SHIELD_CLIP }}><i className="fas fa-shield text-2xl text-white/10"></i></div><p className="text-[10px] font-black italic uppercase text-white tracking-tighter">{match.away}</p></div>
-            </div>
-            {match.pensH !== undefined && (
-              <div className="bg-[#121212]/50 p-5 mt-4 border border-white/5 relative z-10" style={{ clipPath: "polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px)" }}>
-                 <p className="text-[9px] font-black italic text-[#FFD700] uppercase text-center mb-4 tracking-[0.2em]">DISPUTA DE PÊNALTIS</p>
-                 <div className="flex justify-between items-center px-4">
-                    <div className="flex gap-2">{[...Array(5)].map((_, i) => (<div key={i} className={`w-3 h-3 rotate-45 border ${i < (match.pensH || 0) ? 'bg-[#FFD700] border-[#FFD700]' : 'border-white/10'}`}></div>))}</div>
-                    <div className="flex flex-col items-center"><span className="text-2xl font-black italic font-heading text-[#FFD700] leading-none">{match.pensH}</span><span className="text-[8px] text-white/20 font-black italic">VS</span><span className="text-2xl font-black italic font-heading text-white leading-none">{match.pensA}</span></div>
-                    <div className="flex gap-2">{[...Array(5)].map((_, i) => (<div key={i} className={`w-3 h-3 rotate-45 border ${i < (match.pensA || 0) ? 'bg-white/40 border-white/40' : 'border-white/10'}`}></div>))}</div>
-                 </div>
+      <header className="mb-8">
+        <MCOButton variant="ghost" onClick={onBack} className="!px-0 !py-0 mb-6 opacity-40">
+          <i className="fas fa-arrow-left mr-2"></i> VOLTAR
+        </MCOButton>
+        <h2 className="text-5xl font-black italic uppercase font-heading text-white leading-none tracking-tighter">COPA DA LIGA</h2>
+        <p className="text-[10px] text-[#FFD700] font-bold tracking-[0.4em] uppercase italic">
+          {String(summary?.current_phase_label || 'FASE DE GRUPOS')}
+        </p>
+      </header>
+
+      {loading ? (
+        <div className="text-center py-12 text-white/40 text-[10px] font-black italic uppercase tracking-[0.2em]">
+          CARREGANDO COPA...
+        </div>
+      ) : error ? (
+        <div className="bg-[#B22222]/20 border border-[#B22222] p-5" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] font-black uppercase italic text-white">{error}</p>
+        </div>
+      ) : !hasLeague ? (
+        <div className="bg-[#1E1E1E] border-l-[3px] border-[#FFD700] p-6 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+          <p className="text-[10px] text-white/60 font-black uppercase italic tracking-[0.1em]">
+            Você ainda não participa de uma liga nesta confederação.
+          </p>
+          <MCOButton className="w-full" onClick={() => navigateTo(onboardingUrl)}>
+            ENTRAR EM UMA LIGA
+          </MCOButton>
+        </div>
+      ) : (
+        <>
+          <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700] mb-8" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/40">LIGA</p>
+                <p className="text-xl font-black italic uppercase font-heading text-white mt-1">{String(ligaData?.nome || 'LIGA')}</p>
               </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/40">SEU GRUPO</p>
+                <p className="text-xl font-black italic uppercase font-heading text-[#FFD700] mt-1">
+                  {String(summary?.viewer_group_label || 'PENDENTE')}
+                </p>
+              </div>
+              <div>
+                <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/40">POSIÇÃO</p>
+                <p className="text-lg font-black italic font-heading text-white mt-1">
+                  {summary?.viewer_group_position ? `${summary.viewer_group_position}o` : '--'}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-white/40">PARTIDAS</p>
+                <p className="text-lg font-black italic font-heading text-white mt-1">{Number(summary?.viewer_matches_count ?? 0)}</p>
+              </div>
+            </div>
+            {summary?.champion?.club_name && (
+              <p className="mt-5 text-[9px] font-black uppercase italic tracking-[0.16em] text-[#22C55E]">
+                CAMPEÃO ATUAL: {String(summary.champion.club_name).toUpperCase()}
+              </p>
             )}
           </div>
-        ))}
-        <div className="space-y-4">
-           <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">OUTROS CONFRONTOS</h4>
-           <div className="grid grid-cols-1 gap-2">
-              {currentStage.matches.filter(m => !m.isUser).map((match, idx) => (
-                <div key={idx} className="bg-[#1E1E1E] p-4 flex justify-between items-center" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-                  {/* FIXED: changed msg.home to match.home to fix 'Cannot find name msg' error */}
-                  <div className="flex-1 text-left cursor-pointer" onClick={() => onOpenClub(match.home)}><span className="text-[10px] font-black uppercase italic text-white/60">{match.home}</span></div>
-                  <div className="flex items-center gap-3 px-4 bg-[#121212] py-1" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}><span className="text-xs font-black italic font-heading text-white">{match.scoreH}</span><span className="text-[8px] text-white/10 font-black italic">X</span><span className="text-xs font-black italic font-heading text-white">{match.scoreA}</span></div>
-                  <div className="flex-1 text-right cursor-pointer" onClick={() => onOpenClub(match.away)}><span className="text-[10px] font-black uppercase italic text-white/60">{match.away}</span></div>
-                </div>
-              ))}
-           </div>
-        </div>
-      </div>
+
+          <div className="flex gap-2 mb-8 bg-[#1E1E1E] p-1" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+            <button
+              onClick={() => setTab('groups')}
+              className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'groups' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
+              style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+            >
+              GRUPOS
+            </button>
+            <button
+              onClick={() => setTab('bracket')}
+              className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'bracket' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
+              style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+            >
+              CHAVE
+            </button>
+            <button
+              onClick={() => setTab('matches')}
+              className={`flex-1 py-4 text-[9px] font-black italic uppercase transition-all ${tab === 'matches' ? 'bg-[#FFD700] text-[#121212]' : 'text-white/30'}`}
+              style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}
+            >
+              PARTIDAS
+            </button>
+          </div>
+
+          {tab === 'groups' ? (
+            groups.length > 0 ? (
+              <div className="space-y-8">
+                {groups.map((group: any) => (
+                  <section key={group.id} className="space-y-4">
+                    <h3 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
+                      {String(group.label || 'GRUPO')}
+                    </h3>
+                    <div className="space-y-1">
+                      <div className="grid grid-cols-[34px_1fr_48px_48px_56px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+                        <span className="text-[8px] font-black text-white/40 italic uppercase">POS</span>
+                        <span className="text-[8px] font-black text-white/40 italic uppercase">CLUBE</span>
+                        <span className="text-[8px] font-black text-white/40 italic uppercase text-center">P</span>
+                        <span className="text-[8px] font-black text-white/40 italic uppercase text-center">V</span>
+                        <span className="text-[8px] font-black text-[#FFD700] italic uppercase text-right">SG</span>
+                      </div>
+                      {group.rows.map((row: any) => (
+                        <button
+                          key={row.club_id}
+                          type="button"
+                          onClick={() => onOpenClub({ id: row.club_id, name: row.club_name })}
+                          className={`w-full text-left grid grid-cols-[34px_1fr_48px_48px_56px] gap-2 px-4 py-4 items-center transition-all active:opacity-70 ${
+                            row.is_user
+                              ? 'bg-[#FFD700] text-[#121212]'
+                              : row.qualified
+                                ? 'bg-[#1E1E1E] border-l-[3px] border-[#FFD700]'
+                                : 'bg-[#1E1E1E] border-l-[3px] border-transparent'
+                          }`}
+                          style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
+                        >
+                          <span className="text-[9px] font-black italic font-heading">{row.pos}</span>
+                          <span className="text-[10px] font-black italic uppercase truncate">{String(row.club_name || 'CLUBE')}</span>
+                          <span className="text-[10px] font-black italic font-heading text-center">{row.points}</span>
+                          <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
+                          <span className={`text-[10px] font-black italic font-heading text-right ${Number(row.goal_balance ?? 0) >= 0 ? 'text-[#22C55E]' : 'text-[#FFB4B4]'}`}>
+                            {Number(row.goal_balance ?? 0) >= 0 ? '+' : ''}{Number(row.goal_balance ?? 0)}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#1E1E1E] p-6 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Grupos ainda não disponíveis.</p>
+              </div>
+            )
+          ) : null}
+
+          {tab === 'bracket' ? (
+            bracketPhases.length > 0 ? (
+              <div className="space-y-6">
+                {bracketPhases.map((phase: any) => (
+                  <section key={phase.id} className="space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="text-[11px] font-black uppercase text-[#FFD700] italic tracking-[0.2em] border-l-2 border-[#FFD700] pl-2">
+                        {String(phase.label || 'FASE')}
+                      </h3>
+                      <span className="text-[8px] font-black uppercase italic text-white/35 tracking-[0.18em]">
+                        {String(phase.status || 'pendente').replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                    <div className="space-y-3">
+                      {phase.matches.map((match: any) => (
+                        <div
+                          key={`${phase.id}-${match.slot}`}
+                          className={`bg-[#1E1E1E] p-5 border-l-[4px] ${
+                            match.is_user_involved ? 'border-[#FFD700]' : 'border-white/10'
+                          }`}
+                          style={{ clipPath: AGGRESSIVE_CLIP }}
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div className="min-w-0">
+                              <p className="text-[8px] font-black uppercase italic tracking-[0.2em] text-white/35">
+                                CHAVE {Number(match.slot_order || 0)}
+                              </p>
+                              <p className="text-[11px] font-black italic uppercase text-white truncate">
+                                {String(match.aggregate?.home_club_name || 'CONFRONTO')} VS {String(match.aggregate?.away_club_name || 'PENDENTE')}
+                              </p>
+                            </div>
+                            {match.aggregate ? (
+                              <div className="bg-[#121212] px-4 py-2 text-center border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                                <span className="text-xl font-black italic font-heading text-[#FFD700]">
+                                  {match.aggregate.home_score}
+                                </span>
+                                <span className="text-[8px] text-white/15 font-black italic mx-2">X</span>
+                                <span className="text-xl font-black italic font-heading text-white">
+                                  {match.aggregate.away_score}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="text-[8px] font-black uppercase italic text-white/35">AGUARDANDO</span>
+                            )}
+                          </div>
+                          {match.needs_review && (
+                            <p className="text-[8px] font-black uppercase italic text-[#FFB4B4] mb-4">
+                              AGREGADO EMPATADO. A VOLTA PRECISA VIR DECIDIDA.
+                            </p>
+                          )}
+                          {match.winner_club_name && !match.needs_review && (
+                            <p className="text-[8px] font-black uppercase italic text-[#22C55E] mb-4">
+                              CLASSIFICADO: {String(match.winner_club_name).toUpperCase()}
+                            </p>
+                          )}
+                          <div className="space-y-2">
+                            {Array.isArray(match.legs) ? match.legs.map((leg: any) => (
+                              <div key={leg.partida_id} className="bg-[#121212] p-4" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
+                                <div className="flex justify-between items-center gap-3">
+                                  <button type="button" className="text-left min-w-0 flex-1" onClick={() => onOpenClub({ id: leg.mandante_id, name: leg.mandante })}>
+                                    <span className="text-[10px] font-black italic uppercase text-white truncate block">{String(leg.mandante || 'MANDANTE')}</span>
+                                  </button>
+                                  <div className="text-center px-3">
+                                    <p className="text-sm font-black italic font-heading text-white">
+                                      {leg.placar_mandante ?? '-'} x {leg.placar_visitante ?? '-'}
+                                    </p>
+                                    <p className="text-[8px] font-black uppercase italic text-white/35 mt-1">
+                                      JOGO {Number(leg.perna || 0)} • {String(leg.estado || 'PENDENTE')}
+                                    </p>
+                                  </div>
+                                  <button type="button" className="text-right min-w-0 flex-1" onClick={() => onOpenClub({ id: leg.visitante_id, name: leg.visitante })}>
+                                    <span className="text-[10px] font-black italic uppercase text-white truncate block">{String(leg.visitante || 'VISITANTE')}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#1E1E1E] p-6 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/50">
+                  O mata-mata será gerado quando todos os grupos fecharem e os placares forem confirmados.
+                </p>
+              </div>
+            )
+          ) : null}
+
+          {tab === 'matches' ? (
+            matches.length > 0 ? (
+              <div className="space-y-3">
+                {matches.map((match: any) => (
+                  <div key={match.id} className="bg-[#1E1E1E] p-5 border-r-[3px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <div className="flex justify-between items-start gap-3 mb-4">
+                      <div className="min-w-0">
+                        <p className="text-[8px] font-black uppercase italic tracking-[0.2em] text-[#FFD700]">
+                          {String(match.cup_phase_label || match.competition_label || 'COPA')}
+                          {match.cup_group_label ? ` • ${String(match.cup_group_label).toUpperCase()}` : ''}
+                        </p>
+                        <h4 className="text-[13px] font-black italic uppercase text-white mt-2 leading-none truncate">
+                          {String(match.mandante || 'MANDANTE')} VS {String(match.visitante || 'VISITANTE')}
+                        </h4>
+                        <p className="text-[8px] font-bold uppercase italic tracking-widest mt-2 text-white/45">
+                          {String(match.estado || 'pendente')}
+                        </p>
+                        <p className="text-[8px] font-black uppercase italic text-white/35 mt-2">
+                          {match.scheduled_at ? formatLegacyMatchDate(match.scheduled_at) : 'SEM HORÁRIO DEFINIDO'}
+                        </p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <p className="text-xl font-black italic font-heading text-white">
+                          {match.placar_mandante ?? '-'} <span className="text-white/15">x</span> {match.placar_visitante ?? '-'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <MCOButton className="w-full !py-4 !px-2 !text-[9px]" onClick={onOpenMatchCenter}>
+                        ABRIR MATCH CENTER
+                      </MCOButton>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-[#1E1E1E] p-6 border border-white/10" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                <p className="text-[10px] font-black uppercase italic text-white/50">Seu clube ainda não tem partidas de Copa.</p>
+              </div>
+            )
+          ) : null}
+        </>
+      )}
     </div>
   );
 };
@@ -8288,7 +8625,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
       ) : (
         <LegacyReveal delayMs={70}>
           <div className="space-y-4">
-            <MCOCard onClick={onSelectTournament} accentColor="#FFD700" active={true} className="p-8">
+            <MCOCard onClick={() => onSelectTournament('league')} accentColor="#FFD700" active={true} className="p-8">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-6">
                   <div
@@ -8310,6 +8647,25 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
                     <h4 className="text-xl font-black italic uppercase font-heading text-white">{String(ligaData?.nome || 'LIGA')}</h4>
                     <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
                       {String(ligaData?.confederacao_nome || currentCareer?.name || 'CONFEDERAÇÃO')}
+                    </span>
+                  </div>
+                </div>
+                <i className="fas fa-chevron-right text-white/10"></i>
+              </div>
+            </MCOCard>
+            <MCOCard onClick={() => onSelectTournament('cup')} accentColor="#22C55E" className="p-8">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center gap-6">
+                  <div
+                    className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#22C55E]"
+                    style={{ clipPath: SHIELD_CLIP }}
+                  >
+                    <i className="fas fa-trophy text-3xl text-[#22C55E]"></i>
+                  </div>
+                  <div>
+                    <h4 className="text-xl font-black italic uppercase font-heading text-white">COPA DA LIGA</h4>
+                    <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
+                      GRUPOS + MATA-MATA
                     </span>
                   </div>
                 </div>
@@ -11588,8 +11944,8 @@ const App = () => {
     };
   }, [currentCareer?.id, view, matchCenterReloadToken]);
   
-  const handleTournamentSelect = () => {
-    setView('league-table');
+  const handleTournamentSelect = (tournament: 'league' | 'cup' = 'league') => {
+    setView(tournament === 'cup' ? 'cup-detail' : 'league-table');
   };
 
   const openMarketFromHub = () => {
@@ -11777,7 +12133,7 @@ const App = () => {
       case 'trophies': return <TrophiesView onBack={() => setView('my-club')} userStats={userStats} />;
       case 'tournaments': return <TournamentsView onBack={() => setView('hub-global')} onSelectTournament={handleTournamentSelect} currentCareer={currentCareer} />;
       case 'league-table': return <LeagueTableView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} currentCareer={currentCareer} />;
-      case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
+      case 'cup-detail': return <LeagueCupView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} onOpenMatchCenter={() => setView('match-center')} currentCareer={currentCareer} />;
       case 'continental-detail': return <ContinentalTournamentView onBack={() => setView('tournaments')} onOpenClub={handleOpenClubProfile} />;
       case 'profile': return <ProfileView onBack={() => setView('hub-global')} onNotify={pushLegacyToast} />;
       default: return <HubGlobalView onOpenMyClub={() => setView('my-club')} onOpenTournaments={() => setView('tournaments')} onOpenMarket={openMarketFromHub} onOpenNextEvents={() => setView('next-events')} onOpenTransferHistory={() => setView('transfer-history')} onOpenStats={() => setView('season-stats')} onOpenLeaderboard={() => setView('leaderboard')} onOpenInbox={() => setView('inbox')} onOpenSchedulePending={() => { setSelectedScheduleMatch(null); setView('schedule-matches'); }} careers={careers} currentCareer={currentCareer} onCareerChange={setCurrentCareerId} userStats={userStats} onOpenOwnProfile={() => { void handleOpenClubProfile(); }} />;

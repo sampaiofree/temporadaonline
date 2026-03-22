@@ -127,7 +127,7 @@ class LegacyFinanceStatementDataTest extends TestCase
             'imagem' => null,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'max_jogadores_por_clube' => 18,
             'saldo_inicial' => 1000000,
             'multa_multiplicador' => 2.00,
@@ -158,4 +158,3 @@ class LegacyFinanceStatementDataTest extends TestCase
         ]);
     }
 }
-

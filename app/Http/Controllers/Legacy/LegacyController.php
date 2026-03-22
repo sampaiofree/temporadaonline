@@ -28,6 +28,7 @@ use App\Models\Temporada;
 use App\Models\User;
 use App\Services\AuctionService;
 use App\Services\ConquistaProgressService;
+use App\Services\LigaCopaService;
 use App\Services\LeagueFinanceService;
 use App\Services\MarketWindowService;
 use App\Services\ReleaseClauseValueService;
@@ -86,6 +87,7 @@ class LegacyController extends Controller
                 'matchCenterDataUrl' => route('legacy.match_center.data'),
                 'leaderboardDataUrl' => route('legacy.leaderboard.data'),
                 'leagueTableDataUrl' => route('legacy.league_table.data'),
+                'cupDataUrl' => route('legacy.cup.data'),
                 'achievementsDataUrl' => route('legacy.achievements.data'),
                 'patrociniosDataUrl' => route('legacy.patrocinios.data'),
                 'seasonStatsDataUrl' => route('legacy.season_stats.data'),
@@ -1371,13 +1373,38 @@ class LegacyController extends Controller
             ]);
         }
 
+        $copaService = app(LigaCopaService::class);
+        $partidaRelations = [
+            'mandante:id,nome,user_id,escudo_clube_id',
+            'visitante:id,nome,user_id,escudo_clube_id',
+            'mandante.escudo:id,clube_imagem',
+            'visitante.escudo:id,clube_imagem',
+        ];
+
+        if ($copaService->schemaReady()) {
+            $partidaRelations[] = 'cupMeta.fase:id,tipo';
+            $partidaRelations[] = 'cupMeta.grupo:id,label';
+        }
+
+        $partidaColumns = [
+            'id',
+            'mandante_id',
+            'visitante_id',
+            'estado',
+            'scheduled_at',
+            'placar_mandante',
+            'placar_visitante',
+            'placar_registrado_por',
+            'placar_registrado_em',
+            'created_at',
+        ];
+
+        if (Partida::competitionSchemaReady()) {
+            $partidaColumns[] = 'competition_type';
+        }
+
         $partidas = Partida::query()
-            ->with([
-                'mandante:id,nome,user_id,escudo_clube_id',
-                'visitante:id,nome,user_id,escudo_clube_id',
-                'mandante.escudo:id,clube_imagem',
-                'visitante.escudo:id,clube_imagem',
-            ])
+            ->with($partidaRelations)
             ->where('liga_id', $liga->id)
             ->whereIn('estado', [
                 'confirmacao_necessaria',
@@ -1393,18 +1420,7 @@ class LegacyController extends Controller
                     ->orWhere('visitante_id', $clube->id);
             })
             ->orderByRaw('scheduled_at IS NULL DESC, scheduled_at ASC, placar_registrado_em IS NULL, placar_registrado_em ASC, created_at DESC')
-            ->get([
-                'id',
-                'mandante_id',
-                'visitante_id',
-                'estado',
-                'scheduled_at',
-                'placar_mandante',
-                'placar_visitante',
-                'placar_registrado_por',
-                'placar_registrado_em',
-                'created_at',
-            ]);
+            ->get($partidaColumns);
 
         $avaliacoes = PartidaAvaliacao::query()
             ->whereIn('partida_id', $partidas->pluck('id'))
@@ -1855,6 +1871,7 @@ class LegacyController extends Controller
             $mandante = $partida->placar_mandante ?? '-';
             $visitante = $partida->placar_visitante ?? '-';
             $avaliacao = $avaliacoes->get($partida->id);
+            $competitionContext = $copaService->resolvePartidaCompetitionContext($partida);
 
             $messages[] = [
                 'id' => 'confirmation-'.$partida->id,
@@ -1878,6 +1895,10 @@ class LegacyController extends Controller
                     'placar_registrado_por' => $partida->placar_registrado_por,
                     'is_mandante' => (int) $partida->mandante_id === (int) $clube->id,
                     'is_visitante' => (int) $partida->visitante_id === (int) $clube->id,
+                    'competition_type' => $competitionContext['competition_type'],
+                    'competition_label' => $competitionContext['competition_label'],
+                    'cup_phase_label' => $competitionContext['cup_phase_label'],
+                    'cup_group_label' => $competitionContext['cup_group_label'],
                     'avaliacao' => $avaliacao ? [
                         'nota' => $avaliacao->nota,
                         'avaliado_user_id' => $avaliacao->avaliado_user_id,
@@ -2521,8 +2542,21 @@ class LegacyController extends Controller
             ]);
         }
 
+        $copaService = app(LigaCopaService::class);
+        $partidaRelations = [
+            'mandante.user',
+            'visitante.user',
+            'mandante.escudo',
+            'visitante.escudo',
+        ];
+
+        if ($copaService->schemaReady()) {
+            $partidaRelations[] = 'cupMeta.fase:id,tipo';
+            $partidaRelations[] = 'cupMeta.grupo:id,label';
+        }
+
         $partidasCollection = Partida::query()
-            ->with(['mandante.user', 'visitante.user', 'mandante.escudo', 'visitante.escudo'])
+            ->with($partidaRelations)
             ->where('liga_id', $liga->id)
             ->where(function ($query) use ($clube): void {
                 $query->where('mandante_id', $clube->id)
@@ -2539,8 +2573,9 @@ class LegacyController extends Controller
 
         $tz = $liga->timezone ?? 'UTC';
         $partidas = $partidasCollection
-            ->map(function (Partida $partida) use ($clube, $avaliacoes, $tz, $matchReportBlocked, $matchReportBlockReason) {
+            ->map(function (Partida $partida) use ($clube, $avaliacoes, $tz, $matchReportBlocked, $matchReportBlockReason, $copaService) {
                 $avaliacao = $avaliacoes->get($partida->id);
+                $competitionContext = $copaService->resolvePartidaCompetitionContext($partida);
 
                 return [
                     'id' => $partida->id,
@@ -2564,6 +2599,10 @@ class LegacyController extends Controller
                     'is_visitante' => (int) $partida->visitante_id === (int) $clube->id,
                     'match_report_blocked' => $matchReportBlocked,
                     'match_report_block_reason' => $matchReportBlockReason,
+                    'competition_type' => $competitionContext['competition_type'],
+                    'competition_label' => $competitionContext['competition_label'],
+                    'cup_phase_label' => $competitionContext['cup_phase_label'],
+                    'cup_group_label' => $competitionContext['cup_group_label'],
                     'avaliacao' => $avaliacao ? [
                         'nota' => $avaliacao->nota,
                         'avaliado_user_id' => $avaliacao->avaliado_user_id,
@@ -2822,6 +2861,7 @@ class LegacyController extends Controller
 
         $matches = Partida::query()
             ->select(['id', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
+            ->leagueCompetition()
             ->where('liga_id', $liga->id)
             ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'finalizada', 'wo'])
             ->whereNotNull('placar_mandante')
@@ -3384,6 +3424,7 @@ class LegacyController extends Controller
                 'created_at',
                 'updated_at',
             ])
+            ->leagueCompetition()
             ->whereIn('liga_id', $leagueIds)
             ->whereIn('estado', $statesWithScore)
             ->whereNotNull('placar_mandante')
@@ -4643,6 +4684,7 @@ class LegacyController extends Controller
         $statesWithScore = ['finalizada', 'placar_confirmado', 'wo'];
         $leagueMatches = Partida::query()
             ->select(['id', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
+            ->leagueCompetition()
             ->where('liga_id', (int) $latestFinalizedClub->liga_id)
             ->whereIn('estado', $statesWithScore)
             ->whereNotNull('placar_mandante')

@@ -1067,6 +1067,7 @@ class MinhaLigaController extends Controller
                 [
                     'nome' => trim($validated['nome']),
                     'escudo_clube_id' => $escudo?->id,
+                    'confederacao_id' => $liga->confederacao_id,
                 ],
             );
 

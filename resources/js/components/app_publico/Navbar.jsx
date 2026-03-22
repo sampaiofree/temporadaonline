@@ -77,6 +77,9 @@ const resolveActiveId = (mode) => {
         if (path.startsWith('/liga/classificacao')) {
             return 'tabela';
         }
+        if (path.startsWith('/liga/copa')) {
+            return 'liga';
+        }
         if (path.startsWith('/liga/clubes')) {
             return 'clube';
         }

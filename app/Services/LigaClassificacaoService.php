@@ -79,6 +79,7 @@ class LigaClassificacaoService
         })->all();
 
         $partidas = Partida::query()
+            ->leagueCompetition()
             ->where('liga_id', $liga->id)
             ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
             ->get(['mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante']);

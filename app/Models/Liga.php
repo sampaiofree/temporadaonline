@@ -72,6 +72,16 @@ class Liga extends Model
         return $this->hasMany(LigaClube::class);
     }
 
+    public function cupGroups(): HasMany
+    {
+        return $this->hasMany(LigaCopaGrupo::class);
+    }
+
+    public function cupPhases(): HasMany
+    {
+        return $this->hasMany(LigaCopaFase::class);
+    }
+
     public function transferencias(): HasMany
     {
         return $this->hasMany(LigaTransferencia::class);

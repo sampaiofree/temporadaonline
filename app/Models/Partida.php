@@ -5,13 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Schema;
 
 class Partida extends Model
 {
+    public const COMPETITION_LEAGUE = 'liga';
+    public const COMPETITION_CUP = 'copa';
+
+    private static ?bool $competitionSchemaReadyCache = null;
+
     protected $fillable = [
         'liga_id',
         'mandante_id',
         'visitante_id',
+        'competition_type',
         'scheduled_at',
         'estado',
         'alteracoes_usadas',
@@ -86,4 +94,48 @@ class Partida extends Model
         return $this->hasMany(PartidaAvaliacao::class);
     }
 
+    public function cupMeta(): HasOne
+    {
+        return $this->hasOne(LigaCopaPartida::class, 'partida_id');
+    }
+
+    public static function competitionSchemaReady(): bool
+    {
+        if (self::$competitionSchemaReadyCache !== null) {
+            return self::$competitionSchemaReadyCache;
+        }
+
+        self::$competitionSchemaReadyCache = Schema::hasTable('partidas')
+            && Schema::hasColumn('partidas', 'competition_type');
+
+        return self::$competitionSchemaReadyCache;
+    }
+
+    public function scopeLeagueCompetition($query)
+    {
+        if (! self::competitionSchemaReady()) {
+            return $query;
+        }
+
+        return $query->where('competition_type', self::COMPETITION_LEAGUE);
+    }
+
+    public function scopeCupCompetition($query)
+    {
+        if (! self::competitionSchemaReady()) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where('competition_type', self::COMPETITION_CUP);
+    }
+
+    public function isCupCompetition(): bool
+    {
+        return (string) $this->competition_type === self::COMPETITION_CUP;
+    }
+
+    public function isLeagueCompetition(): bool
+    {
+        return (string) ($this->competition_type ?: self::COMPETITION_LEAGUE) === self::COMPETITION_LEAGUE;
+    }
 }

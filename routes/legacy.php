@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Legacy\Auth\AuthenticatedSessionController as LegacyAuthenticatedSessionController;
 use App\Http\Controllers\Legacy\LegacyController;
+use App\Http\Controllers\Legacy\LegacyCupController;
 use App\Http\Controllers\Legacy\LegacyOnboardingClubeController;
 use App\Http\Controllers\Legacy\LegacyProfileController;
 use App\Http\Controllers\Legacy\PrimeiroAcessoController;
@@ -43,6 +44,8 @@ Route::prefix('legacy')->name('legacy.')->group(function () {
             ->name('leaderboard.data');
         Route::get('/league-table-data', [LegacyController::class, 'leagueTableData'])
             ->name('league_table.data');
+        Route::get('/cup-data', [LegacyCupController::class, 'data'])
+            ->name('cup.data');
         Route::get('/achievements-data', [LegacyController::class, 'achievementsData'])
             ->name('achievements.data');
         Route::post('/achievements/{conquista}/claim', [LegacyController::class, 'claimAchievement'])

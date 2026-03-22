@@ -91,6 +91,7 @@ export default function MinhaLiga() {
     const mercadoRadarHref = `/liga/mercado?liga_id=${liga.id}&radar=1`;
     const meuClubeHref = `/minha_liga/clube?liga_id=${liga.id}`;
     const elencoLigaHref = `/liga/elenco?liga_id=${liga.id}`;
+    const copaLigaHref = `/liga/copa?liga_id=${liga.id}&tab=grupos`;
     const descricao = (liga?.descricao || '').toString().trim();
     const regras = (liga?.regras || '').toString().trim();
     const whatsappLink = (liga?.whatsapp_grupo_link || '').toString().trim();
@@ -315,6 +316,31 @@ export default function MinhaLiga() {
                             </svg>
                         </span>
                         <span className="control-card-title">Elenco da liga</span>
+                    </span>
+                </a>
+                <a className="control-card" href={copaLigaHref}>
+                    <span className="inner-content">
+                        <span className="card-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                                <path
+                                    d="M7 4h10v2a5 5 0 0 0 3 4.58V12c0 4.42-3.58 8-8 8s-8-3.58-8-8v-1.42A5 5 0 0 0 7 6V4z"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                                <path
+                                    d="M9 4V2h6v2"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.8"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                />
+                            </svg>
+                        </span>
+                        <span className="control-card-title">Copa da liga</span>
                     </span>
                 </a>
             </section>

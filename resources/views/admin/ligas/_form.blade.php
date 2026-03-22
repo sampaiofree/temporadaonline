@@ -3,6 +3,7 @@
     'method' => 'POST',
     'liga' => null,
     'confederacoes' => [],
+    'hasClubes' => false,
     'statusOptions',
     'submitLabel' => 'Salvar liga',
     'whatsappGroups' => [],
@@ -11,7 +12,7 @@
 @php
     $currentStatus = old('status', $liga->status ?? array_key_first($statusOptions));
     $currentConfederacaoId = old('confederacao_id', $liga->confederacao_id ?? '');
-    $currentMax = old('max_times', $liga->max_times ?? 20);
+    $currentMax = old('max_times', $liga->max_times ?? 16);
     $currentSaldoInicial = old('saldo_inicial', $liga->saldo_inicial ?? 0);
     $currentUsuarioPontuacao = old('usuario_pontuacao', $liga->usuario_pontuacao ?? '');
     $currentWhatsappLink = old('whatsapp_grupo_link', $liga->whatsapp_grupo_link ?? '');
@@ -50,16 +51,26 @@
 
         <div>
             <label for="max_times" class="block text-sm font-semibold text-slate-700">Quantidade maxima de clubes</label>
-            <input
-                type="number"
+            <select
                 id="max_times"
                 name="max_times"
-                min="8"
-                value="{{ $currentMax }}"
                 required
-                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+                @disabled($isEditing && $hasClubes)
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500"
             >
-            <p class="mt-1 text-xs text-slate-500">Use apenas multiplos de 8 (ex.: 8, 16, 24, 32...).</p>
+                @foreach([8, 16, 32, 64] as $maxTimesOption)
+                    <option value="{{ $maxTimesOption }}" @selected((int) $currentMax === $maxTimesOption)>{{ $maxTimesOption }} clubes</option>
+                @endforeach
+            </select>
+            @if($isEditing && $hasClubes)
+                <input type="hidden" name="max_times" value="{{ $currentMax }}">
+            @endif
+            <p class="mt-1 text-xs text-slate-500">
+                A Copa da Liga exige chaves puras. Valores permitidos: 8, 16, 32 ou 64.
+                @if($isEditing && $hasClubes)
+                    A quantidade fica travada apos a entrada de clubes.
+                @endif
+            </p>
             @error('max_times')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror

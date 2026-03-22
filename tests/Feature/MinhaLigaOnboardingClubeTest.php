@@ -14,6 +14,7 @@ use App\Models\LigaEscudo;
 use App\Models\Pais;
 use App\Models\Plataforma;
 use App\Models\User;
+use App\Http\Middleware\EnsureLegacyFirstAccessCompleted;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Tests\TestCase;
@@ -27,6 +28,7 @@ class MinhaLigaOnboardingClubeTest extends TestCase
         parent::setUp();
 
         $this->withoutMiddleware(ValidateCsrfToken::class);
+        $this->withoutMiddleware(EnsureLegacyFirstAccessCompleted::class);
     }
 
     private function createLigaContext(array $ligaOverrides = []): array
@@ -63,7 +65,7 @@ class MinhaLigaOnboardingClubeTest extends TestCase
             'imagem' => null,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'confederacao_id' => $confederacao->id,
             'jogo_id' => $jogo->id,
             'geracao_id' => $geracao->id,
@@ -125,7 +127,7 @@ class MinhaLigaOnboardingClubeTest extends TestCase
             ->actingAs($user)
             ->get('/minha_liga/onboarding-clube');
 
-        $response->assertStatus(400);
+        $response->assertRedirect(route('legacy.onboarding_clube'));
     }
 
     public function test_onboarding_clube_returns_404_when_user_is_not_in_league(): void

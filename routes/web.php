@@ -32,6 +32,7 @@ use App\Http\Controllers\Admin\TemporadaController as AdminTemporadaController;
 use App\Http\Controllers\Admin\LogController as AdminLogController;
 use App\Http\Controllers\LigaClassificacaoController;
 use App\Http\Controllers\LigaController;
+use App\Http\Controllers\LigaCopaController;
 use App\Http\Controllers\LigaElencoController;
 use App\Http\Controllers\LigaMercadoController;
 use App\Http\Controllers\LigaPartidasController;
@@ -189,6 +190,7 @@ Route::middleware(['auth', 'verified', 'roster.limit', 'legacy.first_access'])->
     Route::get('/liga/partidas', [LigaPartidasController::class, 'index'])->name('liga.partidas');
     Route::get('/liga/partidas/{partida}/finalizar', [LigaPartidasController::class, 'finalizar'])
         ->name('liga.partidas.finalizar');
+    Route::get('/liga/copa', [LigaCopaController::class, 'index'])->name('liga.copa');
     Route::get('/liga/classificacao', [LigaClassificacaoController::class, 'index'])->name('liga.classificacao');
     Route::get('/liga/elenco', [LigaElencoController::class, 'index'])->name('liga.elenco');
     Route::get('/liga/clubes/{clube}', [LigaClubePerfilController::class, 'show'])->name('liga.clube.perfil');

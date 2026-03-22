@@ -28,6 +28,7 @@ class LigaClassificacaoController extends Controller
         $stats = $this->initializeStats($clubs);
 
         $partidas = Partida::query()
+            ->leagueCompetition()
             ->where('liga_id', $liga->id)
             ->whereIn('estado', ['placar_registrado', 'placar_confirmado', 'wo'])
             ->get(['mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante']);

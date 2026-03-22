@@ -107,6 +107,13 @@ export default function LigaPartidas() {
 
     const chipsForPartida = (partida) => {
         const chips = [];
+        if (partida.competition_label) {
+            chips.push(
+                partida.cup_phase_label
+                    ? `${partida.competition_label} · ${partida.cup_phase_label}${partida.cup_group_label ? ` · ${partida.cup_group_label}` : ''}`
+                    : partida.competition_label,
+            );
+        }
         if (partida.forced_by_system) chips.push('Horário forçado pelo sistema');
         if (partida.sem_slot_disponivel) chips.push('Sem slot futuro disponível');
         if (partida.estado === 'em_reclamacao') {

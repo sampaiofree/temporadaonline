@@ -59,4 +59,9 @@ class LigaClube extends Model
     {
         return $this->hasOne(LigaClubeFinanceiro::class, 'clube_id');
     }
+
+    public function cupGroupMembership(): HasOne
+    {
+        return $this->hasOne(LigaCopaGrupoClube::class, 'liga_clube_id');
+    }
 }

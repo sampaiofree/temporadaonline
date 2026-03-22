@@ -44,7 +44,7 @@ class LigaSeeder extends Seeder
             'saldo_inicial' => 100000000,
             'tipo' => 'publica',
             'status' => 'ativa',
-            'max_times' => 20,
+            'max_times' => 16,
             'confederacao_id' => $confederacao->id,
             'jogo_id' => $jogo->id,
             'geracao_id' => $geracao->id,
