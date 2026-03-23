@@ -9,9 +9,12 @@ use App\Models\Geracao;
 use App\Models\Jogo;
 use App\Models\Liga;
 use App\Models\LigaClube;
+use App\Models\LigaCopaGrupo;
+use App\Models\LigaCopaGrupoClube;
 use App\Models\LigaClubeFinanceiro;
 use App\Models\LigaEscudo;
 use App\Models\Pais;
+use App\Models\Partida;
 use App\Models\Plataforma;
 use App\Models\User;
 use App\Http\Middleware\EnsureLegacyFirstAccessCompleted;
@@ -229,5 +232,100 @@ class MinhaLigaOnboardingClubeTest extends TestCase
 
         $response->assertStatus(422);
         $response->assertJsonPath('message', 'Este escudo já está em uso por outro clube nesta confederação.');
+    }
+
+    public function test_store_clube_reuses_first_free_cup_group_order_when_existing_group_has_gap(): void
+    {
+        [$liga] = $this->createLigaContext(['max_times' => 8]);
+        $candidate = User::factory()->create();
+        $candidate->ligas()->attach($liga->id);
+
+        Elencopadrao::create([
+            'jogo_id' => $liga->jogo_id,
+            'short_name' => 'GK GAP',
+            'long_name' => 'Goalkeeper Gap Seed',
+            'player_positions' => 'GK',
+            'value_eur' => 1000000,
+            'wage_eur' => 5000,
+        ]);
+
+        $existingClubs = [];
+
+        for ($index = 1; $index <= 3; $index++) {
+            $owner = User::factory()->create();
+            $owner->ligas()->attach($liga->id);
+
+            $existingClubs[] = LigaClube::withoutEvents(function () use ($liga, $owner, $index): LigaClube {
+                return LigaClube::query()->create([
+                    'liga_id' => $liga->id,
+                    'confederacao_id' => $liga->confederacao_id,
+                    'user_id' => $owner->id,
+                    'nome' => "Clube Base {$index}",
+                ]);
+            });
+        }
+
+        $grupoA = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->where('ordem', 1)
+            ->firstOrFail();
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $existingClubs[0]->id,
+            'ordem' => 1,
+        ]);
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $existingClubs[1]->id,
+            'ordem' => 2,
+        ]);
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $existingClubs[2]->id,
+            'ordem' => 4,
+        ]);
+
+        $response = $this
+            ->actingAs($candidate)
+            ->post('/minha_liga/clubes', [
+                'liga_id' => $liga->id,
+                'nome' => 'Clube Retorno',
+            ]);
+
+        $response->assertStatus(201);
+
+        $clubeId = (int) $response->json('clube.id');
+
+        $this->assertDatabaseHas('liga_copa_grupo_clubes', [
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $clubeId,
+            'ordem' => 3,
+        ]);
+
+        $this->assertSame(
+            [
+                1 => $existingClubs[0]->id,
+                2 => $existingClubs[1]->id,
+                3 => $clubeId,
+                4 => $existingClubs[2]->id,
+            ],
+            LigaCopaGrupoClube::query()
+                ->where('grupo_id', $grupoA->id)
+                ->orderBy('ordem')
+                ->pluck('liga_clube_id', 'ordem')
+                ->all(),
+        );
+
+        $this->assertSame(
+            12,
+            Partida::query()
+                ->cupCompetition()
+                ->where('liga_id', $liga->id)
+                ->whereHas('cupMeta', fn ($query) => $query->where('grupo_id', $grupoA->id))
+                ->count(),
+        );
     }
 }

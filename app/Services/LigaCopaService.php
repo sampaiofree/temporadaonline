@@ -11,6 +11,7 @@ use App\Models\LigaCopaPartida;
 use App\Models\Partida;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -303,41 +304,97 @@ class LigaCopaService
             return false;
         }
 
-        $grupo = LigaCopaGrupo::query()
-            ->where('liga_id', $liga->id)
-            ->withCount('memberships')
-            ->orderBy('ordem')
-            ->lockForUpdate()
-            ->get()
-            ->first(fn (LigaCopaGrupo $item) => (int) $item->memberships_count < self::GROUP_SIZE);
+        $groupSlot = $this->resolveFirstAvailableGroupSlot($liga, $clube);
 
-        if (! $grupo) {
+        if (! $groupSlot) {
             return false;
         }
 
-        $ordem = (int) LigaCopaGrupoClube::query()
-            ->where('grupo_id', $grupo->id)
-            ->lockForUpdate()
-            ->get(['id'])
-            ->count() + 1;
-
         LigaCopaGrupoClube::query()->create([
-            'grupo_id' => $grupo->id,
+            'grupo_id' => $groupSlot['grupo']->id,
             'liga_clube_id' => $clube->id,
-            'ordem' => $ordem,
+            'ordem' => $groupSlot['ordem'],
         ]);
 
         $groupMemberCount = (int) LigaCopaGrupoClube::query()
-            ->where('grupo_id', $grupo->id)
+            ->where('grupo_id', $groupSlot['grupo']->id)
             ->lockForUpdate()
             ->get(['id'])
             ->count();
 
         if ($groupMemberCount === self::GROUP_SIZE) {
-            $this->ensureGroupStageMatches($liga, $grupo);
+            $this->ensureGroupStageMatches($liga, $groupSlot['grupo']);
         }
 
         return true;
+    }
+
+    /**
+     * @return array{grupo:LigaCopaGrupo, ordem:int}|null
+     */
+    private function resolveFirstAvailableGroupSlot(Liga $liga, LigaClube $clube): ?array
+    {
+        $groups = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->orderBy('ordem')
+            ->lockForUpdate()
+            ->get();
+
+        foreach ($groups as $grupo) {
+            $usedOrdens = LigaCopaGrupoClube::query()
+                ->where('grupo_id', $grupo->id)
+                ->lockForUpdate()
+                ->pluck('ordem')
+                ->map(fn ($ordem): int => (int) $ordem)
+                ->sort()
+                ->values()
+                ->all();
+
+            $ordem = $this->resolveFirstAvailableGroupOrder($usedOrdens);
+
+            if ($ordem === null) {
+                continue;
+            }
+
+            if ($this->hasGroupOrderGap($usedOrdens, $ordem)) {
+                Log::warning('Liga Copa found non-sequential group membership slots; reusing first available order.', [
+                    'liga_id' => $liga->id,
+                    'grupo_id' => $grupo->id,
+                    'liga_clube_id' => $clube->id,
+                    'used_ordens' => $usedOrdens,
+                    'resolved_ordem' => $ordem,
+                ]);
+            }
+
+            return [
+                'grupo' => $grupo,
+                'ordem' => $ordem,
+            ];
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<int> $usedOrdens
+     */
+    private function resolveFirstAvailableGroupOrder(array $usedOrdens): ?int
+    {
+        for ($ordem = 1; $ordem <= self::GROUP_SIZE; $ordem++) {
+            if (! in_array($ordem, $usedOrdens, true)) {
+                return $ordem;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param list<int> $usedOrdens
+     */
+    private function hasGroupOrderGap(array $usedOrdens, int $resolvedOrdem): bool
+    {
+        return $usedOrdens !== [] && $resolvedOrdem <= count($usedOrdens);
     }
 
     private function ensureGroupStageMatches(Liga $liga, LigaCopaGrupo $grupo): void

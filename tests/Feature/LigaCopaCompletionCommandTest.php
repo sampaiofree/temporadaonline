@@ -14,6 +14,7 @@ use App\Models\Plataforma;
 use App\Models\User;
 use App\Services\LigaCopaService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Tests\TestCase;
 
 class LigaCopaCompletionCommandTest extends TestCase
@@ -96,6 +97,77 @@ class LigaCopaCompletionCommandTest extends TestCase
                 ->whereHas('cupMeta', fn ($query) => $query->where('grupo_id', $grupoA->id))
                 ->count(),
         );
+    }
+
+    public function test_reconcile_reuses_first_free_group_order_when_membership_slots_have_gap(): void
+    {
+        Log::spy();
+
+        $context = $this->createCompetitionContext();
+        $liga = $this->createLiga($context, ['max_times' => 8]);
+
+        $clubs = [];
+        for ($index = 1; $index <= 4; $index++) {
+            $clubs[] = $this->createLegacyClub($liga, sprintf('Clube %02d', $index), $index);
+        }
+
+        $grupoA = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->where('ordem', 1)
+            ->firstOrFail();
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $clubs[0]->id,
+            'ordem' => 1,
+        ]);
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $clubs[1]->id,
+            'ordem' => 2,
+        ]);
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupoA->id,
+            'liga_clube_id' => $clubs[2]->id,
+            'ordem' => 4,
+        ]);
+
+        $added = app(LigaCopaService::class)->reconcileLigaClubs($liga);
+
+        $memberships = LigaCopaGrupoClube::query()
+            ->where('grupo_id', $grupoA->id)
+            ->orderBy('ordem')
+            ->get();
+
+        $this->assertSame(1, $added);
+        $this->assertCount(4, $memberships);
+        $this->assertSame(
+            [
+                1 => $clubs[0]->id,
+                2 => $clubs[1]->id,
+                3 => $clubs[3]->id,
+                4 => $clubs[2]->id,
+            ],
+            $memberships->pluck('liga_clube_id', 'ordem')->all(),
+        );
+        $this->assertSame(
+            12,
+            Partida::query()
+                ->cupCompetition()
+                ->where('liga_id', $liga->id)
+                ->whereHas('cupMeta', fn ($query) => $query->where('grupo_id', $grupoA->id))
+                ->count(),
+        );
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(function (string $message, array $context): bool {
+                return $message === 'Liga Copa found non-sequential group membership slots; reusing first available order.'
+                    && (int) ($context['resolved_ordem'] ?? 0) === 3
+                    && ($context['used_ordens'] ?? []) === [1, 2, 4];
+            });
     }
 
     public function test_complete_liga_copa_command_normalizes_legacy_liga_and_creates_demo_clubs(): void
