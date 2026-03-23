@@ -2278,6 +2278,40 @@ const getLegacyMatchReportBlockReason = (partida: any) =>
       || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.',
   );
 
+const getLegacyFinalizeBlockReason = (partida: any) => {
+  if (!partida) return '';
+  if (isLegacyMatchReportBlocked(partida)) return getLegacyMatchReportBlockReason(partida);
+  if (String(partida?.estado || '') === 'confirmacao_necessaria') {
+    return 'Confirme o horario da partida antes de finalizar a sumula.';
+  }
+  if (!isLegacyFinalizationAllowed(partida)) {
+    return 'Esta partida precisa estar em estado CONFIRMADA ou AGENDADA para finalizar.';
+  }
+
+  return '';
+};
+
+const LegacyInlineWarning = ({
+  message,
+  className = '',
+}: {
+  message: string,
+  className?: string,
+}) => {
+  if (!message) return null;
+
+  return (
+    <div
+      className={`bg-[#B22222]/18 border border-[#B22222]/45 p-4 ${className}`.trim()}
+      style={{ clipPath: AGGRESSIVE_CLIP }}
+    >
+      <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
+        {message}
+      </p>
+    </div>
+  );
+};
+
 // --- Schedule Matches View ---
 
 const ScheduleMatchesView = ({
@@ -2527,11 +2561,10 @@ const ScheduleMatchesView = ({
       </header>
 
       {matchReportBlocked && (
-        <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4 mb-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
-            {matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
-          </p>
-        </div>
+        <LegacyInlineWarning
+          message={matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
+          className="mb-6"
+        />
       )}
 
       {loading ? (
@@ -2984,6 +3017,7 @@ const MatchCenterView = ({
     () => recentResultMatches.slice(0, 3),
     [recentResultMatches],
   );
+  const activeMatchFinalizeBlockReason = activeMatch ? getLegacyFinalizeBlockReason(activeMatch) : '';
 
   const formatMatchCompetitionContext = (partida: any) => {
     const baseLabel = String(partida?.cup_phase_label || partida?.competition_label || 'PARTIDA').trim();
@@ -3153,11 +3187,9 @@ const MatchCenterView = ({
       <div className="px-4 space-y-8">
         {matchReportBlocked && (
           <LegacyReveal delayMs={20}>
-            <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
-              <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
-                {matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
-              </p>
-            </div>
+            <LegacyInlineWarning
+              message={matchReportBlockReason || 'Mercado aberto. O envio de sumulas fica bloqueado ate o fechamento da janela.'}
+            />
           </LegacyReveal>
         )}
         {loading ? (
@@ -3244,10 +3276,8 @@ const MatchCenterView = ({
                         </MCOButton>
                       )}
                     </div>
-                    {isLegacyFinalizationAllowed(activeMatch) && isLegacyMatchReportBlocked(activeMatch) && (
-                      <p className="mt-3 text-[8px] font-black uppercase italic text-[#FFB4B4] text-center">
-                        {getLegacyMatchReportBlockReason(activeMatch)}
-                      </p>
+                    {activeMatchFinalizeBlockReason !== '' && (
+                      <LegacyInlineWarning message={activeMatchFinalizeBlockReason} className="mt-3" />
                     )}
                   </div>
                 ) : (
@@ -3768,11 +3798,7 @@ const ReportMatchView = ({
       </header>
 
       {matchReportBlocked && (
-        <div className="bg-[#B22222]/18 border border-[#B22222]/45 p-4 mb-6" style={{ clipPath: AGGRESSIVE_CLIP }}>
-          <p className="text-[9px] font-black uppercase italic text-[#FFB4B4]">
-            {matchReportBlockReason}
-          </p>
-        </div>
+        <LegacyInlineWarning message={matchReportBlockReason} className="mb-6" />
       )}
 
       <section className="bg-[#1E1E1E] border-l-[4px] border-[#FFD700] p-6 mb-8 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
@@ -7028,6 +7054,9 @@ const LeagueCupView = ({
   const bracketPhases = Array.isArray(cupPayload?.bracket?.phases) ? cupPayload.bracket.phases : [];
   const matches = Array.isArray(cupPayload?.matches) ? cupPayload.matches : [];
   const hasLeague = Boolean(ligaData?.id);
+  const legacyCupTournamentTitle = ligaData?.nome
+    ? `COPA ${String(ligaData.nome)}`
+    : 'COPA DA LIGA';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 flex flex-col">
@@ -8819,10 +8848,19 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
                     className="w-16 h-16 bg-[#121212] flex items-center justify-center border-b-2 border-[#22C55E]"
                     style={{ clipPath: SHIELD_CLIP }}
                   >
-                    <i className="fas fa-trophy text-3xl text-[#22C55E]"></i>
+                    {showLeagueImage ? (
+                      <img
+                        src={leagueImageUrl}
+                        alt={String(ligaData?.nome ? `Escudo da copa da liga ${ligaData.nome}` : 'Escudo da copa da liga')}
+                        className="w-full h-full object-cover"
+                        onError={() => setLeagueImageFailed(true)}
+                      />
+                    ) : (
+                      <i className="fas fa-trophy text-3xl text-[#22C55E]"></i>
+                    )}
                   </div>
                   <div>
-                    <h4 className="text-xl font-black italic uppercase font-heading text-white">COPA DA LIGA</h4>
+                    <h4 className="text-xl font-black italic uppercase font-heading text-white">{legacyCupTournamentTitle}</h4>
                     <span className="text-[9px] font-black bg-white/5 text-white/40 px-3 py-1 italic tracking-widest mt-2 block w-max" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
                       GRUPOS + MATA-MATA
                     </span>
