@@ -25,6 +25,7 @@
     $selectedJogo = $selectedConfederacao?->jogo?->nome;
     $selectedGeracao = $selectedConfederacao?->geracao?->nome;
     $selectedPlataforma = $selectedConfederacao?->plataforma?->nome;
+    $isFormatLocked = $isEditing && $hasClubes;
 @endphp
 
 <form action="{{ $action }}" method="POST" class="space-y-6" enctype="multipart/form-data">
@@ -50,25 +51,26 @@
         </div>
 
         <div>
-            <label for="max_times" class="block text-sm font-semibold text-slate-700">Quantidade maxima de clubes</label>
+            <label for="max_times" class="block text-sm font-semibold text-slate-700">Formato da liga (maximo de clubes)</label>
             <select
                 id="max_times"
                 name="max_times"
                 required
-                @disabled($isEditing && $hasClubes)
+                @disabled($isFormatLocked)
                 class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500"
             >
                 @foreach([8, 16, 32, 64] as $maxTimesOption)
                     <option value="{{ $maxTimesOption }}" @selected((int) $currentMax === $maxTimesOption)>{{ $maxTimesOption }} clubes</option>
                 @endforeach
             </select>
-            @if($isEditing && $hasClubes)
+            @if($isFormatLocked)
                 <input type="hidden" name="max_times" value="{{ $currentMax }}">
             @endif
             <p class="mt-1 text-xs text-slate-500">
-                A Copa da Liga exige chaves puras. Valores permitidos: 8, 16, 32 ou 64.
-                @if($isEditing && $hasClubes)
-                    A quantidade fica travada apos a entrada de clubes.
+                @if($isFormatLocked)
+                    Formato bloqueado: a liga ja recebeu clubes. Alterar esse numero mudaria os grupos e o chaveamento da Copa, entao o campo permanece apenas para consulta.
+                @else
+                    A Copa da Liga usa grupos de 4 clubes e mata-mata em chave pura. Por isso, os formatos permitidos sao 8, 16, 32 ou 64 clubes. Voce ainda pode alterar esse formato antes da entrada de clubes.
                 @endif
             </p>
             @error('max_times')

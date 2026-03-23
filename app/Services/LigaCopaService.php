@@ -89,47 +89,21 @@ class LigaCopaService
 
             $liga = Liga::query()->lockForUpdate()->findOrFail($lockedClube->liga_id);
             $this->ensureSetupForLockedLiga($liga);
+            $this->ensureClubMembershipForLockedLiga($liga, $lockedClube);
+        });
+    }
 
-            $existingMembership = LigaCopaGrupoClube::query()
-                ->where('liga_clube_id', $lockedClube->id)
-                ->lockForUpdate()
-                ->first();
+    public function reconcileLigaClubs(Liga $liga): int
+    {
+        if (! $this->schemaReady()) {
+            return 0;
+        }
 
-            if ($existingMembership) {
-                return;
-            }
+        return DB::transaction(function () use ($liga): int {
+            $lockedLiga = Liga::query()->lockForUpdate()->findOrFail($liga->id);
+            $this->ensureSetupForLockedLiga($lockedLiga);
 
-            $grupo = LigaCopaGrupo::query()
-                ->where('liga_id', $liga->id)
-                ->withCount('memberships')
-                ->orderBy('ordem')
-                ->lockForUpdate()
-                ->get()
-                ->first(fn (LigaCopaGrupo $item) => (int) $item->memberships_count < self::GROUP_SIZE);
-
-            if (! $grupo) {
-                return;
-            }
-
-            $ordem = (int) LigaCopaGrupoClube::query()
-                ->where('grupo_id', $grupo->id)
-                ->lockForUpdate()
-                ->count() + 1;
-
-            LigaCopaGrupoClube::query()->create([
-                'grupo_id' => $grupo->id,
-                'liga_clube_id' => $lockedClube->id,
-                'ordem' => $ordem,
-            ]);
-
-            $groupMemberCount = (int) LigaCopaGrupoClube::query()
-                ->where('grupo_id', $grupo->id)
-                ->lockForUpdate()
-                ->count();
-
-            if ($groupMemberCount === self::GROUP_SIZE) {
-                $this->ensureGroupStageMatches($liga, $grupo);
-            }
+            return $this->reconcileLockedLiga($lockedLiga);
         });
     }
 
@@ -169,6 +143,8 @@ class LigaCopaService
         if ($this->needsSetupForLiga($liga)) {
             $this->ensureSetupForLiga($liga);
         }
+
+        $this->reconcileLigaClubs($liga);
 
         $groups = LigaCopaGrupo::query()
             ->with(['memberships.ligaClube.escudo'])
@@ -294,6 +270,74 @@ class LigaCopaService
             $this->resolvePhaseOrder($liga, self::PHASE_GROUPS),
             self::STATUS_ACTIVE,
         );
+    }
+
+    private function reconcileLockedLiga(Liga $liga): int
+    {
+        $clubes = LigaClube::query()
+            ->where('liga_id', $liga->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        $addedCount = 0;
+
+        foreach ($clubes as $clube) {
+            if ($this->ensureClubMembershipForLockedLiga($liga, $clube)) {
+                $addedCount++;
+            }
+        }
+
+        return $addedCount;
+    }
+
+    private function ensureClubMembershipForLockedLiga(Liga $liga, LigaClube $clube): bool
+    {
+        $existingMembership = LigaCopaGrupoClube::query()
+            ->where('liga_clube_id', $clube->id)
+            ->lockForUpdate()
+            ->first();
+
+        if ($existingMembership) {
+            return false;
+        }
+
+        $grupo = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->withCount('memberships')
+            ->orderBy('ordem')
+            ->lockForUpdate()
+            ->get()
+            ->first(fn (LigaCopaGrupo $item) => (int) $item->memberships_count < self::GROUP_SIZE);
+
+        if (! $grupo) {
+            return false;
+        }
+
+        $ordem = (int) LigaCopaGrupoClube::query()
+            ->where('grupo_id', $grupo->id)
+            ->lockForUpdate()
+            ->get(['id'])
+            ->count() + 1;
+
+        LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupo->id,
+            'liga_clube_id' => $clube->id,
+            'ordem' => $ordem,
+        ]);
+
+        $groupMemberCount = (int) LigaCopaGrupoClube::query()
+            ->where('grupo_id', $grupo->id)
+            ->lockForUpdate()
+            ->get(['id'])
+            ->count();
+
+        if ($groupMemberCount === self::GROUP_SIZE) {
+            $this->ensureGroupStageMatches($liga, $grupo);
+        }
+
+        return true;
     }
 
     private function ensureGroupStageMatches(Liga $liga, LigaCopaGrupo $grupo): void

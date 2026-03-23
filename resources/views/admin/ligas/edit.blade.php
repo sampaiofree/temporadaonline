@@ -3,7 +3,13 @@
         <div class="flex items-center justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-slate-800">Editar liga</h2>
-                <p class="text-sm text-slate-500">Ajuste os campos permitidos conforme a regra vigente.</p>
+                <p class="text-sm text-slate-500">
+                    @if($hasClubes)
+                        A liga ja iniciou sua estrutura competitiva. O formato ficou bloqueado para preservar os grupos e o chaveamento da Copa.
+                    @else
+                        Os campos permitidos ainda podem ser ajustados. Defina o formato final da liga antes da entrada de clubes.
+                    @endif
+                </p>
             </div>
             <a
                 href="{{ route('admin.ligas.index') }}"
@@ -20,6 +26,7 @@
                 'action' => route('admin.ligas.update', $liga),
                 'method' => 'PUT',
                 'liga' => $liga,
+                'hasClubes' => $hasClubes,
                 'statusOptions' => $statusOptions,
                 'whatsappGroups' => $whatsappGroups ?? [],
                 'submitLabel' => 'Salvar alterações',

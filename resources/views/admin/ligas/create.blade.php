@@ -3,7 +3,9 @@
         <div class="flex items-center justify-between gap-4">
             <div>
                 <h2 class="text-2xl font-bold text-slate-800">Criar nova liga</h2>
-                <p class="text-sm text-slate-500">Defina o nome, confederacao e dados herdados (jogo, geracao, plataforma), teto de clubes e status.</p>
+                <p class="text-sm text-slate-500">
+                    Defina o formato da liga antes da entrada de clubes. A Copa usa grupos de 4 e chave eliminatoria pura, entao os formatos permitidos sao 8, 16, 32 ou 64 clubes.
+                </p>
             </div>
             <a
                 href="{{ route('admin.ligas.index') }}"

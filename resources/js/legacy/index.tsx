@@ -1171,6 +1171,7 @@ const normalizeLegacyLeagueTableRows = (rows: any) => {
     clubEscudoUrl: row?.club_escudo_url ? String(row.club_escudo_url) : null,
     played: Math.max(0, Number(row?.played ?? 0) || 0),
     wins: Math.max(0, Number(row?.wins ?? 0) || 0),
+    draws: Math.max(0, Number(row?.draws ?? 0) || 0),
     points: Math.max(0, Number(row?.points ?? 0) || 0),
     isUser: Boolean(row?.is_user),
   }));
@@ -2256,6 +2257,9 @@ const formatLegacyMatchDate = (iso: string | null | undefined) => {
 const isLegacySchedulingAllowed = (partida: any) =>
   ['confirmacao_necessaria', 'confirmada', 'agendada'].includes(String(partida?.estado || ''));
 
+const isLegacyFinalizationAllowed = (partida: any) =>
+  ['confirmada', 'agendada'].includes(String(partida?.estado || ''));
+
 const isLegacyWoAllowed = (partida: any) => {
   if (String(partida?.estado || '') !== 'confirmada') return false;
   if (!partida?.scheduled_at) return false;
@@ -2505,6 +2509,12 @@ const ScheduleMatchesView = ({
   const modalIsPendingConfirmation = String(selectedPartida?.estado || '') === 'confirmacao_necessaria';
   const modalActionLabel = modalIsPendingConfirmation ? 'CONFIRMAR HORARIO' : 'REAGENDAR HORARIO';
   const modalSubmittingLabel = modalIsPendingConfirmation ? 'CONFIRMANDO...' : 'REAGENDANDO...';
+  const formatCompetitionContext = (partida: any) => {
+    const baseLabel = String(partida?.cup_phase_label || partida?.competition_label || 'PARTIDA').trim();
+    const groupLabel = String(partida?.cup_group_label || '').trim().toUpperCase();
+
+    return groupLabel !== '' ? `${baseLabel} • ${groupLabel}` : baseLabel;
+  };
 
   return (
     <div className="min-h-screen bg-[#121212] pt-8 pb-32 px-6">
@@ -2582,7 +2592,7 @@ const ScheduleMatchesView = ({
             ) : visibleMatches.map((partida) => {
               const opponent = partida.is_visitante ? partida.mandante : partida.visitante;
               const isPending = String(partida?.estado || '') === 'confirmacao_necessaria';
-              const canOpenFinalize = String(partida?.estado || '') === 'confirmada';
+              const canOpenFinalize = isLegacyFinalizationAllowed(partida);
               const canFinalize = canOpenFinalize && !isLegacyMatchReportBlocked(partida);
               const homeName = String(partida?.mandante || 'MANDANTE');
               const awayName = String(partida?.visitante || 'VISITANTE');
@@ -2600,6 +2610,9 @@ const ScheduleMatchesView = ({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
+                        <p className="text-[8px] font-black italic text-[#FFD700] uppercase tracking-[0.16em] mb-2">
+                          {formatCompetitionContext(partida)}
+                        </p>
                         <div className="flex items-center gap-2 mb-2">
                           <div className="w-7 h-7 bg-[#121212] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
                             {homeLogo ? (
@@ -2641,6 +2654,9 @@ const ScheduleMatchesView = ({
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <p className="text-[8px] font-black italic text-[#FFD700] uppercase tracking-[0.16em] mb-2">
+                        {formatCompetitionContext(partida)}
+                      </p>
                       <div className="flex items-center gap-2 mb-2">
                         <div className="w-7 h-7 bg-[#121212] border border-[#FFD700]/35 flex items-center justify-center overflow-hidden" style={{ clipPath: SHIELD_CLIP }}>
                           {homeLogo ? (
@@ -2719,6 +2735,9 @@ const ScheduleMatchesView = ({
               <div className="min-w-0">
                 <p className="text-[9px] font-black uppercase italic tracking-[0.25em] text-[#FFD700]">
                   HORARIOS DISPONIVEIS
+                </p>
+                <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-[#FFD700]/80 mt-2">
+                  {formatCompetitionContext(selectedPartida)}
                 </p>
                 <h3 className="text-2xl font-black italic uppercase text-white leading-tight mt-2 truncate">
                   VS {selectedPartida.is_visitante ? selectedPartida.mandante : selectedPartida.visitante}
@@ -2966,23 +2985,161 @@ const MatchCenterView = ({
     [recentResultMatches],
   );
 
-  const renderMatchResultCard = (partida: any) => (
-    <div className="bg-[#1E1E1E] p-4 flex items-center justify-between" style={{ clipPath: "polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px)" }}>
-      <div className="flex-1 min-w-0">
-        <p className="text-[8px] font-black italic text-[#FFD700] uppercase tracking-[0.16em]">
-          {String(partida.cup_phase_label || partida.competition_label || 'PARTIDA')}
-          {partida.cup_group_label ? ` • ${String(partida.cup_group_label).toUpperCase()}` : ''}
-        </p>
-        <p className="text-[9px] font-black italic text-white/60 uppercase mt-1">{LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}</p>
-        <p className="text-[11px] font-black italic text-white uppercase truncate">{partida.is_mandante ? partida.visitante : partida.mandante}</p>
+  const formatMatchCompetitionContext = (partida: any) => {
+    const baseLabel = String(partida?.cup_phase_label || partida?.competition_label || 'PARTIDA').trim();
+    const groupLabel = String(partida?.cup_group_label || '').trim().toUpperCase();
+
+    return groupLabel !== '' ? `${baseLabel} • ${groupLabel}` : baseLabel;
+  };
+
+  const resolveLegacyResultCardMeta = (partida: any) => {
+    const estado = String(partida?.estado || '');
+    const homeScore = Number(partida?.placar_mandante);
+    const awayScore = Number(partida?.placar_visitante);
+    const hasHomeScore = Number.isFinite(homeScore);
+    const hasAwayScore = Number.isFinite(awayScore);
+    const perspective = partida?.is_mandante ? 'mandante' : partida?.is_visitante ? 'visitante' : null;
+
+    let winner: 'mandante' | 'visitante' | null = null;
+
+    if (hasHomeScore && hasAwayScore) {
+      if (homeScore > awayScore) {
+        winner = 'mandante';
+      } else if (awayScore > homeScore) {
+        winner = 'visitante';
+      }
+    }
+
+    const isDraw = winner === null && hasHomeScore && hasAwayScore && homeScore === awayScore;
+    const isWo = estado === 'wo';
+
+    let resultLabel = 'RESULTADO';
+
+    if (isWo) {
+      resultLabel = 'W.O.';
+    } else if (isDraw) {
+      resultLabel = 'EMPATE';
+    } else if (winner && perspective) {
+      resultLabel = winner === perspective ? 'VITORIA' : 'DERROTA';
+    }
+
+    return {
+      winner,
+      isDraw,
+      isWo,
+      resultLabel,
+      homeScoreLabel: hasHomeScore ? String(homeScore) : '-',
+      awayScoreLabel: hasAwayScore ? String(awayScore) : '-',
+    };
+  };
+
+  const renderMatchResultCard = (partida: any) => {
+    const homeName = String(partida?.mandante || 'MANDANTE');
+    const awayName = String(partida?.visitante || 'VISITANTE');
+    const homeLogo = String(partida?.mandante_logo || '').trim();
+    const awayLogo = String(partida?.visitante_logo || '').trim();
+    const resultMeta = resolveLegacyResultCardMeta(partida);
+
+    const homeWon = resultMeta.winner === 'mandante';
+    const awayWon = resultMeta.winner === 'visitante';
+
+    const homePanelClass = resultMeta.isDraw
+      ? 'border-[#FFD700]/18 bg-[#121212]/55 text-white'
+      : homeWon
+        ? 'border-[#22C55E]/55 bg-[#22C55E]/10 text-white shadow-[0_0_18px_rgba(34,197,94,0.12)]'
+        : 'border-white/10 bg-[#121212]/40 text-white/65';
+    const awayPanelClass = resultMeta.isDraw
+      ? 'border-[#FFD700]/18 bg-[#121212]/55 text-white'
+      : awayWon
+        ? 'border-[#22C55E]/55 bg-[#22C55E]/10 text-white shadow-[0_0_18px_rgba(34,197,94,0.12)]'
+        : 'border-white/10 bg-[#121212]/40 text-white/65';
+    const homeShieldBorder = homeWon ? 'border-[#22C55E]' : resultMeta.isDraw ? 'border-[#FFD700]/40' : 'border-white/10';
+    const awayShieldBorder = awayWon ? 'border-[#22C55E]' : resultMeta.isDraw ? 'border-[#FFD700]/40' : 'border-white/10';
+    const scoreClass = resultMeta.isDraw
+      ? 'text-[#FFD700]'
+      : 'text-white';
+    const resultBadgeClass = resultMeta.resultLabel === 'VITORIA'
+      ? 'border-[#22C55E]/55 bg-[#22C55E]/14 text-[#A7F3D0]'
+      : resultMeta.resultLabel === 'DERROTA'
+        ? 'border-[#B22222]/55 bg-[#B22222]/14 text-[#FFB4B4]'
+        : 'border-[#FFD700]/45 bg-[#FFD700]/12 text-[#FFD700]';
+
+    return (
+      <div className="bg-[#1E1E1E] p-4 border-l-[3px] border-[#FFD700]/45 space-y-4" style={{ clipPath: AGGRESSIVE_CLIP }}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[8px] font-black italic text-[#FFD700] uppercase tracking-[0.16em]">
+              {formatMatchCompetitionContext(partida)}
+            </p>
+            <p className="text-[8px] font-black italic text-white/45 uppercase mt-1 tracking-[0.14em]">
+              {LEGACY_MATCH_STATUS_LABELS[String(partida.estado)] || partida.estado}
+            </p>
+          </div>
+          <span className={`shrink-0 px-2 py-1 border text-[7px] font-black uppercase italic tracking-[0.16em] ${resultBadgeClass}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+            {resultMeta.resultLabel}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_1fr] gap-3 items-center">
+          <div className={`min-w-0 text-center border p-3 ${homePanelClass}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className={`w-11 h-11 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 ${homeShieldBorder}`} style={{ clipPath: SHIELD_CLIP }}>
+              {homeLogo ? (
+                <img src={homeLogo} alt={homeName} className="w-full h-full object-cover" />
+              ) : (
+                <i className={`fas fa-shield text-base ${homeWon ? 'text-[#22C55E]/70' : 'text-white/20'}`}></i>
+              )}
+            </div>
+            <p className={`text-[9px] font-black italic uppercase truncate ${homeWon ? 'text-white' : resultMeta.isDraw ? 'text-white' : 'text-white/55'}`}>
+              {homeName}
+            </p>
+            <p className={`mt-2 text-[7px] font-black uppercase italic tracking-[0.16em] ${homeWon ? 'text-[#A7F3D0]' : resultMeta.isDraw ? 'text-[#FFD700]/80' : 'text-white/25'}`}>
+              {homeWon ? 'VENCEDOR' : resultMeta.isDraw ? 'EMPATE' : ' '}
+            </p>
+          </div>
+
+          <div className="bg-[#121212] px-4 py-3 border border-[#FFD700]/18 text-center min-w-[86px]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className="flex items-center justify-center gap-2">
+              <span className={`text-2xl font-black italic font-heading ${homeWon ? 'text-[#22C55E]' : scoreClass}`}>
+                {resultMeta.homeScoreLabel}
+              </span>
+              <span className="text-[9px] font-black italic text-white/15">X</span>
+              <span className={`text-2xl font-black italic font-heading ${awayWon ? 'text-[#22C55E]' : scoreClass}`}>
+                {resultMeta.awayScoreLabel}
+              </span>
+            </div>
+            <p className="mt-2 text-[7px] font-black uppercase italic tracking-[0.16em] text-white/30">
+              {resultMeta.isWo ? 'RESULTADO POR W.O.' : 'PLACAR FINAL'}
+            </p>
+          </div>
+
+          <div className={`min-w-0 text-center border p-3 ${awayPanelClass}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+            <div className={`w-11 h-11 bg-[#121212] mx-auto mb-2 overflow-hidden flex items-center justify-center border-b-2 ${awayShieldBorder}`} style={{ clipPath: SHIELD_CLIP }}>
+              {awayLogo ? (
+                <img src={awayLogo} alt={awayName} className="w-full h-full object-cover" />
+              ) : (
+                <i className={`fas fa-shield text-base ${awayWon ? 'text-[#22C55E]/70' : 'text-white/20'}`}></i>
+              )}
+            </div>
+            <p className={`text-[9px] font-black italic uppercase truncate ${awayWon ? 'text-white' : resultMeta.isDraw ? 'text-white' : 'text-white/55'}`}>
+              {awayName}
+            </p>
+            <p className={`mt-2 text-[7px] font-black uppercase italic tracking-[0.16em] ${awayWon ? 'text-[#A7F3D0]' : resultMeta.isDraw ? 'text-[#FFD700]/80' : 'text-white/25'}`}>
+              {awayWon ? 'VENCEDOR' : resultMeta.isDraw ? 'EMPATE' : ' '}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[7px] font-black uppercase italic tracking-[0.14em] text-white/30">
+            RESULTADO DO SEU CLUBE
+          </p>
+          <span className={`px-2 py-1 border text-[7px] font-black uppercase italic tracking-[0.16em] ${resultBadgeClass}`} style={{ clipPath: AGGRESSIVE_CLIP }}>
+            {resultMeta.resultLabel}
+          </span>
+        </div>
       </div>
-      <div className="bg-[#121212] px-4 py-2 flex items-center gap-3 border-l-2 border-[#FFD700]/30" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
-        <span className="text-lg font-black italic font-heading text-white">{partida.placar_mandante ?? '-'}</span>
-        <span className="text-[8px] text-white/10 font-black italic">X</span>
-        <span className="text-lg font-black italic font-heading text-white">{partida.placar_visitante ?? '-'}</span>
-      </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen bg-[#121212] pb-32" style={{ paddingTop: LEGACY_CONTENT_TOP_PADDING_CSS }}>
@@ -3065,7 +3222,7 @@ const MatchCenterView = ({
                       <MCOButton
                         onClick={() => onOpenFinalize(activeMatch)}
                         className="!py-5 !px-2 !text-[9px]"
-                        disabled={String(activeMatch?.estado || '') !== 'confirmada' || isLegacyMatchReportBlocked(activeMatch)}
+                        disabled={!isLegacyFinalizationAllowed(activeMatch) || isLegacyMatchReportBlocked(activeMatch)}
                       >
                         FINALIZAR PARTIDA
                       </MCOButton>
@@ -3087,7 +3244,7 @@ const MatchCenterView = ({
                         </MCOButton>
                       )}
                     </div>
-                    {String(activeMatch?.estado || '') === 'confirmada' && isLegacyMatchReportBlocked(activeMatch) && (
+                    {isLegacyFinalizationAllowed(activeMatch) && isLegacyMatchReportBlocked(activeMatch) && (
                       <p className="mt-3 text-[8px] font-black uppercase italic text-[#FFB4B4] text-center">
                         {getLegacyMatchReportBlockReason(activeMatch)}
                       </p>
@@ -6742,11 +6899,12 @@ const LeagueTableView = ({
       <div className="flex-grow overflow-y-auto">
         <div className="min-w-full">
           <LegacyReveal delayMs={40}>
-            <div className="grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
+            <div className="grid grid-cols-[72px_1fr_36px_36px_36px_50px] gap-2 px-4 py-3 bg-[#1E1E1E] border-b-[2px] border-[#FFD700]/30 mb-4" style={{ clipPath: "polygon(8px 0, 100% 0, 100% 100%, 0 100%, 0 8px)" }}>
               <span className="text-[8px] font-black text-white/40 italic uppercase">POS</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase">CLUBE</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">P</span>
               <span className="text-[8px] font-black text-white/40 italic uppercase text-center">V</span>
+              <span className="text-[8px] font-black text-white/40 italic uppercase text-center">E</span>
               <span className="text-[8px] font-black text-[#FFD700] italic uppercase text-right">PTS</span>
             </div>
           </LegacyReveal>
@@ -6774,7 +6932,7 @@ const LeagueTableView = ({
                 <LegacyReveal key={`${row.clubId}-${row.pos}`} delayMs={80 + (idx * 16)}>
                   <div
                     onClick={() => onOpenClub({ id: row.clubId, name: row.clubName })}
-                    className={`grid grid-cols-[72px_1fr_40px_40px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
+                    className={`grid grid-cols-[72px_1fr_36px_36px_36px_50px] gap-2 px-4 py-4 items-center transition-all cursor-pointer active:scale-95 ${row.isUser ? 'bg-[#FFD700] text-[#121212]' : 'bg-[#1E1E1E] text-white'}`}
                     style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}
                   >
                     <span className="flex items-center gap-2">
@@ -6790,6 +6948,7 @@ const LeagueTableView = ({
                     <span className="text-[11px] font-black italic uppercase truncate">{row.clubName}</span>
                     <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.played}</span>
                     <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.wins}</span>
+                    <span className="text-[10px] font-black italic font-heading text-center opacity-60">{row.draws}</span>
                     <span className="text-xs font-black italic font-heading text-right">{row.points}</span>
                   </div>
                 </LegacyReveal>

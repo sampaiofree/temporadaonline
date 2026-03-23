@@ -2877,6 +2877,7 @@ class LegacyController extends Controller
                 'user_id' => (int) ($club->user_id ?? 0),
                 'played' => 0,
                 'wins' => 0,
+                'draws' => 0,
                 'points' => 0,
                 'goals_for' => 0,
                 'goals_against' => 0,
@@ -2909,6 +2910,8 @@ class LegacyController extends Controller
                 $stats[$visitanteId]['wins']++;
                 $stats[$visitanteId]['points'] += 3;
             } else {
+                $stats[$mandanteId]['draws']++;
+                $stats[$visitanteId]['draws']++;
                 $stats[$mandanteId]['points'] += 1;
                 $stats[$visitanteId]['points'] += 1;
             }
@@ -2948,6 +2951,7 @@ class LegacyController extends Controller
                     'user_id' => (int) $row['user_id'],
                     'played' => (int) $row['played'],
                     'wins' => (int) $row['wins'],
+                    'draws' => (int) $row['draws'],
                     'points' => (int) $row['points'],
                     'is_user' => (int) $row['user_id'] === (int) $user->id,
                 ];
