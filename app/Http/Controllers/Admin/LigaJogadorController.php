@@ -29,6 +29,21 @@ class LigaJogadorController extends Controller
             ->paginate(15)
             ->withQueryString();
 
+        $clubesByKey = LigaClube::query()
+            ->whereIn('liga_id', $ligaJogadores->getCollection()->pluck('liga_id')->unique()->all())
+            ->whereIn('user_id', $ligaJogadores->getCollection()->pluck('user_id')->unique()->all())
+            ->get(['liga_id', 'user_id', 'nome'])
+            ->keyBy(fn (LigaClube $clube) => $this->clubKey($clube->liga_id, $clube->user_id));
+
+        $ligaJogadores->getCollection()->transform(function (LigaJogador $entry) use ($clubesByKey): LigaJogador {
+            $entry->setAttribute(
+                'club_name',
+                $clubesByKey->get($this->clubKey($entry->liga_id, $entry->user_id))?->nome,
+            );
+
+            return $entry;
+        });
+
         return view('admin.ligas-usuarios.index', [
             'ligaJogadores' => $ligaJogadores,
             'ligas' => $ligas,
@@ -66,5 +81,10 @@ class LigaJogadorController extends Controller
         }
 
         return $query;
+    }
+
+    private function clubKey(int|string|null $ligaId, int|string|null $userId): string
+    {
+        return sprintf('%s:%s', (string) $ligaId, (string) $userId);
     }
 }

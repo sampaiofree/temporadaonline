@@ -145,6 +145,7 @@
                             <tr>
                                 <th class="px-4 py-3 font-semibold">Usuário</th>
                                 <th class="px-4 py-3 font-semibold">Liga</th>
+                                <th class="px-4 py-3 font-semibold">Clube</th>
                                 <th class="px-4 py-3 font-semibold">Registrado em</th>
                                 <th class="px-4 py-3 font-semibold text-right">Ações</th>
                             </tr>
@@ -157,6 +158,15 @@
                                         <div class="text-xs text-slate-500">ID {{ $entry->user->id }} · {{ $entry->user->email }}</div>
                                     </td>
                                     <td class="px-4 py-4">{{ $entry->liga?->nome ?? '—' }}</td>
+                                    <td class="px-4 py-4">
+                                        @if ($entry->club_name)
+                                            <span class="font-semibold text-slate-900">{{ $entry->club_name }}</span>
+                                        @else
+                                            <span class="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700">
+                                                Sem clube
+                                            </span>
+                                        @endif
+                                    </td>
                                     <td class="px-4 py-4 text-slate-600">{{ $entry->created_at?->format('d/m/Y H:i') }}</td>
                                     <td class="px-4 py-4 text-right">
                                         <form action="{{ route('admin.ligas-usuarios.destroy', $entry) }}{{ $listingQuery }}" method="POST" class="inline">
@@ -173,7 +183,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-500">
+                                    <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-500">
                                         Nenhum usuário registrado em ligas no momento.
                                     </td>
                                 </tr>
