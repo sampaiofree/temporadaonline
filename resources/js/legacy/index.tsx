@@ -8776,6 +8776,9 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
   const hasLeague = Boolean(ligaData?.id && clubData?.id);
   const leagueImageUrl = String(ligaData?.imagem_url || '').trim();
   const showLeagueImage = leagueImageUrl !== '' && !leagueImageFailed;
+  const legacyCupTournamentTitle = ligaData?.nome
+    ? `COPA ${String(ligaData.nome)}`
+    : 'COPA DA LIGA';
 
   return (
     <div className="min-h-screen bg-[#121212] p-6 pb-32 overflow-y-auto">
