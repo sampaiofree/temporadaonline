@@ -36,6 +36,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
@@ -2191,9 +2192,31 @@ class LegacyController extends Controller
 
         $rawConfederacaoId = $request->query('confederacao_id');
         $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $legacySource = Str::lower(trim((string) $request->query('legacy_source', '')));
+        $isTournamentSource = $legacySource === 'tournaments';
+
+        if ($isTournamentSource) {
+            Log::withContext([
+                'legacy_view' => 'tournaments',
+                'legacy_endpoint' => 'my_club.data',
+                'legacy_source' => $legacySource,
+                'user_id' => $user->id,
+                'confederacao_id' => $confederacaoId,
+                'raw_confederacao_id' => $rawConfederacaoId,
+            ]);
+        }
+
+        if ($isTournamentSource && $rawConfederacaoId !== null && $confederacaoId === null) {
+            Log::warning('Legacy tournaments: invalid confederacao_id received.');
+        }
+
         $liga = $this->resolveMarketLiga($user, $confederacaoId);
 
         if (! $liga) {
+            if ($isTournamentSource) {
+                Log::warning('Legacy tournaments: no league found for selected confederacao.');
+            }
+
             return response()->json([
                 'message' => 'Nenhuma liga encontrada para esta confederacao.',
                 'liga' => null,
@@ -2212,6 +2235,13 @@ class LegacyController extends Controller
         $latestFinalizedLeagueResult = $this->resolveLegacyLatestFinalizedLeagueResult($user, $scopeConfederacaoId);
 
         if (! $userClub) {
+            if ($isTournamentSource) {
+                Log::info('Legacy tournaments: user is in league but has no club for selected confederacao.', [
+                    'liga_id' => $liga->id,
+                    'liga_nome' => $liga->nome,
+                ]);
+            }
+
             return response()->json([
                 'liga' => [
                     'id' => $liga->id,

@@ -13,6 +13,7 @@ use App\Models\LigaClubeConquista;
 use App\Models\Plataforma;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -97,6 +98,60 @@ class LegacyMyClubDataTest extends TestCase
         $response->assertJsonPath('clube.club_size_tiers.1.min_fans', 750000);
         $response->assertJsonPath('clube.club_size_tiers.2.name', 'NACIONAL');
         $response->assertJsonPath('clube.club_size_tiers.2.min_fans', 1500000);
+    }
+
+    public function test_my_club_data_logs_when_tournaments_source_has_no_league(): void
+    {
+        ['confederacao' => $confederacao] = $this->createLeagueContext('tournaments-no-league');
+
+        $user = User::factory()->create();
+
+        Log::spy();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('legacy.my_club.data', [
+                'confederacao_id' => $confederacao->id,
+                'legacy_source' => 'tournaments',
+            ]));
+
+        $response->assertNotFound();
+        $response->assertJsonPath('message', 'Nenhuma liga encontrada para esta confederacao.');
+
+        Log::shouldHaveReceived('warning')
+            ->once()
+            ->withArgs(function (string $message, array $context = []): bool {
+                return $message === 'Legacy tournaments: no league found for selected confederacao.';
+            });
+    }
+
+    public function test_my_club_data_logs_when_tournaments_source_has_league_but_no_club(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLeagueContext('tournaments-no-club');
+
+        $user = User::factory()->create();
+        $user->ligas()->attach($liga->id);
+
+        Log::spy();
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('legacy.my_club.data', [
+                'confederacao_id' => $confederacao->id,
+                'legacy_source' => 'tournaments',
+            ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('liga.id', $liga->id);
+        $response->assertJsonPath('clube', null);
+
+        Log::shouldHaveReceived('info')
+            ->once()
+            ->withArgs(function (string $message, array $context = []): bool {
+                return $message === 'Legacy tournaments: user is in league but has no club for selected confederacao.'
+                    && array_key_exists('liga_id', $context)
+                    && array_key_exists('liga_nome', $context);
+            });
     }
 
     /**

@@ -8742,6 +8742,7 @@ const TournamentsView = ({ onBack, onSelectTournament, currentCareer }: any) => 
       try {
         const endpoint = new URL(LEGACY_MY_CLUB_DATA_URL, window.location.origin);
         endpoint.searchParams.set('confederacao_id', String(currentCareer.id));
+        endpoint.searchParams.set('legacy_source', 'tournaments');
 
         const payload = await jsonRequest(endpoint.toString(), { method: 'GET' });
         if (cancelled) return;
