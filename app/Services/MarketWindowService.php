@@ -89,26 +89,27 @@ class MarketWindowService
         }
 
         $tz = $liga->resolveTimezone();
-        $threshold = $currentPeriod['fim'] ?? Carbon::now($tz)->toDateString();
+        $threshold = $currentPeriod['fim'] ?? Carbon::now($tz)->format('Y-m-d H:i:s');
 
         $nextRange = LigaLeilao::query()
             ->where('confederacao_id', $liga->confederacao_id)
-            ->whereDate('inicio', '>', $threshold)
+            ->where('inicio', '>', $threshold)
             ->orderBy('inicio')
+            ->toBase()
             ->first(['inicio', 'fim']);
 
         if (! $nextRange) {
             return null;
         }
 
-        $startDate = $nextRange->inicio instanceof Carbon ? $nextRange->inicio : Carbon::parse((string) $nextRange->inicio, $tz);
-        $endDate = $nextRange->fim instanceof Carbon ? $nextRange->fim : Carbon::parse((string) $nextRange->fim, $tz);
+        $startDate = Carbon::parse((string) $nextRange->inicio, $tz);
+        $endDate = Carbon::parse((string) $nextRange->fim, $tz);
 
         return [
-            'inicio' => $startDate->toDateString(),
-            'fim' => $endDate->toDateString(),
-            'inicio_label' => $startDate->format('d/m/Y'),
-            'fim_label' => $endDate->format('d/m/Y'),
+            'inicio' => $startDate->format('Y-m-d H:i:s'),
+            'fim' => $endDate->format('Y-m-d H:i:s'),
+            'inicio_label' => $startDate->format('d/m/Y H:i'),
+            'fim_label' => $endDate->format('d/m/Y H:i'),
             'timezone' => $tz,
         ];
     }

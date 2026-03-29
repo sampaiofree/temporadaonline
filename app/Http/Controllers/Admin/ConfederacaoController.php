@@ -61,8 +61,8 @@ class ConfederacaoController extends Controller
             'periodos.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
             'periodos.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'leiloes' => 'array',
-            'leiloes.*.inicio' => 'nullable|date',
-            'leiloes.*.fim' => 'nullable|date',
+            'leiloes.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'leiloes.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'roubos_multa' => 'array',
             'roubos_multa.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
             'roubos_multa.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
@@ -79,7 +79,7 @@ class ConfederacaoController extends Controller
 
         $timezone = (string) ($data['timezone'] ?? 'America/Sao_Paulo');
         $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
-        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
+        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes', $timezone, true);
         $roubosMulta = $this->normalizePeriodos($request->input('roubos_multa', []), 'roubos_multa', $timezone, true);
         unset($data['periodos'], $data['leiloes'], $data['roubos_multa']);
 
@@ -131,8 +131,8 @@ class ConfederacaoController extends Controller
             'periodos.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
             'periodos.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'leiloes' => 'array',
-            'leiloes.*.inicio' => 'nullable|date',
-            'leiloes.*.fim' => 'nullable|date',
+            'leiloes.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
+            'leiloes.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
             'roubos_multa' => 'array',
             'roubos_multa.*.inicio' => 'nullable|date_format:Y-m-d\TH:i',
             'roubos_multa.*.fim' => 'nullable|date_format:Y-m-d\TH:i',
@@ -163,7 +163,7 @@ class ConfederacaoController extends Controller
 
         $timezone = (string) ($data['timezone'] ?? $confederacao->timezone ?? 'America/Sao_Paulo');
         $periodos = $this->normalizePeriodos($request->input('periodos', []), 'periodos', $timezone, true);
-        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes');
+        $leiloes = $this->normalizePeriodos($request->input('leiloes', []), 'leiloes', $timezone, true);
         $roubosMulta = $this->normalizePeriodos($request->input('roubos_multa', []), 'roubos_multa', $timezone, true);
         unset($data['periodos'], $data['leiloes'], $data['roubos_multa']);
 

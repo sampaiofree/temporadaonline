@@ -69,8 +69,8 @@ class LegacyNextEventsDataTest extends TestCase
 
         LigaLeilao::create([
             'confederacao_id' => $confederacaoA->id,
-            'inicio' => '2026-03-20',
-            'fim' => '2026-03-22',
+            'inicio' => '2026-03-20 09:00:00',
+            'fim' => '2026-03-22 18:00:00',
         ]);
 
         LigaPeriodo::create([
@@ -100,8 +100,8 @@ class LegacyNextEventsDataTest extends TestCase
         $this->assertSame(['multa', 'market', 'auction'], $orderedIds);
         $this->assertSame('upcoming', $auction['status'] ?? null);
         $this->assertNull($auction['current_window'] ?? null);
-        $this->assertSame('20/03/2026', $auction['next_window']['start_label'] ?? null);
-        $this->assertSame('22/03/2026', $auction['next_window']['end_label'] ?? null);
+        $this->assertSame('20/03/2026 09:00', $auction['next_window']['start_label'] ?? null);
+        $this->assertSame('22/03/2026 18:00', $auction['next_window']['end_label'] ?? null);
 
         $this->assertSame('open', $multa['status'] ?? null);
         $this->assertSame('16/03/2026 11:30', $multa['current_window']['start_label'] ?? null);
@@ -136,8 +136,8 @@ class LegacyNextEventsDataTest extends TestCase
 
         LigaLeilao::create([
             'confederacao_id' => $confederacaoB->id,
-            'inicio' => '2026-03-18',
-            'fim' => '2026-03-19',
+            'inicio' => '2026-03-18 09:00:00',
+            'fim' => '2026-03-19 18:00:00',
         ]);
 
         $response = $this
@@ -174,8 +174,8 @@ class LegacyNextEventsDataTest extends TestCase
 
         LigaLeilao::create([
             'confederacao_id' => $confederacao->id,
-            'inicio' => '2026-03-12',
-            'fim' => '2026-03-13',
+            'inicio' => '2026-03-12 09:00:00',
+            'fim' => '2026-03-13 18:00:00',
         ]);
 
         LigaPeriodo::create([

@@ -51,8 +51,12 @@
             ? $confederacao->leiloes
                 ->sortBy('inicio')
                 ->map(fn ($leilao) => [
-                    'inicio' => $leilao->inicio?->toDateString(),
-                    'fim' => $leilao->fim?->toDateString(),
+                    'inicio' => $leilao->inicio
+                        ? Carbon::parse((string) $leilao->getRawOriginal('inicio'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
+                    'fim' => $leilao->fim
+                        ? Carbon::parse((string) $leilao->getRawOriginal('fim'), $timezoneAtual)->format('Y-m-d\TH:i')
+                        : null,
                 ])
                 ->values()
                 ->toArray()
@@ -366,14 +370,20 @@
                             @php
                                 $inicio = $leilao['inicio'] ?? '';
                                 $fim = $leilao['fim'] ?? '';
+                                $inicioLabel = $inicio
+                                    ? Carbon::parse(str_replace('T', ' ', $inicio), $timezoneAtual)->format('d/m/Y H:i')
+                                    : '—';
+                                $fimLabel = $fim
+                                    ? Carbon::parse(str_replace('T', ' ', $fim), $timezoneAtual)->format('d/m/Y H:i')
+                                    : '—';
                             @endphp
                             <tr class="border-b border-slate-100 bg-white" data-leilao-row>
                                 <td class="px-4 py-3 text-sm text-slate-900">
-                                    <div class="font-semibold">{{ $inicio ?: '—' }}</div>
+                                    <div class="font-semibold">{{ $inicioLabel }}</div>
                                     <input type="hidden" name="leiloes[{{ $index }}][inicio]" value="{{ $inicio }}">
                                 </td>
                                 <td class="px-4 py-3 text-sm text-slate-900">
-                                    <div class="font-semibold">{{ $fim ?: '—' }}</div>
+                                    <div class="font-semibold">{{ $fimLabel }}</div>
                                     <input type="hidden" name="leiloes[{{ $index }}][fim]" value="{{ $fim }}">
                                 </td>
                                 <td class="px-4 py-3 text-right">
@@ -551,7 +561,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-semibold text-slate-900">Adicionar janela de leilão</h3>
-                <p class="text-sm text-slate-500">Configure as datas de início e término.</p>
+                <p class="text-sm text-slate-500">Configure data e hora de início e término.</p>
             </div>
             <button
                 type="button"
@@ -564,19 +574,19 @@
 
         <form id="confederacao-leiloes-modal-form" class="mt-6 space-y-4">
             <div>
-                <label for="confederacao-leilao-modal-inicio" class="text-sm font-semibold text-slate-700">Data de inicio</label>
+                <label for="confederacao-leilao-modal-inicio" class="text-sm font-semibold text-slate-700">Data e hora de inicio</label>
                 <input
                     id="confederacao-leilao-modal-inicio"
-                    type="date"
+                    type="datetime-local"
                     class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     required
                 >
             </div>
             <div>
-                <label for="confederacao-leilao-modal-fim" class="text-sm font-semibold text-slate-700">Data de fim</label>
+                <label for="confederacao-leilao-modal-fim" class="text-sm font-semibold text-slate-700">Data e hora de fim</label>
                 <input
                     id="confederacao-leilao-modal-fim"
-                    type="date"
+                    type="datetime-local"
                     class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                     required
                 >
@@ -736,16 +746,14 @@
                 });
             };
 
+            const formatRangeLabel = (value) => config.withTime ? formatDateTimeLabel(value) : (value || '—');
+
             const createRow = (inicio, fim) => {
                 const row = document.createElement('tr');
                 row.className = 'border-b border-slate-100 bg-white';
                 row.setAttribute(config.rowAttribute, '');
-                const renderInicio = (config.fieldName === 'periodos' || config.fieldName === 'roubos_multa')
-                    ? formatDateTimeLabel(inicio)
-                    : (inicio || '—');
-                const renderFim = (config.fieldName === 'periodos' || config.fieldName === 'roubos_multa')
-                    ? formatDateTimeLabel(fim)
-                    : (fim || '—');
+                const renderInicio = formatRangeLabel(inicio);
+                const renderFim = formatRangeLabel(fim);
                 row.innerHTML = `
                     <td class="px-4 py-3 text-sm text-slate-900">
                         <div class="font-semibold">${renderInicio}</div>
@@ -821,7 +829,7 @@
 
                 const overlap = findOverlap(inicio, fim);
                 if (overlap) {
-                    showError(`Conflito com janela ${overlap.inicio} - ${overlap.fim}.`);
+                    showError(`Conflito com janela ${formatRangeLabel(overlap.inicio)} - ${formatRangeLabel(overlap.fim)}.`);
                     return;
                 }
 
@@ -872,6 +880,7 @@
             fieldName: 'periodos',
             rowAttribute: 'data-periodo-row',
             removeAttribute: 'data-remove-periodo',
+            withTime: true,
         });
 
         initRangeManager({
@@ -887,6 +896,7 @@
             fieldName: 'leiloes',
             rowAttribute: 'data-leilao-row',
             removeAttribute: 'data-remove-leilao',
+            withTime: true,
         });
 
         initRangeManager({
@@ -902,6 +912,7 @@
             fieldName: 'roubos_multa',
             rowAttribute: 'data-roubo-row',
             removeAttribute: 'data-remove-roubo',
+            withTime: true,
         });
     });
 </script>
