@@ -2261,8 +2261,14 @@ const formatLegacyMatchDate = (iso: string | null | undefined) => {
 const isLegacySchedulingAllowed = (partida: any) =>
   ['confirmacao_necessaria', 'confirmada', 'agendada'].includes(String(partida?.estado || ''));
 
-const isLegacyFinalizationAllowed = (partida: any) =>
+const isLegacyActiveMatch = (partida: any) =>
   ['confirmada', 'agendada'].includes(String(partida?.estado || ''));
+
+const isLegacyConfirmationPending = (partida: any) =>
+  String(partida?.estado || '') === 'confirmacao_necessaria';
+
+const isLegacyFinalizationAllowed = (partida: any) =>
+  isLegacyActiveMatch(partida);
 
 const isLegacyWoAllowed = (partida: any) => {
   if (String(partida?.estado || '') !== 'confirmada') return false;
@@ -2357,11 +2363,11 @@ const ScheduleMatchesView = ({
     [matches],
   );
   const confirmationPendingMatches = useMemo(
-    () => schedulableMatches.filter((partida) => String(partida?.estado || '') === 'confirmacao_necessaria'),
+    () => schedulableMatches.filter((partida) => isLegacyConfirmationPending(partida)),
     [schedulableMatches],
   );
   const confirmedOrScheduledMatches = useMemo(
-    () => schedulableMatches.filter((partida) => ['confirmada', 'agendada'].includes(String(partida?.estado || ''))),
+    () => schedulableMatches.filter((partida) => isLegacyActiveMatch(partida)),
     [schedulableMatches],
   );
   const visibleMatches = activeTab === 'pending' ? confirmationPendingMatches : confirmedOrScheduledMatches;
@@ -2977,12 +2983,20 @@ const MatchCenterView = ({
   }, [currentCareer?.id, reloadToken]);
 
   const activeMatch = useMemo(
-    () => partidas.find((partida) => isLegacySchedulingAllowed(partida)) || null,
+    () => partidas.find((partida) => isLegacyActiveMatch(partida)) || null,
+    [partidas],
+  );
+  const pendingScheduleMatch = useMemo(
+    () => partidas.find((partida) => isLegacyConfirmationPending(partida)) || null,
     [partidas],
   );
   const pendingScheduleCount = useMemo(
-    () => partidas.filter((partida) => isLegacySchedulingAllowed(partida)).length,
+    () => partidas.filter((partida) => isLegacyConfirmationPending(partida)).length,
     [partidas],
+  );
+  const scheduleTargetMatch = useMemo(
+    () => pendingScheduleMatch || activeMatch || null,
+    [pendingScheduleMatch, activeMatch],
   );
   const pendingSummaries = useMemo(
     () => partidas.filter((partida) => partida?.estado === 'placar_registrado' && Number(partida?.placar_registrado_por) !== Number(clube?.user_id)),
@@ -3284,6 +3298,33 @@ const MatchCenterView = ({
                       <LegacyInlineWarning message={activeMatchFinalizeBlockReason} className="mt-3" />
                     )}
                   </div>
+                ) : pendingScheduleMatch ? (
+                  <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#B22222]" style={{ clipPath: AGGRESSIVE_CLIP }}>
+                    <p className="text-[8px] font-black uppercase italic tracking-[0.18em] text-[#FFD700]">
+                      {String(pendingScheduleMatch?.cup_phase_label || pendingScheduleMatch?.competition_label || 'PARTIDA')}
+                      {pendingScheduleMatch?.cup_group_label ? ` • ${String(pendingScheduleMatch.cup_group_label).toUpperCase()}` : ''}
+                    </p>
+                    <p className="text-[10px] text-white font-black uppercase italic mt-3">
+                      Nenhum confronto ativo no momento.
+                    </p>
+                    <p className="text-[9px] text-white/55 font-black uppercase italic mt-2 leading-relaxed">
+                      Você precisa agendar ou confirmar o horário do próximo jogo para liberar este confronto.
+                    </p>
+                    <p className="text-[8px] font-black uppercase italic text-white/35 tracking-[0.14em] mt-4">
+                      VS {pendingScheduleMatch?.is_visitante ? pendingScheduleMatch?.mandante : pendingScheduleMatch?.visitante}
+                    </p>
+                    <p className="text-[8px] font-black uppercase italic text-white/30 tracking-[0.14em] mt-2">
+                      {formatLegacyMatchDate(pendingScheduleMatch?.scheduled_at)}
+                    </p>
+                    <div className="mt-5">
+                      <MCOButton
+                        onClick={() => onOpenSchedule(pendingScheduleMatch)}
+                        className="!py-5 !px-2 !text-[9px]"
+                      >
+                        AGENDAR / CONFIRMAR HORÁRIO
+                      </MCOButton>
+                    </div>
+                  </div>
                 ) : (
                   <div className="bg-[#1E1E1E] p-6 border-l-[4px] border-[#FFD700]" style={{ clipPath: AGGRESSIVE_CLIP }}>
                     <p className="text-[10px] text-white/50 font-black uppercase italic">Sem confronto ativo nesta confederação.</p>
@@ -3295,7 +3336,12 @@ const MatchCenterView = ({
             <LegacyReveal delayMs={80}>
               <section className="space-y-4">
                 <h4 className="text-[11px] font-black uppercase text-white/40 italic tracking-[0.2em] px-2">GESTÃO DE AGENDA</h4>
-                <MCOCard onClick={() => onOpenSchedule(activeMatch)} className="p-6" active={true} accentColor="#FFD700">
+                <MCOCard
+                  onClick={scheduleTargetMatch ? () => onOpenSchedule(scheduleTargetMatch) : undefined}
+                  className={`p-6 ${scheduleTargetMatch ? '' : 'opacity-70 pointer-events-none'}`}
+                  active={Boolean(scheduleTargetMatch)}
+                  accentColor="#FFD700"
+                >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-5">
                       <div className="w-12 h-12 bg-[#121212] flex items-center justify-center border-b-2 border-[#FFD700]" style={{ clipPath: SHIELD_CLIP }}>
