@@ -9,13 +9,18 @@ use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaCopaFase;
 use App\Models\LigaCopaGrupo;
+use App\Models\LigaCopaGrupoClube;
 use App\Models\Partida;
 use App\Models\Plataforma;
 use App\Models\User;
+use App\Services\PartidaSchedulerService;
 use App\Services\LigaClassificacaoService;
 use App\Services\LigaCopaService;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Mockery;
+use PDOException;
 use Tests\TestCase;
 
 class LigaCopaMvpTest extends TestCase
@@ -213,6 +218,90 @@ class LigaCopaMvpTest extends TestCase
         $this->assertSame(1, $ranking[0]['partidas_jogadas']);
         $this->assertSame($clubeB->id, $ranking[1]['clube_id']);
         $this->assertSame(0, $ranking[1]['pontos']);
+    }
+
+    public function test_membership_allocation_retries_after_unique_slot_conflict(): void
+    {
+        $context = $this->createCompetitionContext();
+        $liga = $this->createLiga($context, ['max_times' => 8]);
+
+        for ($index = 1; $index <= 3; $index++) {
+            $this->createClub($liga, "Base {$index}");
+        }
+
+        $candidate = LigaClube::withoutEvents(function () use ($liga): LigaClube {
+            $user = User::factory()->create();
+            $user->ligas()->attach($liga->id);
+
+            return LigaClube::create([
+                'liga_id' => $liga->id,
+                'confederacao_id' => $liga->confederacao_id,
+                'user_id' => $user->id,
+                'nome' => 'Candidato ao retry',
+            ]);
+        });
+
+        $groupA = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->where('ordem', 1)
+            ->firstOrFail();
+
+        $groupB = LigaCopaGrupo::query()
+            ->where('liga_id', $liga->id)
+            ->where('ordem', 2)
+            ->firstOrFail();
+
+        $service = Mockery::mock(LigaCopaService::class, [app(PartidaSchedulerService::class)])
+            ->makePartial()
+            ->shouldAllowMockingProtectedMethods();
+
+        $service->shouldReceive('resolveFirstAvailableGroupSlot')
+            ->twice()
+            ->andReturn(
+                ['grupo' => $groupA, 'ordem' => 4],
+                ['grupo' => $groupB, 'ordem' => 1],
+            );
+
+        $service->shouldReceive('createGroupMembership')
+            ->once()
+            ->with($groupA, Mockery::on(fn (LigaClube $club): bool => $club->id === $candidate->id), 4)
+            ->andThrow($this->makeMembershipConflictException());
+
+        $service->shouldReceive('createGroupMembership')
+            ->once()
+            ->with($groupB, Mockery::on(fn (LigaClube $club): bool => $club->id === $candidate->id), 1)
+            ->andReturnUsing(function (LigaCopaGrupo $grupo, LigaClube $clube, int $ordem): LigaCopaGrupoClube {
+                return LigaCopaGrupoClube::query()->create([
+                    'grupo_id' => $grupo->id,
+                    'liga_clube_id' => $clube->id,
+                    'ordem' => $ordem,
+                ]);
+            });
+
+        $service->handleClubCreated($candidate->fresh());
+
+        $this->assertDatabaseHas('liga_copa_grupo_clubes', [
+            'liga_clube_id' => $candidate->id,
+            'grupo_id' => $groupB->id,
+            'ordem' => 1,
+        ]);
+
+        $this->assertSame(
+            1,
+            LigaCopaGrupoClube::query()
+                ->where('liga_clube_id', $candidate->id)
+                ->count(),
+        );
+    }
+
+    private function makeMembershipConflictException(): UniqueConstraintViolationException
+    {
+        return new UniqueConstraintViolationException(
+            config('database.default'),
+            'insert into "liga_copa_grupo_clubes" ("grupo_id", "liga_clube_id", "ordem") values (?, ?, ?)',
+            [],
+            new PDOException('SQLSTATE[23505]: Unique violation: 7 ERROR: duplicate key value violates unique constraint "liga_copa_grupo_clubes_grupo_ordem_unique"'),
+        );
     }
 
     private function createCompetitionContext(): array

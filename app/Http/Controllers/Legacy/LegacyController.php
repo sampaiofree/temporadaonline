@@ -453,16 +453,18 @@ class LegacyController extends Controller
                 });
             }
 
-            if ($filterQuality !== 'TODAS') {
-                match ($filterQuality) {
-                    '90+' => $playersQuery->where('elencopadrao.overall', '>=', 90),
-                    '89-88' => $playersQuery->whereBetween('elencopadrao.overall', [88, 89]),
-                    '87-84' => $playersQuery->whereBetween('elencopadrao.overall', [84, 87]),
-                    '83-80' => $playersQuery->whereBetween('elencopadrao.overall', [80, 83]),
-                    '79-73' => $playersQuery->whereBetween('elencopadrao.overall', [73, 79]),
-                    '72-' => $playersQuery->where('elencopadrao.overall', '<=', 72),
-                    default => null,
-                };
+            $qualityRange = $this->resolveLegacyQualityFilterRange($filterQuality);
+            if ($qualityRange !== null) {
+                $minOverall = $qualityRange['min'];
+                $maxOverall = $qualityRange['max'];
+
+                if ($minOverall !== null && $maxOverall !== null) {
+                    $playersQuery->whereBetween('elencopadrao.overall', [$minOverall, $maxOverall]);
+                } elseif ($minOverall !== null) {
+                    $playersQuery->where('elencopadrao.overall', '>=', $minOverall);
+                } elseif ($maxOverall !== null) {
+                    $playersQuery->where('elencopadrao.overall', '<=', $maxOverall);
+                }
             }
 
             if ($filterValMin !== null) {
@@ -1186,14 +1188,43 @@ class LegacyController extends Controller
 
     private function matchesLegacyQualityFilter(string $filterQuality, int $overall): bool
     {
-        return match ($filterQuality) {
-            '90+' => $overall >= 90,
-            '89-88' => $overall >= 88 && $overall <= 89,
-            '87-84' => $overall >= 84 && $overall <= 87,
-            '83-80' => $overall >= 80 && $overall <= 83,
-            '79-73' => $overall >= 73 && $overall <= 79,
-            '72-' => $overall <= 72,
-            default => true,
+        $range = $this->resolveLegacyQualityFilterRange($filterQuality);
+        if ($range === null) {
+            return true;
+        }
+
+        $minOverall = $range['min'];
+        $maxOverall = $range['max'];
+
+        if ($minOverall !== null && $overall < $minOverall) {
+            return false;
+        }
+
+        if ($maxOverall !== null && $overall > $maxOverall) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * @return array{min:int|null,max:int|null}|null
+     */
+    private function resolveLegacyQualityFilterRange(string $filterQuality): ?array
+    {
+        return match (Str::upper(trim($filterQuality))) {
+            'S+', '90+' => ['min' => 90, 'max' => null],
+            'A', '89-88' => ['min' => 88, 'max' => 89],
+            'B' => ['min' => 86, 'max' => 87],
+            'C' => ['min' => 84, 'max' => 85],
+            'D' => ['min' => 81, 'max' => 83],
+            'E' => ['min' => 75, 'max' => 80],
+            'F' => ['min' => 72, 'max' => 74],
+            'G', '72-' => ['min' => null, 'max' => 72],
+            '87-84' => ['min' => 84, 'max' => 87],
+            '83-80' => ['min' => 80, 'max' => 83],
+            '79-73' => ['min' => 73, 'max' => 79],
+            default => null,
         };
     }
 
@@ -4367,20 +4398,19 @@ class LegacyController extends Controller
             ->orderByDesc('id')
             ->get();
 
-        $players = $elencoEntries->map(function (LigaClubeElenco $entry) {
-            $player = $entry->elencopadrao;
+        $traitNames = $elencoEntries
+            ->pluck('elencopadrao')
+            ->filter()
+            ->flatMap(fn (Elencopadrao $player) => $this->parseLegacyTraitTags($player->player_traits))
+            ->unique(fn (string $name) => Str::lower($name))
+            ->values();
 
-            return [
-                'id' => (int) $entry->id,
-                'nome' => (string) ($player?->short_name ?? $player?->long_name ?? 'ATLETA'),
-                'pos' => (string) (explode(',', (string) ($player?->player_positions ?? ''))[0] ?? '-'),
-                'ovr' => (int) ($player?->overall ?? 0),
-                'valor' => (int) ($entry->value_eur ?? $player?->value_eur ?? 0),
-                'salario' => (int) ($entry->wage_eur ?? $player?->wage_eur ?? 0),
-                'foto' => $player?->player_face_url,
-                'ativo' => (bool) $entry->ativo,
-            ];
-        })->values()->all();
+        $playstylesMap = $this->buildLegacyPlaystylesMap($traitNames);
+
+        $players = $elencoEntries
+            ->map(fn (LigaClubeElenco $entry) => $this->formatLegacyPublicClubProfilePlayer($entry, $playstylesMap))
+            ->values()
+            ->all();
 
         return response()->json([
             'liga' => [
@@ -4417,6 +4447,67 @@ class LegacyController extends Controller
                 'esquema_tatico_field_background_url' => $fieldBackgroundUrl,
             ],
         ]);
+    }
+
+    private function formatLegacyPublicClubProfilePlayer(LigaClubeElenco $entry, Collection $playstylesMap): array
+    {
+        $player = $entry->elencopadrao;
+
+        return [
+            'id' => (int) $entry->id,
+            'elencopadrao_id' => (int) ($player?->id ?? 0),
+            'nome' => (string) ($player?->short_name ?? $player?->long_name ?? 'ATLETA'),
+            'short_name' => $player?->short_name,
+            'long_name' => $player?->long_name,
+            'pos' => (string) (explode(',', (string) ($player?->player_positions ?? ''))[0] ?? '-'),
+            'player_positions' => $player?->player_positions,
+            'ovr' => (int) ($player?->overall ?? 0),
+            'overall' => $player?->overall,
+            'valor' => (int) ($entry->value_eur ?? $player?->value_eur ?? 0),
+            'value_eur' => (int) ($entry->value_eur ?? $player?->value_eur ?? 0),
+            'salario' => (int) ($entry->wage_eur ?? $player?->wage_eur ?? 0),
+            'wage_eur' => (int) ($entry->wage_eur ?? $player?->wage_eur ?? 0),
+            'foto' => $player?->player_face_url,
+            'player_face_url' => $player?->player_face_url,
+            'ativo' => (bool) $entry->ativo,
+            'age' => $player?->age,
+            'weak_foot' => $player?->weak_foot,
+            'skill_moves' => $player?->skill_moves,
+            'player_traits' => $player?->player_traits,
+            'playstyle_badges' => $player ? $this->mapLegacyPlaystyleBadges($player->player_traits, $playstylesMap) : [],
+            'pace' => $player?->pace,
+            'shooting' => $player?->shooting,
+            'passing' => $player?->passing,
+            'dribbling' => $player?->dribbling,
+            'defending' => $player?->defending,
+            'physic' => $player?->physic,
+            'goalkeeping_diving' => $player?->goalkeeping_diving,
+            'goalkeeping_handling' => $player?->goalkeeping_handling,
+            'goalkeeping_kicking' => $player?->goalkeeping_kicking,
+            'goalkeeping_reflexes' => $player?->goalkeeping_reflexes,
+            'goalkeeping_positioning' => $player?->goalkeeping_positioning,
+            'movement_acceleration' => $player?->movement_acceleration,
+            'movement_sprint_speed' => $player?->movement_sprint_speed,
+            'attacking_finishing' => $player?->attacking_finishing,
+            'power_shot_power' => $player?->power_shot_power,
+            'power_long_shots' => $player?->power_long_shots,
+            'attacking_short_passing' => $player?->attacking_short_passing,
+            'skill_long_passing' => $player?->skill_long_passing,
+            'mentality_vision' => $player?->mentality_vision,
+            'skill_dribbling' => $player?->skill_dribbling,
+            'skill_ball_control' => $player?->skill_ball_control,
+            'movement_agility' => $player?->movement_agility,
+            'movement_balance' => $player?->movement_balance,
+            'movement_reactions' => $player?->movement_reactions,
+            'defending_marking_awareness' => $player?->defending_marking_awareness,
+            'mentality_interceptions' => $player?->mentality_interceptions,
+            'defending_standing_tackle' => $player?->defending_standing_tackle,
+            'defending_sliding_tackle' => $player?->defending_sliding_tackle,
+            'power_strength' => $player?->power_strength,
+            'power_stamina' => $player?->power_stamina,
+            'power_jumping' => $player?->power_jumping,
+            'mentality_aggression' => $player?->mentality_aggression,
+        ];
     }
 
     private function resolveClubeTamanhoByFans(int $fans): ?ClubeTamanho

@@ -11,6 +11,7 @@ use App\Models\Partida;
 use App\Models\PartidaAvaliacao;
 use App\Models\PartidaDesempenho;
 use App\Models\PartidaEvento;
+use Illuminate\Support\Facades\Schema;
 
 class ConquistaProgressService
 {
@@ -162,10 +163,12 @@ class ConquistaProgressService
             ->where('confederacao_id', $confederacaoId)
             ->count();
 
-        $vendasMercado = LigaClubeVendaMercado::query()
-            ->where('user_id', $userId)
-            ->where('confederacao_id', $confederacaoId)
-            ->count();
+        $vendasMercado = Schema::hasTable('liga_clube_vendas_mercado')
+            ? LigaClubeVendaMercado::query()
+                ->where('user_id', $userId)
+                ->where('confederacao_id', $confederacaoId)
+                ->count()
+            : 0;
 
         $comprasMercado = LigaTransferencia::query()
             ->where('confederacao_id', $confederacaoId)

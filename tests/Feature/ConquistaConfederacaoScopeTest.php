@@ -24,6 +24,7 @@ use App\Services\ConquistaProgressService;
 use App\Http\Middleware\EnsureLegacyFirstAccessCompleted;
 use App\Http\Middleware\EnsureRosterLimitDuringMarketClosed;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -454,6 +455,26 @@ class ConquistaConfederacaoScopeTest extends TestCase
             'liga_id' => $liga2->id,
             'liga_clube_id' => $club2->id,
         ]);
+    }
+
+    public function test_progress_service_defaults_market_sales_to_zero_when_table_is_missing(): void
+    {
+        $suffix = Str::lower(Str::random(6));
+        $context = $this->createConfederacaoContext("schema-{$suffix}");
+        $liga = $this->createLiga($context['confederacao'], "Liga {$suffix}");
+        $user = User::factory()->create();
+
+        $this->createClub($liga, $context['confederacao'], $user, "Clube {$suffix}");
+
+        Schema::dropIfExists('liga_clube_vendas_mercado');
+
+        /** @var ConquistaProgressService $service */
+        $service = app(ConquistaProgressService::class);
+        $progress = $service->progressForConfederacao($user->id, $context['confederacao']->id);
+
+        $this->assertSame(0, (int) $progress['venda_mercado']);
+        $this->assertSame(0, (int) $progress['compra_mercado']);
+        $this->assertSame(0, (int) $progress['gols']);
     }
 
     /**

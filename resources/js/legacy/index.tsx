@@ -1759,11 +1759,13 @@ const PublicClubProfileView = ({
   const [activeTab, setActiveTab] = useState<'status' | 'elenco'>('status');
   const [trophyImageErrorById, setTrophyImageErrorById] = useState<Record<string, boolean>>({});
   const [selectedProfilePlayer, setSelectedProfilePlayer] = useState<any>(null);
+  const [showProfileDetailed, setShowProfileDetailed] = useState(false);
 
   useEffect(() => {
     setActiveTab('status');
     setTrophyImageErrorById({});
     setSelectedProfilePlayer(null);
+    setShowProfileDetailed(false);
   }, [clubData?.id]);
 
   const profile = {
@@ -1872,6 +1874,16 @@ const PublicClubProfileView = ({
         },
       },
     };
+  };
+
+  const openProfilePlayer = (player: any) => {
+    setSelectedProfilePlayer(mapPublicClubProfilePlayerToLegacyCard(player));
+    setShowProfileDetailed(false);
+  };
+
+  const closeProfilePlayer = () => {
+    setSelectedProfilePlayer(null);
+    setShowProfileDetailed(false);
   };
 
   const tacticalLayoutPlayers = useMemo(() => {
@@ -2136,7 +2148,7 @@ const PublicClubProfileView = ({
                           <button
                             type="button"
                             className="bg-transparent border-0 p-0 cursor-pointer active:opacity-75"
-                            onClick={() => setSelectedProfilePlayer(mapPublicClubProfilePlayerToLegacyCard(entry.sourcePlayer))}
+                            onClick={() => openProfilePlayer(entry.sourcePlayer)}
                           >
                             <LegacyMarketPlayerThumb
                               player={entry.thumbPlayer}
@@ -2174,7 +2186,7 @@ const PublicClubProfileView = ({
                     type="button"
                     className="w-full text-left bg-[#1E1E1E] p-4 flex items-center gap-4 border-r-[3px] border-[#FFD700] cursor-pointer active:opacity-75"
                     style={{ clipPath: AGGRESSIVE_CLIP }}
-                    onClick={() => setSelectedProfilePlayer(mapPublicClubProfilePlayerToLegacyCard(player))}
+                    onClick={() => openProfilePlayer(player)}
                   >
                     {(() => {
                       const thumbPlayer = normalizePublicClubProfileThumbPlayer(player);
@@ -2206,24 +2218,12 @@ const PublicClubProfileView = ({
           </div>
         )}
       </div>
-      {selectedProfilePlayer && (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-md">
-          <div className="absolute inset-0" onClick={() => setSelectedProfilePlayer(null)}></div>
-          <div className="relative w-full max-w-sm flex flex-col items-center">
-            <div className="w-full flex justify-end mb-4">
-              <button
-                onClick={() => setSelectedProfilePlayer(null)}
-                className="bg-[#1E1E1E] text-[#FFD700] w-12 h-12 flex items-center justify-center border-b-[3px] border-[#FFD700]"
-                style={{ clipPath: AGGRESSIVE_CLIP }}
-                type="button"
-              >
-                <i className="fas fa-times text-xl"></i>
-              </button>
-            </div>
-            <LegacyUTCard player={selectedProfilePlayer} preferAssetTemplate />
-          </div>
-        </div>
-      )}
+      <LegacyPlayerShowcaseModal
+        player={selectedProfilePlayer}
+        showDetailed={showProfileDetailed}
+        onToggleDetailed={() => setShowProfileDetailed((current) => !current)}
+        onClose={closeProfilePlayer}
+      />
     </div>
   );
 };
@@ -11116,12 +11116,14 @@ const MarketView = ({
                   <label className="text-[7px] font-black text-white/30 uppercase italic">QUALIDADE</label>
                   <select value={filterQuality} onChange={(e) => setFilterQuality(e.target.value)} className="w-full bg-[#121212] text-white text-[10px] p-2 outline-none border-none italic font-black uppercase">
                     <option value="TODAS">TODAS</option>
-                    <option value="90+">90 OU MAIS</option>
-                    <option value="89-88">89 A 88</option>
-                    <option value="87-84">87 A 84</option>
-                    <option value="83-80">83 A 80</option>
-                    <option value="79-73">79 A 73</option>
-                    <option value="72-">72 OU MENOS</option>
+                    <option value="S+">S+</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="G">G</option>
                   </select>
                 </div>
               </div>

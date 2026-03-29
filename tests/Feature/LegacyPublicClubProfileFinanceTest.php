@@ -158,6 +158,132 @@ class LegacyPublicClubProfileFinanceTest extends TestCase
             ->assertJsonPath('clube.financeiro.poder_investimento', 120_000_000);
     }
 
+    public function test_public_profile_returns_detailed_player_attributes_for_target_club(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao, 'jogo' => $jogo] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $rivalOwner = User::factory()->create();
+
+        $viewer->ligas()->attach($liga->id);
+        $rivalOwner->ligas()->attach($liga->id);
+
+        $viewerClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $viewer->id,
+            'nome' => 'Clube Viewer',
+        ]);
+
+        $rivalClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $rivalOwner->id,
+            'nome' => 'Clube Rival',
+        ]);
+
+        $viewerPlayer = $this->createElenco($jogo, [
+            'short_name' => 'Viewer Stat',
+            'long_name' => 'Viewer Stat Full',
+            'player_positions' => 'CM',
+            'overall' => 74,
+            'pace' => 41,
+            'shooting' => 42,
+            'passing' => 43,
+            'dribbling' => 44,
+            'defending' => 45,
+            'physic' => 46,
+        ]);
+
+        $rivalPlayer = $this->createElenco($jogo, [
+            'short_name' => 'Rival Star',
+            'long_name' => 'Rival Star Full',
+            'player_positions' => 'ST,CF',
+            'overall' => 89,
+            'value_eur' => 111_000_000,
+            'wage_eur' => 7_000_000,
+            'player_face_url' => 'https://example.com/rival-star.png',
+            'age' => 28,
+            'weak_foot' => 4,
+            'skill_moves' => 5,
+            'player_traits' => 'Rapid,Power Shot',
+            'pace' => 91,
+            'shooting' => 88,
+            'passing' => 84,
+            'dribbling' => 87,
+            'defending' => 39,
+            'physic' => 79,
+            'movement_acceleration' => 93,
+            'movement_sprint_speed' => 90,
+            'movement_agility' => 86,
+            'movement_balance' => 80,
+            'movement_reactions' => 88,
+            'attacking_finishing' => 92,
+            'attacking_short_passing' => 85,
+            'power_shot_power' => 89,
+            'power_long_shots' => 83,
+            'power_jumping' => 78,
+            'power_stamina' => 82,
+            'power_strength' => 81,
+            'skill_long_passing' => 77,
+            'skill_dribbling' => 90,
+            'skill_ball_control' => 88,
+            'mentality_vision' => 84,
+            'mentality_interceptions' => 35,
+            'mentality_aggression' => 67,
+            'defending_marking_awareness' => 33,
+            'defending_standing_tackle' => 37,
+            'defending_sliding_tackle' => 31,
+        ]);
+
+        LigaClubeElenco::create([
+            'confederacao_id' => $confederacao->id,
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $viewerClub->id,
+            'elencopadrao_id' => $viewerPlayer->id,
+            'value_eur' => 22_000_000,
+            'wage_eur' => 1_500_000,
+            'ativo' => true,
+        ]);
+
+        LigaClubeElenco::create([
+            'confederacao_id' => $confederacao->id,
+            'liga_id' => $liga->id,
+            'liga_clube_id' => $rivalClub->id,
+            'elencopadrao_id' => $rivalPlayer->id,
+            'value_eur' => 120_000_000,
+            'wage_eur' => 8_000_000,
+            'ativo' => true,
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}&club_id={$rivalClub->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('clube.id', $rivalClub->id)
+            ->assertJsonPath('clube.players.0.nome', 'Rival Star')
+            ->assertJsonPath('clube.players.0.player_face_url', 'https://example.com/rival-star.png')
+            ->assertJsonPath('clube.players.0.age', 28)
+            ->assertJsonPath('clube.players.0.weak_foot', 4)
+            ->assertJsonPath('clube.players.0.skill_moves', 5)
+            ->assertJsonPath('clube.players.0.pace', 91)
+            ->assertJsonPath('clube.players.0.shooting', 88)
+            ->assertJsonPath('clube.players.0.passing', 84)
+            ->assertJsonPath('clube.players.0.dribbling', 87)
+            ->assertJsonPath('clube.players.0.defending', 39)
+            ->assertJsonPath('clube.players.0.physic', 79)
+            ->assertJsonPath('clube.players.0.player_traits', 'Rapid,Power Shot')
+            ->assertJsonPath('clube.players.0.playstyle_badges.0.name', 'Rapid')
+            ->assertJsonPath('clube.players.0.playstyle_badges.1.name', 'Power Shot');
+
+        $this->assertNotSame(
+            41,
+            (int) $response->json('clube.players.0.pace'),
+            'Os atributos retornados não podem vir do elenco do usuário logado.',
+        );
+    }
+
     public function test_public_profile_returns_club_size_tiers_from_database(): void
     {
         ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();

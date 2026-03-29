@@ -9,6 +9,7 @@ use App\Models\LigaCopaGrupo;
 use App\Models\LigaCopaGrupoClube;
 use App\Models\LigaCopaPartida;
 use App\Models\Partida;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -304,35 +305,61 @@ class LigaCopaService
             return false;
         }
 
-        $groupSlot = $this->resolveFirstAvailableGroupSlot($liga, $clube);
+        $lastConflict = null;
 
-        if (! $groupSlot) {
-            return false;
+        for ($attempt = 1; $attempt <= $this->membershipAllocationAttempts($liga); $attempt++) {
+            $groupSlot = $this->resolveFirstAvailableGroupSlot($liga, $clube);
+
+            if (! $groupSlot) {
+                return false;
+            }
+
+            try {
+                DB::transaction(function () use ($groupSlot, $clube): void {
+                    $this->createGroupMembership($groupSlot['grupo'], $clube, $groupSlot['ordem']);
+                });
+
+                $this->ensureGroupStageMatchesIfGroupIsFull($liga, $groupSlot['grupo']);
+
+                return true;
+            } catch (UniqueConstraintViolationException $exception) {
+                if (! $this->isRetryableMembershipConflict($exception)) {
+                    throw $exception;
+                }
+
+                $lastConflict = $exception;
+                $persistedMembership = LigaCopaGrupoClube::query()
+                    ->where('liga_clube_id', $clube->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($persistedMembership) {
+                    $persistedGroup = LigaCopaGrupo::query()
+                        ->lockForUpdate()
+                        ->findOrFail($persistedMembership->grupo_id);
+
+                    $this->ensureGroupStageMatchesIfGroupIsFull($liga, $persistedGroup);
+
+                    return false;
+                }
+
+                Log::warning('Liga Copa membership allocation conflict detected; retrying slot resolution.', [
+                    'liga_id' => $liga->id,
+                    'grupo_id' => $groupSlot['grupo']->id,
+                    'liga_clube_id' => $clube->id,
+                    'ordem' => $groupSlot['ordem'],
+                    'attempt' => $attempt,
+                ]);
+            }
         }
 
-        LigaCopaGrupoClube::query()->create([
-            'grupo_id' => $groupSlot['grupo']->id,
-            'liga_clube_id' => $clube->id,
-            'ordem' => $groupSlot['ordem'],
-        ]);
-
-        $groupMemberCount = (int) LigaCopaGrupoClube::query()
-            ->where('grupo_id', $groupSlot['grupo']->id)
-            ->lockForUpdate()
-            ->get(['id'])
-            ->count();
-
-        if ($groupMemberCount === self::GROUP_SIZE) {
-            $this->ensureGroupStageMatches($liga, $groupSlot['grupo']);
-        }
-
-        return true;
+        throw $lastConflict ?? new \RuntimeException('Liga Copa failed to allocate membership after retries.');
     }
 
     /**
      * @return array{grupo:LigaCopaGrupo, ordem:int}|null
      */
-    private function resolveFirstAvailableGroupSlot(Liga $liga, LigaClube $clube): ?array
+    protected function resolveFirstAvailableGroupSlot(Liga $liga, LigaClube $clube): ?array
     {
         $groups = LigaCopaGrupo::query()
             ->where('liga_id', $liga->id)
@@ -395,6 +422,43 @@ class LigaCopaService
     private function hasGroupOrderGap(array $usedOrdens, int $resolvedOrdem): bool
     {
         return $usedOrdens !== [] && $resolvedOrdem <= count($usedOrdens);
+    }
+
+    protected function createGroupMembership(LigaCopaGrupo $grupo, LigaClube $clube, int $ordem): LigaCopaGrupoClube
+    {
+        return LigaCopaGrupoClube::query()->create([
+            'grupo_id' => $grupo->id,
+            'liga_clube_id' => $clube->id,
+            'ordem' => $ordem,
+        ]);
+    }
+
+    private function ensureGroupStageMatchesIfGroupIsFull(Liga $liga, LigaCopaGrupo $grupo): void
+    {
+        $groupMemberCount = (int) LigaCopaGrupoClube::query()
+            ->where('grupo_id', $grupo->id)
+            ->lockForUpdate()
+            ->get(['id'])
+            ->count();
+
+        if ($groupMemberCount === self::GROUP_SIZE) {
+            $this->ensureGroupStageMatches($liga, $grupo);
+        }
+    }
+
+    private function membershipAllocationAttempts(Liga $liga): int
+    {
+        return max(3, (int) ceil((int) $liga->max_times / self::GROUP_SIZE));
+    }
+
+    private function isRetryableMembershipConflict(UniqueConstraintViolationException $exception): bool
+    {
+        $message = strtolower($exception->getMessage());
+
+        return str_contains($message, 'liga_copa_grupo_clubes_grupo_ordem_unique')
+            || str_contains($message, 'liga_copa_grupo_clubes_grupo_id_liga_clube_id_unique')
+            || str_contains($message, 'liga_copa_grupo_clubes_liga_clube_id_unique')
+            || (str_contains($message, 'liga_copa_grupo_clubes') && str_contains($message, 'unique'));
     }
 
     private function ensureGroupStageMatches(Liga $liga, LigaCopaGrupo $grupo): void

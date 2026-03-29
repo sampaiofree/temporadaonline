@@ -155,6 +155,100 @@ class LegacyMarketDataTest extends TestCase
         $response->assertJsonPath('mercado.players.0.can_multa', false);
     }
 
+    public function test_paginated_market_data_filters_quality_using_letter_tiers_and_keeps_legacy_ranges_compatible(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLeagueContext('market-quality');
+
+        $viewer = User::factory()->create();
+        $viewer->ligas()->attach($liga->id);
+
+        LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $viewer->id,
+            'nome' => 'Meu Clube',
+        ]);
+
+        collect([
+            ['short_name' => 'Tier S+', 'overall' => 91],
+            ['short_name' => 'Tier A', 'overall' => 89],
+            ['short_name' => 'Tier B', 'overall' => 86],
+            ['short_name' => 'Tier C', 'overall' => 85],
+            ['short_name' => 'Tier D', 'overall' => 82],
+            ['short_name' => 'Tier E', 'overall' => 76],
+            ['short_name' => 'Tier F', 'overall' => 74],
+            ['short_name' => 'Tier G', 'overall' => 72],
+        ])->each(function (array $player) use ($liga): void {
+            Elencopadrao::create([
+                'jogo_id' => $liga->jogo_id,
+                'player_id' => Str::uuid()->toString(),
+                'short_name' => $player['short_name'],
+                'long_name' => $player['short_name'].' Completo',
+                'player_positions' => 'ST',
+                'overall' => $player['overall'],
+                'value_eur' => 1000000 * $player['overall'],
+                'wage_eur' => 100000,
+            ]);
+        });
+
+        $responseTierA = $this
+            ->actingAs($viewer)
+            ->get(route('legacy.market.data', [
+                'confederacao_id' => $confederacao->id,
+                'page' => 1,
+                'per_page' => 20,
+                'sub_mode' => 'list',
+                'filter_quality' => 'A',
+            ]));
+
+        $responseTierA->assertOk();
+        $responseTierA->assertJsonPath('mercado.pagination.total', 1);
+        $responseTierA->assertJsonPath('mercado.players.0.short_name', 'Tier A');
+
+        $responseTierE = $this
+            ->actingAs($viewer)
+            ->get(route('legacy.market.data', [
+                'confederacao_id' => $confederacao->id,
+                'page' => 1,
+                'per_page' => 20,
+                'sub_mode' => 'list',
+                'filter_quality' => 'E',
+            ]));
+
+        $responseTierE->assertOk();
+        $responseTierE->assertJsonPath('mercado.pagination.total', 1);
+        $responseTierE->assertJsonPath('mercado.players.0.short_name', 'Tier E');
+
+        $responseTierG = $this
+            ->actingAs($viewer)
+            ->get(route('legacy.market.data', [
+                'confederacao_id' => $confederacao->id,
+                'page' => 1,
+                'per_page' => 20,
+                'sub_mode' => 'list',
+                'filter_quality' => 'G',
+            ]));
+
+        $responseTierG->assertOk();
+        $responseTierG->assertJsonPath('mercado.pagination.total', 1);
+        $responseTierG->assertJsonPath('mercado.players.0.short_name', 'Tier G');
+
+        $responseLegacyRange = $this
+            ->actingAs($viewer)
+            ->get(route('legacy.market.data', [
+                'confederacao_id' => $confederacao->id,
+                'page' => 1,
+                'per_page' => 20,
+                'sub_mode' => 'list',
+                'filter_quality' => '87-84',
+            ]));
+
+        $responseLegacyRange->assertOk();
+        $responseLegacyRange->assertJsonPath('mercado.pagination.total', 2);
+        $responseLegacyRange->assertJsonPath('mercado.players.0.short_name', 'Tier B');
+        $responseLegacyRange->assertJsonPath('mercado.players.1.short_name', 'Tier C');
+    }
+
     /**
      * @return array{liga:Liga, confederacao:Confederacao}
      */
