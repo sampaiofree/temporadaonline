@@ -228,6 +228,10 @@ const LEGACY_TOPBAR_TOTAL_HEIGHT_CSS = `calc(${LEGACY_TOPBAR_BASE_HEIGHT_PX}px +
 const LEGACY_CONTENT_TOP_PADDING_CSS = LEGACY_TOPBAR_TOTAL_HEIGHT_CSS;
 const LEGACY_MARKET_TIMERS_TOP_CSS = LEGACY_TOPBAR_TOTAL_HEIGHT_CSS;
 const LEGACY_MARKET_TIMERS_EXTRA_PADDING_PX = 66;
+const LEGACY_DESKTOP_STAGE_CLASS = 'lg:min-h-screen lg:bg-[radial-gradient(circle_at_top,_rgba(255,215,0,0.08),_transparent_34%),linear-gradient(180deg,_#0b0b0b_0%,_#101010_100%)] lg:px-6';
+const LEGACY_DESKTOP_FRAME_CLASS = 'lg:mx-auto lg:box-border lg:w-full lg:max-w-[460px]';
+const LEGACY_DESKTOP_FIXED_FRAME_CLASS = 'lg:left-1/2 lg:right-auto lg:box-border lg:w-full lg:max-w-[460px] lg:-translate-x-1/2';
+const LEGACY_DESKTOP_SURFACE_CLASS = 'lg:overflow-hidden lg:rounded-[28px] lg:border lg:border-white/10 lg:shadow-[0_32px_90px_rgba(0,0,0,0.62)]';
 let legacyGlobalLoaderPendingCount = 0;
 let legacyGlobalLoaderVisible = false;
 const legacyPrefetchTracker = new Map<string, number>();
@@ -719,7 +723,7 @@ const MCOBottomNav = ({
     { id: 'profile', icon: 'fa-user', label: 'PERFIL' }
   ];
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-[#1E1E1E] border-t-[3px] border-[#FFD700] flex justify-around p-2 safe-area-bottom z-50">
+    <nav className={`fixed bottom-0 left-0 right-0 bg-[#1E1E1E] border-t-[3px] border-[#FFD700] flex justify-around p-2 safe-area-bottom z-50 ${LEGACY_DESKTOP_FIXED_FRAME_CLASS} lg:rounded-t-[24px] lg:border-x lg:border-white/10 lg:shadow-[0_-18px_40px_rgba(0,0,0,0.55)]`}>
       {navItems.map((item) => {
         const isClubSubView = ['my-club', 'esquema-tatico', 'squad', 'achievements', 'patrocinios', 'finance', 'trophies'].includes(activeView);
         const active = activeView === item.id || 
@@ -847,7 +851,7 @@ const LegacyToastStack = ({
     : '16px';
 
   return (
-    <div className="fixed left-0 right-0 px-4 z-[70] pointer-events-none" style={{ bottom: bottomOffset }}>
+    <div className={`fixed left-0 right-0 px-4 z-[70] pointer-events-none ${LEGACY_DESKTOP_FIXED_FRAME_CLASS}`} style={{ bottom: bottomOffset }}>
       <div className="mx-auto w-full max-w-md space-y-2">
         {toasts.map((toast) => (
           <LegacyToastCard key={toast.id} toast={toast} onClose={onClose} />
@@ -874,7 +878,7 @@ const MCOTopBar = ({ careers, currentCareer, onCareerChange, score = 5, skillRat
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 bg-[#1E1E1E] border-b-[3px] border-[#FFD700] z-[60] flex items-center px-4"
+      className={`fixed top-0 left-0 right-0 bg-[#1E1E1E] border-b-[3px] border-[#FFD700] z-[60] flex items-center px-4 ${LEGACY_DESKTOP_FIXED_FRAME_CLASS} lg:rounded-b-[24px] lg:border-x lg:border-white/10 lg:shadow-[0_18px_40px_rgba(0,0,0,0.45)]`}
       style={{
         height: LEGACY_TOPBAR_TOTAL_HEIGHT_CSS,
         paddingTop: 'env(safe-area-inset-top)',
@@ -8056,7 +8060,7 @@ const ProfileView = ({ onBack, onNotify }: any) => {
           </MCOButton>
         )}
       </section>
-      <div className="fixed bottom-24 left-6 right-6 z-40">
+      <div className="fixed bottom-24 left-6 right-6 z-40 lg:left-1/2 lg:right-auto lg:w-[412px] lg:-translate-x-1/2">
         <MCOButton variant="primary" className="w-full py-5 text-lg" onClick={handleSave} disabled={saving}>
           {saving ? 'SALVANDO...' : 'SALVAR ALTERAÇÕES'}
         </MCOButton>
@@ -11029,7 +11033,7 @@ const MarketView = ({
     >
       <MCOTopBar careers={careers} currentCareer={currentCareer} onCareerChange={onCareerChange} score={userStats.score} skillRating={userStats.skillRating} />
       {showMarketTimers && (
-        <div className="fixed left-0 right-0 z-[55] px-4 pt-2" style={{ top: LEGACY_MARKET_TIMERS_TOP_CSS }}>
+        <div className={`fixed left-0 right-0 z-[55] px-4 pt-2 ${LEGACY_DESKTOP_FIXED_FRAME_CLASS}`} style={{ top: LEGACY_MARKET_TIMERS_TOP_CSS }}>
           <div className="bg-[#1E1E1E]/95 border-b-[3px] border-[#FFD700] px-3 py-2 flex items-center gap-2" style={{ clipPath: AGGRESSIVE_CLIP }}>
             <div className="flex-1 min-w-0 bg-[#121212]/80 border border-[#FFD700]/30 px-2 py-2" style={{ clipPath: "polygon(4px 0, 100% 0, 100% 100%, 0 100%, 0 4px)" }}>
               <p className="text-[7px] font-black uppercase italic text-[#FFD700] tracking-[0.18em] truncate">LEILAO</p>
@@ -12347,8 +12351,10 @@ const App = () => {
 
   return (
     <>
-      <div style={viewTransitionStyle}>
-        {renderContent(renderView)}
+      <div className={LEGACY_DESKTOP_STAGE_CLASS}>
+        <div className={`${LEGACY_DESKTOP_FRAME_CLASS} ${LEGACY_DESKTOP_SURFACE_CLASS}`} style={viewTransitionStyle}>
+          {renderContent(renderView)}
+        </div>
       </div>
       {selectedWoMatch && (
         <div className="fixed inset-0 z-[140] flex items-center justify-center p-6 bg-black/90 backdrop-blur-sm">
