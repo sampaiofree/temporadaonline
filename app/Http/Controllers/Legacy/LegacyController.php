@@ -4242,9 +4242,27 @@ class LegacyController extends Controller
 
         $rawConfederacaoId = $request->query('confederacao_id');
         $confederacaoId = is_numeric($rawConfederacaoId) ? (int) $rawConfederacaoId : null;
+        $hasExplicitClubId = $request->query->has('club_id');
+        $rawClubId = $request->query('club_id');
+        $clubId = is_numeric($rawClubId) && (int) $rawClubId > 0 ? (int) $rawClubId : null;
+        $clubName = trim((string) $request->query('club_name', ''));
+        $requestLogContext = [
+            'viewer_user_id' => (int) $user->id,
+            'raw_confederacao_id' => $rawConfederacaoId,
+            'confederacao_id' => $confederacaoId,
+            'has_explicit_club_id' => $hasExplicitClubId,
+            'raw_club_id' => $rawClubId,
+            'club_id' => $clubId,
+            'club_name' => $clubName !== '' ? $clubName : null,
+        ];
+
+        Log::info('Legacy public club profile: request received.', $requestLogContext);
+
         $liga = $this->resolveMarketLiga($user, $confederacaoId);
 
         if (! $liga) {
+            Log::warning('Legacy public club profile: no league resolved for request.', $requestLogContext);
+
             return response()->json([
                 'message' => 'Nenhuma liga encontrada para esta confederacao.',
                 'liga' => null,
@@ -4256,10 +4274,6 @@ class LegacyController extends Controller
         $fieldBackgroundUrl = $this->resolveEscudoUrl(
             AppAsset::query()->value('imagem_campo'),
         );
-        $hasExplicitClubId = $request->query->has('club_id');
-        $rawClubId = $request->query('club_id');
-        $clubId = is_numeric($rawClubId) && (int) $rawClubId > 0 ? (int) $rawClubId : null;
-        $clubName = trim((string) $request->query('club_name', ''));
 
         $clubQuery = LigaClube::query()
             ->with(['escudo:id,clube_imagem,clube_nome', 'liga:id,nome'])
@@ -4268,13 +4282,21 @@ class LegacyController extends Controller
                 fn ($query) => $query->where('confederacao_id', $scopeConfederacaoId),
                 fn ($query) => $query->where('liga_id', $liga->id),
             );
+        $resolutionStrategy = 'viewer_club';
 
         if ($clubId !== null) {
+            $resolutionStrategy = 'club_id';
             $clubQuery->where('id', $clubId);
         } elseif ($clubName !== '') {
+            $resolutionStrategy = 'club_name';
             $normalized = mb_strtolower($clubName);
             $clubQuery->whereRaw('LOWER(nome) = ?', [$normalized]);
         } elseif ($hasExplicitClubId) {
+            Log::warning('Legacy public club profile: invalid club selector received.', array_merge($requestLogContext, [
+                'liga_id' => $liga->id,
+                'liga_confederacao_id' => $liga->confederacao_id,
+            ]));
+
             return response()->json([
                 'message' => 'club_id invalido para esta consulta.',
                 'liga' => [
@@ -4291,6 +4313,12 @@ class LegacyController extends Controller
         $club = $clubQuery->first();
 
         if (! $club) {
+            Log::warning('Legacy public club profile: club not found for selector.', array_merge($requestLogContext, [
+                'liga_id' => $liga->id,
+                'liga_confederacao_id' => $liga->confederacao_id,
+                'resolution_strategy' => $resolutionStrategy,
+            ]));
+
             return response()->json([
                 'message' => 'Clube não encontrado para esta confederação.',
                 'liga' => [
@@ -4303,9 +4331,21 @@ class LegacyController extends Controller
             ], 404);
         }
 
+        Log::info('Legacy public club profile: club resolved.', array_merge($requestLogContext, [
+            'liga_id' => $liga->id,
+            'liga_nome' => $liga->nome,
+            'liga_confederacao_id' => $liga->confederacao_id,
+            'resolution_strategy' => $resolutionStrategy,
+            'resolved_club_id' => (int) $club->id,
+            'resolved_club_name' => (string) $club->nome,
+            'resolved_club_user_id' => (int) $club->user_id,
+            'resolved_club_liga_id' => (int) $club->liga_id,
+            'resolved_club_confederacao_id' => (int) $club->confederacao_id,
+        ]));
+
         $statesWithScore = ['finalizada', 'placar_confirmado', 'wo'];
         $clubMatches = Partida::query()
-            ->select(['id', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
+            ->select(['id', 'estado', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
             ->where('liga_id', $club->liga_id)
             ->whereIn('estado', $statesWithScore)
             ->whereNotNull('placar_mandante')
@@ -4318,14 +4358,29 @@ class LegacyController extends Controller
 
         $wins = 0;
         $goals = 0;
+        $matchBreakdown = [];
         foreach ($clubMatches as $match) {
             $isMandante = (int) $match->mandante_id === (int) $club->id;
             $goalsFor = (int) ($isMandante ? $match->placar_mandante : $match->placar_visitante);
             $goalsAgainst = (int) ($isMandante ? $match->placar_visitante : $match->placar_mandante);
             $goals += $goalsFor;
-            if ($goalsFor > $goalsAgainst) {
+            $countedAsWin = $goalsFor > $goalsAgainst;
+            if ($countedAsWin) {
                 $wins++;
             }
+
+            $matchBreakdown[] = [
+                'partida_id' => (int) $match->id,
+                'estado' => (string) $match->estado,
+                'is_mandante' => $isMandante,
+                'mandante_id' => (int) $match->mandante_id,
+                'visitante_id' => (int) $match->visitante_id,
+                'placar_mandante' => (int) $match->placar_mandante,
+                'placar_visitante' => (int) $match->placar_visitante,
+                'gols_pro' => $goalsFor,
+                'gols_contra' => $goalsAgainst,
+                'counted_as_win' => $countedAsWin,
+            ];
         }
 
         $assists = (int) (PartidaDesempenho::query()
@@ -4376,6 +4431,24 @@ class LegacyController extends Controller
         $score = $avaliacoes !== null
             ? (float) max(1, min(5, round((float) $avaliacoes, 1)))
             : 5.0;
+
+        Log::info('Legacy public club profile: skill rating calculated.', array_merge($requestLogContext, [
+            'liga_id' => $liga->id,
+            'liga_nome' => $liga->nome,
+            'resolution_strategy' => $resolutionStrategy,
+            'resolved_club_id' => (int) $club->id,
+            'resolved_club_name' => (string) $club->nome,
+            'resolved_club_user_id' => (int) $club->user_id,
+            'states_with_score' => $statesWithScore,
+            'played_matches' => $playedMatches,
+            'wins' => $wins,
+            'goals' => $goals,
+            'assists' => $assists,
+            'avaliacoes_media' => $avaliacoes !== null ? (float) $avaliacoes : null,
+            'score' => $score,
+            'skill_rating' => $skillRating,
+            'matches' => $matchBreakdown,
+        ]));
 
         $walletSaldo = LigaClubeFinanceiro::query()
             ->where('liga_id', $club->liga_id)
