@@ -115,6 +115,101 @@ class LegacyPublicClubProfileFinanceTest extends TestCase
         );
     }
 
+    public function test_public_profile_uses_club_name_when_club_id_is_zero(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $rivalOwner = User::factory()->create();
+
+        $viewer->ligas()->attach($liga->id);
+        $rivalOwner->ligas()->attach($liga->id);
+
+        $viewerClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $viewer->id,
+            'nome' => 'Clube Viewer',
+        ]);
+
+        $rivalClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $rivalOwner->id,
+            'nome' => 'Clube Rival',
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}&club_id=0&club_name=Clube%20Rival");
+
+        $response->assertOk()
+            ->assertJsonPath('clube.id', $rivalClub->id)
+            ->assertJsonPath('clube.nome', 'Clube Rival');
+
+        $this->assertNotSame(
+            $viewerClub->id,
+            (int) $response->json('clube.id'),
+            'club_id=0 com club_name preenchido deve resolver o clube informado pelo nome.',
+        );
+    }
+
+    public function test_public_profile_returns_422_for_explicit_invalid_club_id_without_name(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $viewer->ligas()->attach($liga->id);
+
+        LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $viewer->id,
+            'nome' => 'Clube Viewer',
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}&club_id=0");
+
+        $response->assertStatus(422)
+            ->assertJsonPath('message', 'club_id invalido para esta consulta.')
+            ->assertJsonPath('clube', null);
+    }
+
+    public function test_public_profile_returns_logged_user_club_when_no_selector_is_provided(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $rivalOwner = User::factory()->create();
+
+        $viewer->ligas()->attach($liga->id);
+        $rivalOwner->ligas()->attach($liga->id);
+
+        $viewerClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $viewer->id,
+            'nome' => 'Clube Viewer',
+        ]);
+
+        LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $rivalOwner->id,
+            'nome' => 'Clube Rival',
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('clube.id', $viewerClub->id)
+            ->assertJsonPath('clube.nome', 'Clube Viewer');
+    }
+
     public function test_public_profile_uses_liga_initial_balance_when_target_wallet_is_missing(): void
     {
         ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext([

@@ -4256,8 +4256,9 @@ class LegacyController extends Controller
         $fieldBackgroundUrl = $this->resolveEscudoUrl(
             AppAsset::query()->value('imagem_campo'),
         );
+        $hasExplicitClubId = $request->query->has('club_id');
         $rawClubId = $request->query('club_id');
-        $clubId = is_numeric($rawClubId) ? (int) $rawClubId : null;
+        $clubId = is_numeric($rawClubId) && (int) $rawClubId > 0 ? (int) $rawClubId : null;
         $clubName = trim((string) $request->query('club_name', ''));
 
         $clubQuery = LigaClube::query()
@@ -4268,11 +4269,21 @@ class LegacyController extends Controller
                 fn ($query) => $query->where('liga_id', $liga->id),
             );
 
-        if ($clubId) {
+        if ($clubId !== null) {
             $clubQuery->where('id', $clubId);
         } elseif ($clubName !== '') {
             $normalized = mb_strtolower($clubName);
             $clubQuery->whereRaw('LOWER(nome) = ?', [$normalized]);
+        } elseif ($hasExplicitClubId) {
+            return response()->json([
+                'message' => 'club_id invalido para esta consulta.',
+                'liga' => [
+                    'id' => $liga->id,
+                    'nome' => $liga->nome,
+                    'confederacao_id' => $liga->confederacao_id,
+                ],
+                'clube' => null,
+            ], 422);
         } else {
             $clubQuery->where('user_id', $user->id);
         }

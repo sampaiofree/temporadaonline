@@ -12265,8 +12265,10 @@ const App = () => {
       }
 
       if (clubRef && typeof clubRef === 'object') {
-        if (clubRef.id !== undefined && clubRef.id !== null && String(clubRef.id) !== '') {
-          endpoint.searchParams.set('club_id', String(clubRef.id));
+        const parsedClubId = Number.parseInt(String(clubRef.id ?? ''), 10);
+
+        if (Number.isInteger(parsedClubId) && parsedClubId > 0) {
+          endpoint.searchParams.set('club_id', String(parsedClubId));
         } else if (typeof clubRef.name === 'string' && clubRef.name.trim() !== '') {
           endpoint.searchParams.set('club_name', clubRef.name.trim());
         }
