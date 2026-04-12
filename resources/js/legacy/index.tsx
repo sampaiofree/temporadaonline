@@ -3,7 +3,66 @@ import ReactDOM from 'react-dom/client';
 
 const LEGACY_CONFIG = (window as any).__LEGACY_CONFIG__ || {};
 const APP_ASSETS = (window as any).__APP_ASSETS__ || {};
-const CSRF_TOKEN = (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content || '';
+
+const getLegacyMetaCsrfToken = () =>
+  (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement | null)?.content?.trim() || '';
+
+const getLegacyXsrfCookieToken = () => {
+  const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]+)/);
+  if (!match?.[1]) return '';
+
+  try {
+    return decodeURIComponent(match[1]).trim();
+  } catch {
+    return String(match[1]).trim();
+  }
+};
+
+const getLegacyFormCsrfToken = () => {
+  const metaToken = getLegacyMetaCsrfToken();
+  if (metaToken !== '') return metaToken;
+
+  return getLegacyXsrfCookieToken();
+};
+
+const getLegacyRequestHeaders = (headers?: HeadersInit, includeJsonContentType = true): HeadersInit => {
+  const requestHeaders: Record<string, string> = {
+    Accept: 'application/json',
+    'X-Requested-With': 'XMLHttpRequest',
+  };
+
+  if (includeJsonContentType) {
+    requestHeaders['Content-Type'] = 'application/json';
+  }
+
+  const xsrfCookieToken = getLegacyXsrfCookieToken();
+  if (xsrfCookieToken !== '') {
+    requestHeaders['X-XSRF-TOKEN'] = xsrfCookieToken;
+  } else {
+    const metaToken = getLegacyMetaCsrfToken();
+    if (metaToken !== '') {
+      requestHeaders['X-CSRF-TOKEN'] = metaToken;
+    }
+  }
+
+  if (headers instanceof Headers) {
+    headers.forEach((value, key) => {
+      requestHeaders[key] = value;
+    });
+  } else if (Array.isArray(headers)) {
+    headers.forEach(([key, value]) => {
+      requestHeaders[String(key)] = String(value);
+    });
+  } else if (headers && typeof headers === 'object') {
+    Object.entries(headers).forEach(([key, value]) => {
+      if (value !== undefined) {
+        requestHeaders[key] = String(value);
+      }
+    });
+  }
+
+  return requestHeaders;
+};
 
 const getLegacyConfederacoes = () => {
   const raw = Array.isArray(LEGACY_CONFIG?.confederacoes) ? LEGACY_CONFIG.confederacoes : [];
@@ -62,7 +121,7 @@ const submitLegacyLogout = () => {
   const tokenInput = document.createElement('input');
   tokenInput.type = 'hidden';
   tokenInput.name = '_token';
-  tokenInput.value = CSRF_TOKEN;
+  tokenInput.value = getLegacyFormCsrfToken();
   form.appendChild(tokenInput);
 
   document.body.appendChild(form);
@@ -334,12 +393,7 @@ const jsonRequest = async (url: string, options: LegacyRequestInit = {}) => {
     () => fetch(url, {
       credentials: 'same-origin',
       ...requestOptions,
-      headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN,
-        ...(headers || {}),
-      },
+      headers: getLegacyRequestHeaders(headers, true),
     }),
     shouldUseGlobalLoader,
     globalLoaderDelayMs,
@@ -376,11 +430,7 @@ const multipartRequest = async (url: string, formData: FormData, options: Legacy
       method: 'POST',
       ...requestOptions,
       body: formData,
-      headers: {
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': CSRF_TOKEN,
-        ...(headers || {}),
-      },
+      headers: getLegacyRequestHeaders(headers, false),
     }),
     shouldUseGlobalLoader,
     globalLoaderDelayMs,

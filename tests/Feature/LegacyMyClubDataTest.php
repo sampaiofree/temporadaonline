@@ -10,6 +10,7 @@ use App\Models\Jogo;
 use App\Models\Liga;
 use App\Models\LigaClube;
 use App\Models\LigaClubeConquista;
+use App\Models\Partida;
 use App\Models\Plataforma;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -152,6 +153,64 @@ class LegacyMyClubDataTest extends TestCase
                     && array_key_exists('liga_id', $context)
                     && array_key_exists('liga_nome', $context);
             });
+    }
+
+    public function test_my_club_data_skill_rating_includes_placar_registrado_matches(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLeagueContext('skill-rating');
+
+        $user = User::factory()->create();
+        $opponent = User::factory()->create();
+
+        $user->ligas()->attach($liga->id);
+        $opponent->ligas()->attach($liga->id);
+
+        $club = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $user->id,
+            'nome' => 'Clube Teste',
+        ]);
+
+        $opponentClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $opponent->id,
+            'nome' => 'Clube Oponente',
+        ]);
+
+        Partida::create([
+            'liga_id' => $liga->id,
+            'mandante_id' => $club->id,
+            'visitante_id' => $opponentClub->id,
+            'estado' => 'placar_confirmado',
+            'placar_mandante' => 2,
+            'placar_visitante' => 1,
+            'placar_registrado_por' => $user->id,
+            'placar_registrado_em' => now()->subDay(),
+        ]);
+
+        Partida::create([
+            'liga_id' => $liga->id,
+            'mandante_id' => $opponentClub->id,
+            'visitante_id' => $club->id,
+            'estado' => 'placar_registrado',
+            'placar_mandante' => 3,
+            'placar_visitante' => 0,
+            'placar_registrado_por' => $opponent->id,
+            'placar_registrado_em' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($user)
+            ->get(route('legacy.my_club.data', [
+                'confederacao_id' => $confederacao->id,
+            ]));
+
+        $response->assertOk();
+        $response->assertJsonPath('clube.id', $club->id);
+        $response->assertJsonPath('clube.wins', 1);
+        $response->assertJsonPath('clube.skill_rating', 50);
     }
 
     /**

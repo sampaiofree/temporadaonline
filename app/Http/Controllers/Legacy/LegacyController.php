@@ -2314,7 +2314,7 @@ class LegacyController extends Controller
         $clubSize = $this->resolveClubeTamanhoByFans($fans);
         $clubSizeTiers = $this->resolveLegacyClubeTamanhoTiers();
 
-        $statesWithScore = ['finalizada', 'placar_confirmado', 'wo'];
+        $statesWithScore = ['placar_registrado', 'placar_confirmado', 'finalizada', 'wo'];
         $clubMatches = Partida::query()
             ->select(['id', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
             ->where('liga_id', $userClub->liga_id)
@@ -4344,7 +4344,7 @@ class LegacyController extends Controller
             'resolved_club_confederacao_id' => (int) $club->confederacao_id,
         ]));
 
-        $statesWithScore = ['finalizada', 'placar_confirmado', 'wo'];
+        $statesWithScore = ['placar_registrado', 'placar_confirmado', 'finalizada', 'wo'];
         $clubMatches = Partida::query()
             ->select(['id', 'estado', 'mandante_id', 'visitante_id', 'placar_mandante', 'placar_visitante'])
             ->where('liga_id', $club->liga_id)

@@ -14,6 +14,7 @@ use App\Models\LigaClube;
 use App\Models\LigaClubeConquista;
 use App\Models\LigaClubeElenco;
 use App\Models\LigaClubeFinanceiro;
+use App\Models\Partida;
 use App\Models\Plataforma;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -208,6 +209,64 @@ class LegacyPublicClubProfileFinanceTest extends TestCase
         $response->assertOk()
             ->assertJsonPath('clube.id', $viewerClub->id)
             ->assertJsonPath('clube.nome', 'Clube Viewer');
+    }
+
+    public function test_public_profile_skill_rating_includes_placar_registrado_matches(): void
+    {
+        ['liga' => $liga, 'confederacao' => $confederacao] = $this->createLigaContext();
+
+        $viewer = User::factory()->create();
+        $rivalOwner = User::factory()->create();
+        $opponentOwner = User::factory()->create();
+
+        $viewer->ligas()->attach($liga->id);
+        $rivalOwner->ligas()->attach($liga->id);
+        $opponentOwner->ligas()->attach($liga->id);
+
+        $rivalClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $rivalOwner->id,
+            'nome' => 'Clube Rival',
+        ]);
+
+        $opponentClub = LigaClube::create([
+            'liga_id' => $liga->id,
+            'confederacao_id' => $confederacao->id,
+            'user_id' => $opponentOwner->id,
+            'nome' => 'Clube Oponente',
+        ]);
+
+        Partida::create([
+            'liga_id' => $liga->id,
+            'mandante_id' => $rivalClub->id,
+            'visitante_id' => $opponentClub->id,
+            'estado' => 'placar_confirmado',
+            'placar_mandante' => 2,
+            'placar_visitante' => 1,
+            'placar_registrado_por' => $rivalOwner->id,
+            'placar_registrado_em' => now()->subDay(),
+        ]);
+
+        Partida::create([
+            'liga_id' => $liga->id,
+            'mandante_id' => $opponentClub->id,
+            'visitante_id' => $rivalClub->id,
+            'estado' => 'placar_registrado',
+            'placar_mandante' => 3,
+            'placar_visitante' => 0,
+            'placar_registrado_por' => $opponentOwner->id,
+            'placar_registrado_em' => now(),
+        ]);
+
+        $response = $this
+            ->actingAs($viewer)
+            ->getJson("/legacy/public-club-profile-data?confederacao_id={$confederacao->id}&club_id={$rivalClub->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('clube.id', $rivalClub->id)
+            ->assertJsonPath('clube.wins', 1)
+            ->assertJsonPath('clube.skill_rating', 50);
     }
 
     public function test_public_profile_uses_liga_initial_balance_when_target_wallet_is_missing(): void
