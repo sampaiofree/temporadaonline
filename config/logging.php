@@ -73,6 +73,13 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'legacy_public_club_profile' => [
+            'driver' => 'single',
+            'path' => storage_path('logs/legacy-public-club-profile.log'),
+            'level' => env('LOG_LEGACY_PUBLIC_CLUB_PROFILE_LEVEL', env('LOG_LEVEL', 'debug')),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

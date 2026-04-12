@@ -4255,13 +4255,14 @@ class LegacyController extends Controller
             'club_id' => $clubId,
             'club_name' => $clubName !== '' ? $clubName : null,
         ];
+        $profileLog = Log::channel('legacy_public_club_profile');
 
-        Log::info('Legacy public club profile: request received.', $requestLogContext);
+        $profileLog->info('Legacy public club profile: request received.', $requestLogContext);
 
         $liga = $this->resolveMarketLiga($user, $confederacaoId);
 
         if (! $liga) {
-            Log::warning('Legacy public club profile: no league resolved for request.', $requestLogContext);
+            $profileLog->warning('Legacy public club profile: no league resolved for request.', $requestLogContext);
 
             return response()->json([
                 'message' => 'Nenhuma liga encontrada para esta confederacao.',
@@ -4292,7 +4293,7 @@ class LegacyController extends Controller
             $normalized = mb_strtolower($clubName);
             $clubQuery->whereRaw('LOWER(nome) = ?', [$normalized]);
         } elseif ($hasExplicitClubId) {
-            Log::warning('Legacy public club profile: invalid club selector received.', array_merge($requestLogContext, [
+            $profileLog->warning('Legacy public club profile: invalid club selector received.', array_merge($requestLogContext, [
                 'liga_id' => $liga->id,
                 'liga_confederacao_id' => $liga->confederacao_id,
             ]));
@@ -4313,7 +4314,7 @@ class LegacyController extends Controller
         $club = $clubQuery->first();
 
         if (! $club) {
-            Log::warning('Legacy public club profile: club not found for selector.', array_merge($requestLogContext, [
+            $profileLog->warning('Legacy public club profile: club not found for selector.', array_merge($requestLogContext, [
                 'liga_id' => $liga->id,
                 'liga_confederacao_id' => $liga->confederacao_id,
                 'resolution_strategy' => $resolutionStrategy,
@@ -4331,7 +4332,7 @@ class LegacyController extends Controller
             ], 404);
         }
 
-        Log::info('Legacy public club profile: club resolved.', array_merge($requestLogContext, [
+        $profileLog->info('Legacy public club profile: club resolved.', array_merge($requestLogContext, [
             'liga_id' => $liga->id,
             'liga_nome' => $liga->nome,
             'liga_confederacao_id' => $liga->confederacao_id,
@@ -4432,7 +4433,7 @@ class LegacyController extends Controller
             ? (float) max(1, min(5, round((float) $avaliacoes, 1)))
             : 5.0;
 
-        Log::info('Legacy public club profile: skill rating calculated.', array_merge($requestLogContext, [
+        $profileLog->info('Legacy public club profile: skill rating calculated.', array_merge($requestLogContext, [
             'liga_id' => $liga->id,
             'liga_nome' => $liga->nome,
             'resolution_strategy' => $resolutionStrategy,
