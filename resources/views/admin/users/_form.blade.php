@@ -3,6 +3,7 @@
     'method' => 'POST',
     'user' => null,
     'plataformas',
+    'jogos',
     'regioes',
     'idiomas',
     'submitLabel' => 'Salvar usuário',
@@ -19,6 +20,7 @@
     $currentRegiao = old('regiao_id', $profile?->regiao_id ?? '');
     $currentIdioma = old('idioma_id', $profile?->idioma_id ?? '');
     $isAdmin = old('is_admin', $user?->is_admin ?? false);
+    $currentJogo = old('jogo_id', $profile?->jogo_id ?? '');
 @endphp
 
 <form action="{{ $action }}" method="POST" class="space-y-6">
@@ -90,7 +92,7 @@
         </div>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-5">
+    <div class="grid gap-6 md:grid-cols-2 xl:grid-cols-6">
         <div>
             <label for="whatsapp" class="block text-sm font-semibold text-slate-700">WhatsApp</label>
             <input
@@ -166,6 +168,23 @@
                 @endforeach
             </select>
             @error('plataforma_id')
+                <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
+            @enderror
+        </div>
+
+        <div>
+            <label for="jogo_id" class="block text-sm font-semibold text-slate-700">Jogo</label>
+            <select
+                id="jogo_id"
+                name="jogo_id"
+                class="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            >
+                <option value="">Sem jogo</option>
+                @foreach($jogos as $jogo)
+                    <option value="{{ $jogo->id }}" @selected((string) $currentJogo === (string) $jogo->id)>{{ $jogo->nome }}</option>
+                @endforeach
+            </select>
+            @error('jogo_id')
                 <p class="mt-1 text-xs text-red-600">{{ $message }}</p>
             @enderror
         </div>

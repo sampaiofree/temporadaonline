@@ -16,6 +16,7 @@
                 'method' => 'PUT',
                 'user' => $user,
                 'plataformas' => $plataformas,
+                'jogos' => $jogos,
                 'regioes' => $regioes,
                 'idiomas' => $idiomas,
                 'submitLabel' => 'Salvar usuário',

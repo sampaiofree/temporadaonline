@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Confederacao;
 use App\Models\Idioma;
+use App\Models\Jogo;
 use App\Models\Plataforma;
 use App\Models\Profile;
 use App\Models\Regiao;
 use App\Models\User;
+use App\Services\UserHardDeletionService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
@@ -66,6 +67,7 @@ class UserController extends Controller
     {
         return view('admin.users.create', [
             'plataformas' => Plataforma::orderBy('nome')->get(['id', 'nome']),
+            'jogos' => Jogo::orderBy('nome')->get(['id', 'nome']),
             'regioes' => Regiao::orderBy('nome')->get(['id', 'nome']),
             'idiomas' => Idioma::orderBy('nome')->get(['id', 'nome']),
         ]);
@@ -80,6 +82,7 @@ class UserController extends Controller
             'nickname' => 'nullable|string|max:255',
             'whatsapp' => 'nullable|string|max:255',
             'plataforma_id' => 'nullable|integer|exists:plataformas,id',
+            'jogo_id' => 'nullable|integer|exists:jogos,id',
             'regiao_id' => 'nullable|integer|exists:regioes,id',
             'idioma_id' => 'nullable|integer|exists:idiomas,id',
         ]);
@@ -101,6 +104,7 @@ class UserController extends Controller
         return view('admin.users.edit', [
             'user' => $user,
             'plataformas' => Plataforma::orderBy('nome')->get(['id', 'nome']),
+            'jogos' => Jogo::orderBy('nome')->get(['id', 'nome']),
             'regioes' => Regiao::orderBy('nome')->get(['id', 'nome']),
             'idiomas' => Idioma::orderBy('nome')->get(['id', 'nome']),
         ]);
@@ -115,6 +119,7 @@ class UserController extends Controller
             'nickname' => 'nullable|string|max:255',
             'whatsapp' => 'nullable|string|max:255',
             'plataforma_id' => 'nullable|integer|exists:plataformas,id',
+            'jogo_id' => 'nullable|integer|exists:jogos,id',
             'regiao_id' => 'nullable|integer|exists:regioes,id',
             'idioma_id' => 'nullable|integer|exists:idiomas,id',
         ]);
@@ -136,7 +141,7 @@ class UserController extends Controller
         return redirect()->route('admin.users.index')->with('success', 'Usuário salvo com sucesso');
     }
 
-    public function destroy(Request $request, User $user): RedirectResponse
+    public function destroy(Request $request, User $user, UserHardDeletionService $userDeletionService): RedirectResponse
     {
         $redirect = redirect()->route('admin.users.index', $request->query());
         $authenticatedUser = $request->user();
@@ -149,14 +154,7 @@ class UserController extends Controller
             return $redirect->with('error', 'Usuários administradores não podem ser excluídos.');
         }
 
-        if ($this->hasUserHistory($user)) {
-            return $redirect->with(
-                'error',
-                'Usuário possui histórico relacionado. Remova os vínculos manualmente antes de excluir.'
-            );
-        }
-
-        $user->delete();
+        $userDeletionService->delete($user);
 
         return $redirect->with('success', 'Usuário excluído com sucesso.');
     }
@@ -166,15 +164,18 @@ class UserController extends Controller
         $profile = $user->profile ?? new Profile(['user_id' => $user->id]);
         $regiaoId = $request->input('regiao_id') ?: null;
         $idiomaId = $request->input('idioma_id') ?: null;
+        $regiaoNome = $regiaoId ? Regiao::query()->find($regiaoId)?->nome : ($profile->regiao ?: 'Brasil');
+        $idiomaNome = $idiomaId ? Idioma::query()->find($idiomaId)?->nome : ($profile->idioma ?: 'Português do Brasil');
 
         $profile->fill([
             'nickname' => $this->normalizeNullable($request, 'nickname', $profile->nickname),
             'whatsapp' => $this->normalizeNullable($request, 'whatsapp', $profile->whatsapp),
             'plataforma_id' => $request->input('plataforma_id') ?: null,
+            'jogo_id' => $request->input('jogo_id') ?: null,
             'regiao_id' => $regiaoId,
             'idioma_id' => $idiomaId,
-            'regiao' => $regiaoId ? Regiao::query()->find($regiaoId)?->nome : null,
-            'idioma' => $idiomaId ? Idioma::query()->find($idiomaId)?->nome : null,
+            'regiao' => $regiaoNome,
+            'idioma' => $idiomaNome,
         ]);
 
         $profile->save();
@@ -189,40 +190,5 @@ class UserController extends Controller
         $value = trim((string) $request->input($field, ''));
 
         return $value === '' ? null : $value;
-    }
-
-    private function hasUserHistory(User $user): bool
-    {
-        $userId = (int) $user->id;
-
-        if ($user->ligas()->exists()) {
-            return true;
-        }
-
-        if ($user->clubesLiga()->exists()) {
-            return true;
-        }
-
-        if ($user->disponibilidades()->exists()) {
-            return true;
-        }
-
-        return DB::table('reclamacoes_partida')->where('user_id', $userId)->exists()
-            || DB::table('player_favorites')->where('user_id', $userId)->exists()
-            || DB::table('partida_alteracoes')->where('user_id', $userId)->exists()
-            || DB::table('partida_eventos')->where('user_id', $userId)->exists()
-            || DB::table('account_deletion_requests')->where('user_id', $userId)->exists()
-            || DB::table('partida_avaliacoes')
-                ->where(function ($query) use ($userId) {
-                    $query->where('avaliador_user_id', $userId)
-                        ->orWhere('avaliado_user_id', $userId);
-                })
-                ->exists()
-            || DB::table('partidas')
-                ->where(function ($query) use ($userId) {
-                    $query->where('wo_para_user_id', $userId)
-                        ->orWhere('placar_registrado_por', $userId);
-                })
-                ->exists();
     }
 }

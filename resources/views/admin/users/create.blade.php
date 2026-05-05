@@ -15,6 +15,7 @@
                 'action' => route('admin.users.store'),
                 'method' => 'POST',
                 'plataformas' => $plataformas,
+                'jogos' => $jogos,
                 'regioes' => $regioes,
                 'idiomas' => $idiomas,
                 'submitLabel' => 'Criar usuário',
